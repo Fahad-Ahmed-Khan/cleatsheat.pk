@@ -1,0 +1,27 @@
+// Admin-only styling entrypoint (Bootstrap + theme SCSS).
+// Keep Tailwind out of this bundle to avoid conflicts with storefront.
+
+// Theme expects Bootstrap variables/functions available through its own imports.
+
+// A minimal variable to help the theme resolve vendor font paths if needed.
+// If later we copy fonts into `public/admin-assets/fonts`, we can point theme variables here.
+$asset-path: "/admin-assets" !default;
+
+@import "../../vue-admin-design/resources/assets/vendor/scss/core.scss";
+
+// ---- Admin menu stability overrides (Inertia + vendor menu)
+// Prevent hover/active styles from causing layout shifts (e.g. borders/font-weight changes).
+.layout-menu-horizontal {
+  .menu-inner > .menu-item > .menu-link {
+    box-sizing: border-box;
+    border: 1px solid transparent;
+    font-weight: 500;
+  }
+
+  .menu-inner > .menu-item > .menu-link:hover,
+  .menu-inner > .menu-item.active > .menu-link,
+  .menu-inner > .menu-item.open > .menu-link {
+    font-weight: 500;
+  }
+}
+
