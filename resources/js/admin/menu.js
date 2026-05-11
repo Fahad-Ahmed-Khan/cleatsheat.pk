@@ -41,6 +41,7 @@ export function buildAdminMenu(route) {
             children: [
                 { label: 'Payments', href: route('admin.payment-settings.edit'), active: 'admin.payment-settings.*' },
                 { label: 'WhatsApp', href: route('admin.whatsapp-settings.edit'), active: 'admin.whatsapp-settings.*' },
+                { label: 'Storefront Assistant', href: route('admin.storefront-assistant.edit'), active: 'admin.storefront-assistant.*' },
                 { label: 'Marketing & SEO', href: route('admin.marketing-settings.edit'), active: 'admin.marketing-settings.*' },
             ],
         },

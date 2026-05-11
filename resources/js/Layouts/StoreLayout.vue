@@ -1,5 +1,6 @@
 <script setup>
 import StoreBottomNav from '@/Components/Store/StoreBottomNav.vue';
+import StorefrontAssistant from '@/Components/Store/StorefrontAssistant.vue';
 import { useStoreAnalytics } from '@/composables/useStoreAnalytics';
 import { Link, usePage } from '@inertiajs/vue3';
 import { computed, onMounted, onUnmounted } from 'vue';
@@ -123,6 +124,7 @@ onUnmounted(() => {
         >
             <span aria-hidden="true">💬</span>
         </a>
+        <StorefrontAssistant />
         <StoreBottomNav />
         <footer class="mt-12 border-t border-stone-200 bg-white py-8 text-center text-xs text-stone-500">
             <Link :href="route('store.journal.index')" class="font-medium text-stone-700 underline-offset-2 hover:underline">

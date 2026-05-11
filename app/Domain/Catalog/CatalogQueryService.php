@@ -3,6 +3,7 @@
 namespace App\Domain\Catalog;
 
 use App\Enums\Gender;
+use App\Enums\ShoeType;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Color;
@@ -16,6 +17,26 @@ use Illuminate\Support\Facades\DB;
 
 class CatalogQueryService
 {
+    /**
+     * @return array<int, string>
+     */
+    private function normalizeStringList(mixed $value): array
+    {
+        if (is_array($value)) {
+            return array_values(array_filter(array_map(
+                static fn (mixed $v): ?string => is_string($v) || is_numeric($v) ? trim((string) $v) : null,
+                $value
+            ), static fn (?string $v): bool => $v !== null && $v !== ''));
+        }
+
+        if (is_string($value) || is_numeric($value)) {
+            $s = trim((string) $value);
+            return $s === '' ? [] : [$s];
+        }
+
+        return [];
+    }
+
     /** @return Collection<int, Product> */
     public function featuredProducts(int $limit = 8): Collection
     {
@@ -198,6 +219,16 @@ class CatalogQueryService
             $query->where('gender', $gender);
         }
 
+        $type = $filters['type'] ?? null;
+        $typeList = $this->normalizeStringList($type);
+        if ($typeList !== []) {
+            $allowed = array_map(static fn (ShoeType $c): string => $c->value, ShoeType::cases());
+            $typeList = array_values(array_intersect($typeList, $allowed));
+            if ($typeList !== []) {
+                $query->whereIn('shoe_type', $typeList);
+            }
+        }
+
         $priceMin = $filters['price_min'] ?? null;
         if ($priceMin !== null && $priceMin !== '') {
             $query->whereHas('variants', fn (Builder $vq) => $vq->where('price', '>=', (float) $priceMin));
@@ -212,6 +243,14 @@ class CatalogQueryService
         if (is_string($sizeLabel) && $sizeLabel !== '') {
             $query->whereHas('variants.sizes', fn (Builder $sq) => $sq
                 ->where('size_label', $sizeLabel)
+                ->where('stock_qty', '>', 0));
+        }
+
+        $sizeUk = $filters['size_uk'] ?? null;
+        $sizeUkList = $this->normalizeStringList($sizeUk);
+        if ($sizeUkList !== []) {
+            $query->whereHas('variants.sizes', fn (Builder $sq) => $sq
+                ->whereIn('uk_size', $sizeUkList)
                 ->where('stock_qty', '>', 0));
         }
 
@@ -335,6 +374,16 @@ class CatalogQueryService
             $query->where('gender', $gender);
         }
 
+        $type = $filters['type'] ?? null;
+        $typeList = $this->normalizeStringList($type);
+        if ($typeList !== []) {
+            $allowed = array_map(static fn (ShoeType $c): string => $c->value, ShoeType::cases());
+            $typeList = array_values(array_intersect($typeList, $allowed));
+            if ($typeList !== []) {
+                $query->whereIn('shoe_type', $typeList);
+            }
+        }
+
         $priceMin = $filters['price_min'] ?? null;
         if ($priceMin !== null && $priceMin !== '') {
             $query->whereHas('variants', fn (Builder $vq) => $vq->where('price', '>=', (float) $priceMin));
@@ -349,6 +398,14 @@ class CatalogQueryService
         if (is_string($sizeLabel) && $sizeLabel !== '') {
             $query->whereHas('variants.sizes', fn (Builder $sq) => $sq
                 ->where('size_label', $sizeLabel)
+                ->where('stock_qty', '>', 0));
+        }
+
+        $sizeUk = $filters['size_uk'] ?? null;
+        $sizeUkList = $this->normalizeStringList($sizeUk);
+        if ($sizeUkList !== []) {
+            $query->whereHas('variants.sizes', fn (Builder $sq) => $sq
+                ->whereIn('uk_size', $sizeUkList)
                 ->where('stock_qty', '>', 0));
         }
 
@@ -413,9 +470,11 @@ class CatalogQueryService
                 (array) $request->input('color_ids', [])
             )))),
             'gender' => $request->input('gender') ?: null,
+            'type' => $request->input('type') ?: null,
             'price_min' => $request->filled('price_min') ? (float) $request->input('price_min') : null,
             'price_max' => $request->filled('price_max') ? (float) $request->input('price_max') : null,
             'size' => $request->input('size') ?: null,
+            'size_uk' => $request->input('size_uk') ?: null,
             'availability' => $request->input('availability') ?: null,
         ];
     }

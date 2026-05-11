@@ -18,6 +18,7 @@ use App\Http\Controllers\Web\Admin\PaymentSettingsAdminController;
 use App\Http\Controllers\Web\Admin\ProductAdminController;
 use App\Http\Controllers\Web\Admin\ShippingSettingsAdminController;
 use App\Http\Controllers\Web\Admin\SizeChartAdminController;
+use App\Http\Controllers\Web\Admin\StorefrontAssistantSettingsAdminController;
 use App\Http\Controllers\Web\Admin\WhatsAppSettingsAdminController;
 use Illuminate\Support\Facades\Route;
 
@@ -90,6 +91,11 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 
     Route::get('/marketing-settings', [MarketingSettingsAdminController::class, 'edit'])->name('marketing-settings.edit');
     Route::patch('/marketing-settings', [MarketingSettingsAdminController::class, 'update'])->name('marketing-settings.update');
+
+    Route::get('/storefront-assistant', [StorefrontAssistantSettingsAdminController::class, 'edit'])
+        ->name('storefront-assistant.edit');
+    Route::patch('/storefront-assistant', [StorefrontAssistantSettingsAdminController::class, 'update'])
+        ->name('storefront-assistant.update');
 
     Route::resource('content-posts', ContentPostAdminController::class)->except(['show']);
 });

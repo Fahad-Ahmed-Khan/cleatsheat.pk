@@ -344,10 +344,27 @@ const sortLabel = computed(() => {
                 <!-- Grid -->
                 <div class="px-4 pt-6 sm:px-0">
                     <div v-if="!products.length" class="rounded-2xl bg-stone-50 py-16 text-center text-sm text-stone-600">
-                        No shoes match these filters.
-                        <button type="button" class="mt-2 block w-full font-semibold text-stone-900 underline sm:inline" @click="clearFilters">
-                            Reset filters
-                        </button>
+                        <p class="text-sm font-medium text-stone-700">
+                            No shoes match these filters.
+                        </p>
+                        <p class="mt-1 text-xs text-stone-500">
+                            Try removing a filter, or browse everything.
+                        </p>
+                        <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-center">
+                            <button
+                                type="button"
+                                class="min-h-11 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-stone-900 shadow-sm ring-1 ring-stone-200 transition hover:ring-stone-300"
+                                @click="clearFilters"
+                            >
+                                Reset filters
+                            </button>
+                            <Link
+                                :href="route('store.shop')"
+                                class="min-h-11 rounded-full bg-stone-900 px-5 py-2.5 text-sm font-semibold text-white shadow-md"
+                            >
+                                Shop all
+                            </Link>
+                        </div>
                     </div>
                     <div v-else class="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
                         <StoreProductCard v-for="(p, i) in products" :key="p.id" :product="p" :index="i" />

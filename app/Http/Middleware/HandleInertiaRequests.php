@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\CartItem;
 use App\Models\Category;
 use App\Models\MarketingSetting;
+use App\Models\StorefrontAssistantSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Middleware;
@@ -90,10 +91,19 @@ class HandleInertiaRequests extends Middleware
             }
         }
 
+        $storefrontAssistant = null;
+        if (Schema::hasTable('storefront_assistant_settings')) {
+            $row = StorefrontAssistantSetting::query()->first();
+            if ($row) {
+                $storefrontAssistant = $row->toPublicPayload();
+            }
+        }
+
         return [
             ...parent::share($request),
             'bargainEnabled' => (bool) config('bargain.enabled', true),
             'marketing' => $marketing,
+            'storefrontAssistant' => $storefrontAssistant,
             'flashPaymentError' => $request->session()->pull('flash_payment_error'),
             'auth' => [
                 'user' => $request->user(),
