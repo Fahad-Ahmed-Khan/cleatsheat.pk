@@ -2,10 +2,13 @@
 
 namespace Tests\Feature\Bargaining;
 
-use App\Domain\Checkout\CartService;
 use App\Domain\Bargain\DeterministicShopkeeperReply;
+use App\Domain\Checkout\CartService;
+use App\Models\BargainSession;
 use App\Models\Cart;
+use App\Models\CartItem;
 use App\Models\ProductVariant;
+use App\Models\User;
 use Database\Seeders\DemoCatalogSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
@@ -305,6 +308,114 @@ class BargainPricingTest extends TestCase
         $line = $cartService->addLine($cart, $variant->id, 'UK 8', 1, null, $phone);
 
         $this->assertSame($nudged, (string) $line->unit_price_snapshot);
+    }
+
+    public function test_accepted_price_applies_to_logged_in_cart_when_bargain_phone_matches_session(): void
+    {
+        Config::set('bargain.in_range_nudge.min_step_pkr', 25);
+        Config::set('bargain.in_range_nudge.max_fraction_of_gap', 0.4);
+        Config::set('bargain.counter.concession.enabled', false);
+
+        $this->seed(DemoCatalogSeeder::class);
+
+        $variant = ProductVariant::query()->where('sku', 'URB-BLK-001')->firstOrFail();
+        $variant->update([
+            'bargain_enabled' => true,
+            'bargain_min_price' => '900.00',
+            'bargain_max_discount_percent' => '50.00',
+            'price' => '1000.00',
+        ]);
+
+        $phone = '+923001234567';
+
+        $start = $this->postJson('/api/v1/bargain/sessions', [
+            'product_variant_id' => $variant->id,
+            'customer_name' => 'Fahad',
+            'customer_phone' => $phone,
+        ]);
+        $sessionId = (int) $start->json('data.session.id');
+
+        $msg = $this->postJson("/api/v1/bargain/sessions/{$sessionId}/messages", [
+            'customer_phone' => $phone,
+            'message' => 'PKR 920 works for me.',
+        ]);
+        $msg->assertOk();
+        $nudged = (string) $msg->json('data.session.current_offer');
+        $this->assertSame('950.00', $nudged);
+
+        $this->postJson("/api/v1/bargain/sessions/{$sessionId}/accept", [
+            'customer_phone' => $phone,
+        ])->assertOk();
+
+        $user = User::factory()->create();
+        $cart = Cart::query()->create([
+            'user_id' => $user->id,
+            'guest_token' => null,
+            'currency' => 'PKR',
+        ]);
+
+        $cartService = app(CartService::class);
+        $line = $cartService->addLine($cart, $variant->id, 'UK 8', 1, $user, $phone);
+
+        $this->assertSame($nudged, (string) $line->unit_price_snapshot);
+        $this->assertStringStartsWith('bargain:', (string) $line->pricing_key);
+    }
+
+    public function test_expired_bargain_lock_reverts_cart_line_to_list_price(): void
+    {
+        Config::set('bargain.in_range_nudge.min_step_pkr', 25);
+        Config::set('bargain.in_range_nudge.max_fraction_of_gap', 0.4);
+        Config::set('bargain.counter.concession.enabled', false);
+
+        $this->seed(DemoCatalogSeeder::class);
+
+        $variant = ProductVariant::query()->where('sku', 'URB-BLK-001')->firstOrFail();
+        $variant->update([
+            'bargain_enabled' => true,
+            'bargain_min_price' => '900.00',
+            'bargain_max_discount_percent' => '50.00',
+            'price' => '1000.00',
+        ]);
+
+        $phone = '+923001234567';
+
+        $start = $this->postJson('/api/v1/bargain/sessions', [
+            'product_variant_id' => $variant->id,
+            'customer_name' => 'Fahad',
+            'customer_phone' => $phone,
+        ]);
+        $sessionId = (int) $start->json('data.session.id');
+
+        $msg = $this->postJson("/api/v1/bargain/sessions/{$sessionId}/messages", [
+            'customer_phone' => $phone,
+            'message' => 'PKR 920 works for me.',
+        ]);
+        $msg->assertOk();
+        $nudged = (string) $msg->json('data.session.current_offer');
+        $this->assertSame('950.00', $nudged);
+
+        $this->postJson("/api/v1/bargain/sessions/{$sessionId}/accept", [
+            'customer_phone' => $phone,
+        ])->assertOk();
+
+        $cart = Cart::query()->create([
+            'user_id' => null,
+            'guest_token' => '00000000-0000-0000-0000-000000000002',
+            'currency' => 'PKR',
+        ]);
+
+        $cartService = app(CartService::class);
+        $line = $cartService->addLine($cart, $variant->id, 'UK 8', 1, null, $phone);
+        $this->assertStringStartsWith('bargain:', (string) $line->pricing_key);
+
+        BargainSession::query()->whereKey($sessionId)->update(['expires_at' => now()->subMinute()]);
+
+        $cartService->revertStaleBargainLines($cart);
+
+        $updated = CartItem::query()->where('cart_id', $cart->id)->first();
+        $this->assertNotNull($updated);
+        $this->assertSame('regular', $updated->pricing_key);
+        $this->assertSame('1000.00', (string) $updated->unit_price_snapshot);
     }
 
     public function test_accept_with_price_below_floor_is_rejected(): void

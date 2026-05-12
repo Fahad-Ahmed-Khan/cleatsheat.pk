@@ -3,6 +3,8 @@
 namespace App\Http\Requests\Admin;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\Rule;
 
 class UpdateStorefrontAssistantSettingsRequest extends FormRequest
 {
@@ -31,6 +33,11 @@ class UpdateStorefrontAssistantSettingsRequest extends FormRequest
      */
     public function rules(): array
     {
+        $sizeChartRule = ['nullable', 'integer', 'min:1'];
+        if (Schema::hasTable('size_charts')) {
+            $sizeChartRule[] = Rule::exists('size_charts', 'id');
+        }
+
         return [
             'enabled' => ['sometimes', 'boolean'],
             'preview_enabled' => ['sometimes', 'boolean'],
@@ -44,6 +51,7 @@ class UpdateStorefrontAssistantSettingsRequest extends FormRequest
             'ui.title' => ['nullable', 'string', 'max:80'],
             'ui.subtitle' => ['nullable', 'string', 'max:140'],
             'ui.welcome' => ['nullable', 'string', 'max:200'],
+            'ui.size_chart_id' => $sizeChartRule,
             'ui.open_button_label' => ['nullable', 'string', 'max:30'],
             'ui.start_button_label' => ['nullable', 'string', 'max:30'],
             'ui.next_button_label' => ['nullable', 'string', 'max:30'],
@@ -60,6 +68,7 @@ class UpdateStorefrontAssistantSettingsRequest extends FormRequest
             'steps.*.placeholder' => ['nullable', 'string', 'max:60'],
             'steps.*.min' => ['nullable', 'numeric'],
             'steps.*.max' => ['nullable', 'numeric'],
+            'steps.*.step' => ['nullable', 'numeric', 'min:0.1', 'max:2'],
             'steps.*.options' => ['nullable', 'array', 'max:50'],
             'steps.*.options.*.label' => ['required_with:steps.*.options', 'string', 'max:60'],
             'steps.*.options.*.value' => ['required_with:steps.*.options', 'string', 'max:60'],
@@ -68,4 +77,3 @@ class UpdateStorefrontAssistantSettingsRequest extends FormRequest
         ];
     }
 }
-

@@ -3,6 +3,8 @@
 namespace App\Domain\Checkout;
 
 use App\Domain\Bargain\PriceLockResolver;
+use App\Enums\BargainSessionState;
+use App\Models\BargainSession;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\ProductVariant;
@@ -10,6 +12,7 @@ use App\Models\User;
 use App\Models\VariantSize;
 use App\Support\Bargain\PhoneNormalizer;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 
@@ -91,6 +94,7 @@ class CartService
                 ->where('cart_id', $userCart->id)
                 ->where('product_variant_id', $item->product_variant_id)
                 ->where('size_label', $item->size_label)
+                ->where('pricing_key', $item->pricing_key ?? 'regular')
                 ->first();
 
             if ($existing) {
@@ -120,17 +124,23 @@ class CartService
         }
 
         $price = (string) $variant->price;
+        $pricingKey = 'regular';
 
         $normalizedBargainPhone = PhoneNormalizer::normalize($bargainPhone);
-        $locked = $this->priceLocks->lockedUnitPrice($variant->id, $user, $normalizedBargainPhone);
-        if ($locked !== null && bccomp($locked, $price, 2) !== 1) {
-            $price = $locked;
+        $lock = $this->priceLocks->lockForCart($variant->id, $user, $normalizedBargainPhone);
+        if ($lock !== null && $lock->accepted_price !== null) {
+            $locked = (string) $lock->accepted_price;
+            if (bccomp($locked, $price, 2) !== 1) {
+                $price = $locked;
+                $pricingKey = 'bargain:'.$lock->id;
+            }
         }
 
         $line = CartItem::query()->firstOrNew([
             'cart_id' => $cart->id,
             'product_variant_id' => $variantId,
             'size_label' => $sizeLabel,
+            'pricing_key' => $pricingKey,
         ]);
 
         $newQty = ($line->exists ? $line->quantity : 0) + $qty;
@@ -140,9 +150,104 @@ class CartService
 
         $line->quantity = $newQty;
         $line->unit_price_snapshot = $price;
+        $line->pricing_key = $pricingKey;
         $line->save();
 
         return $line;
+    }
+
+    /**
+     * When a bargain lock expires (or is no longer valid), cart lines tagged with that lock should show list price again.
+     */
+    public function revertStaleBargainLines(Cart $cart): void
+    {
+        $cart = $cart->fresh(['items']);
+        if ($cart === null || $cart->items->isEmpty()) {
+            return;
+        }
+
+        $bargainItemIds = $cart->items
+            ->filter(fn (CartItem $item) => str_starts_with((string) ($item->pricing_key ?? ''), 'bargain:'))
+            ->pluck('id')
+            ->all();
+
+        if ($bargainItemIds === []) {
+            return;
+        }
+
+        DB::transaction(function () use ($bargainItemIds): void {
+            foreach ($bargainItemIds as $id) {
+                /** @var CartItem|null $item */
+                $item = CartItem::query()->whereKey($id)->lockForUpdate()->first();
+                if ($item === null) {
+                    continue;
+                }
+                if (! str_starts_with((string) ($item->pricing_key ?? ''), 'bargain:')) {
+                    continue;
+                }
+                $sessionId = (int) substr((string) $item->pricing_key, strlen('bargain:'));
+                if ($sessionId < 1) {
+                    continue;
+                }
+                $session = BargainSession::query()->find($sessionId);
+                if ($this->bargainLineStillBackedByActiveLock($item, $session)) {
+                    continue;
+                }
+                $this->revertCartLineToRegularList($item);
+            }
+        });
+    }
+
+    private function bargainLineStillBackedByActiveLock(CartItem $item, ?BargainSession $session): bool
+    {
+        if ($session === null) {
+            return false;
+        }
+        if ((int) $session->product_variant_id !== (int) $item->product_variant_id) {
+            return false;
+        }
+        if ($session->state !== BargainSessionState::Accepted) {
+            return false;
+        }
+        if ($session->accepted_price === null) {
+            return false;
+        }
+        if ($session->lock_consumed_at !== null) {
+            return false;
+        }
+        if ($session->expires_at === null || $session->expires_at <= now()) {
+            return false;
+        }
+
+        return bccomp((string) $session->accepted_price, (string) $item->unit_price_snapshot, 2) === 0;
+    }
+
+    private function revertCartLineToRegularList(CartItem $item): void
+    {
+        $variant = ProductVariant::query()->find($item->product_variant_id);
+        if ($variant === null) {
+            return;
+        }
+        $list = (string) $variant->price;
+        $regular = CartItem::query()
+            ->where('cart_id', $item->cart_id)
+            ->where('product_variant_id', $item->product_variant_id)
+            ->where('size_label', $item->size_label)
+            ->where('pricing_key', 'regular')
+            ->where('id', '!=', $item->id)
+            ->lockForUpdate()
+            ->first();
+        if ($regular !== null) {
+            $regular->quantity += $item->quantity;
+            $regular->save();
+            $item->delete();
+
+            return;
+        }
+
+        $item->pricing_key = 'regular';
+        $item->unit_price_snapshot = $list;
+        $item->save();
     }
 
     public function updateQuantity(CartItem $item, int $qty): void
@@ -170,6 +275,7 @@ class CartService
      */
     public function buildCartPayload(Cart $cart): array
     {
+        $this->revertStaleBargainLines($cart);
         $cart->load(['items.variant.product.images', 'items.variant.color']);
 
         $lines = $cart->items->map(function (CartItem $item) {

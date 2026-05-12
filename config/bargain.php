@@ -34,6 +34,42 @@ return [
         'max_fraction_of_gap' => (float) env('BARGAIN_IN_RANGE_NUDGE_MAX_FRACTION', 0.4),
     ],
 
+    'intent' => [
+        'accept_min_confidence' => (float) env('BARGAIN_INTENT_ACCEPT_MIN_CONFIDENCE', 0.72),
+        'offer_typo_min_confidence' => (float) env('BARGAIN_INTENT_OFFER_TYPO_MIN_CONFIDENCE', 0.82),
+    ],
+
+    /**
+     * Session-scoped customer integrity floor (never settle below a passed-on customer amount).
+     * Strategic relaxation is off by default — enabling weakens the hard floor; tune carefully.
+     */
+    'integrity' => [
+        'allow_strategic_floor_relaxation' => filter_var(env('BARGAIN_INTEGRITY_ALLOW_STRATEGIC_RELAX', false), FILTER_VALIDATE_BOOLEAN),
+        'strategic_relax_min_pkr' => env('BARGAIN_INTEGRITY_STRATEGIC_RELAX_MIN_PKR', '500.00'),
+        'strategic_relax_min_negotiation_turns' => (int) env('BARGAIN_INTEGRITY_STRATEGIC_RELAX_MIN_TURNS', 4),
+    ],
+
+    /** Near-policy-floor behaviour: resistance score + hold-firm / plateau in engine. */
+    'resistance' => [
+        'hold_firm_score_threshold' => (int) env('BARGAIN_RESISTANCE_HOLD_FIRM_SCORE', 85),
+        'hold_firm_min_same_offer_streak' => (int) env('BARGAIN_RESISTANCE_HOLD_FIRM_STREAK', 2),
+        'concession_count_curve_weight' => (float) env('BARGAIN_RESISTANCE_CONCESSION_CURVE_WEIGHT', 0.05),
+        'max_step_frac_resistance_scale' => (float) env('BARGAIN_RESISTANCE_MAX_STEP_FRAC_SCALE', 0.55),
+    ],
+
+    'stubborn' => [
+        'same_offer_streak' => (int) env('BARGAIN_STUBBORN_SAME_OFFER_STREAK', 3),
+        'min_concessions_without_customer_up' => (int) env('BARGAIN_STUBBORN_MIN_CONCESSIONS', 5),
+    ],
+
+    /** Defend-line: tiny numeric gap + phrase heuristic (no price move when already plateaued). */
+    'defend' => [
+        'max_gap_pkr' => (float) env('BARGAIN_DEFEND_MAX_GAP_PKR', 250.0),
+    ],
+
+    /** Optional cooldown between shop-line decreases (0 = disabled). */
+    'concession_cooldown_minutes' => (int) env('BARGAIN_CONCESSION_COOLDOWN_MINUTES', 0),
+
     // Optional AI (LLM) for natural language only (pricing stays deterministic).
     'ai' => [
         // filter_var correctly parses "true"/"false" from .env (raw env() strings break bool casts).
@@ -50,6 +86,9 @@ return [
             'max_messages' => (int) env('BARGAIN_AI_CONTEXT_MAX_MESSAGES', 6),
             'max_chars_per_message' => (int) env('BARGAIN_AI_CONTEXT_MAX_CHARS_PER_MESSAGE', 300),
             'max_total_chars' => (int) env('BARGAIN_AI_CONTEXT_MAX_TOTAL_CHARS', 1800),
+        ],
+        'analyzer' => [
+            'max_messages' => (int) env('BARGAIN_AI_ANALYZER_MAX_MESSAGES', 50),
         ],
     ],
 ];

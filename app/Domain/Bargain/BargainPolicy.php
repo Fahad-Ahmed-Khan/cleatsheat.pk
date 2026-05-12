@@ -140,13 +140,14 @@ final readonly class BargainPolicy
      *
      * Seed material should include session + customer message id to keep behavior stable per turn.
      */
-    public function steppedCounterBelowMin(?string $previousShopOffer, string $seedMaterial): string
+    public function steppedCounterBelowMin(?string $previousShopOffer, string $seedMaterial, ?ConcessionContext $context = null): string
     {
         $next = ConcessionStepCalculator::nextOffer(
             $this->listPrice,
             $this->minAllowedPrice,
             $previousShopOffer,
             $seedMaterial,
+            $context,
         );
 
         return $this->clampToAllowedRange($next);

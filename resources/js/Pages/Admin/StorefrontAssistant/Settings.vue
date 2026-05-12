@@ -8,6 +8,7 @@ import { computed } from 'vue';
 
 const props = defineProps({
     settings: { type: Object, required: true },
+    sizeCharts: { type: Array, default: () => [] },
 });
 
 const form = useForm({
@@ -16,7 +17,7 @@ const form = useForm({
     delay_seconds: props.settings.delay_seconds ?? 4,
     snooze_days: props.settings.snooze_days ?? 7,
     allowed_routes_text: props.settings.allowed_routes_text ?? '',
-    ui: props.settings.ui ?? {},
+    ui: { size_chart_id: null, ...(props.settings.ui ?? {}) },
     steps: Array.isArray(props.settings.steps) ? props.settings.steps : [],
     mapping: props.settings.mapping ?? {},
 });
@@ -42,6 +43,71 @@ const mappingJson = computed({
         } catch {
             // keep existing until JSON is valid
         }
+    },
+});
+
+function sizeUkStepIndex() {
+    return (form.steps || []).findIndex((s) => s && s.key === 'size_uk');
+}
+
+function ensureSizeUkStep() {
+    if (!Array.isArray(form.steps)) form.steps = [];
+    const i = sizeUkStepIndex();
+    if (i !== -1) return i;
+    form.steps.push({
+        key: 'size_uk',
+        label: 'UK size',
+        required: true,
+        type: 'number',
+        min: 4,
+        max: 13,
+        step: 0.5,
+        multiple: true,
+    });
+    return form.steps.length - 1;
+}
+
+const sizeUkMin = computed({
+    get: () => {
+        const i = ensureSizeUkStep();
+        return Number(form.steps[i].min ?? 4);
+    },
+    set: (v) => {
+        const i = ensureSizeUkStep();
+        form.steps[i].min = v === '' || v == null ? null : Number(v);
+    },
+});
+
+const sizeUkMax = computed({
+    get: () => {
+        const i = ensureSizeUkStep();
+        return Number(form.steps[i].max ?? 13);
+    },
+    set: (v) => {
+        const i = ensureSizeUkStep();
+        form.steps[i].max = v === '' || v == null ? null : Number(v);
+    },
+});
+
+const sizeUkStep = computed({
+    get: () => {
+        const i = ensureSizeUkStep();
+        return Number(form.steps[i].step ?? 0.5);
+    },
+    set: (v) => {
+        const i = ensureSizeUkStep();
+        form.steps[i].step = v === '' || v == null ? null : Number(v);
+    },
+});
+
+const sizeUkMultiple = computed({
+    get: () => {
+        const i = ensureSizeUkStep();
+        return !!form.steps[i].multiple;
+    },
+    set: (v) => {
+        const i = ensureSizeUkStep();
+        form.steps[i].multiple = !!v;
     },
 });
 
@@ -119,6 +185,65 @@ function submit() {
                 </div>
             </FormSection>
 
+            <FormSection title="UK size badges">
+                <div class="row g-3">
+                    <div class="col-12 col-md-4">
+                        <FormField id="saUkMin" label="Min UK size" :error="form.errors['steps.0.min']">
+                            <template #default="{ invalid, describedBy }">
+                                <input
+                                    id="saUkMin"
+                                    v-model.number="sizeUkMin"
+                                    type="number"
+                                    step="0.5"
+                                    class="form-control"
+                                    :class="{ 'is-invalid': invalid }"
+                                    :aria-describedby="describedBy"
+                                />
+                            </template>
+                        </FormField>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <FormField id="saUkMax" label="Max UK size" :error="form.errors['steps.0.max']">
+                            <template #default="{ invalid, describedBy }">
+                                <input
+                                    id="saUkMax"
+                                    v-model.number="sizeUkMax"
+                                    type="number"
+                                    step="0.5"
+                                    class="form-control"
+                                    :class="{ 'is-invalid': invalid }"
+                                    :aria-describedby="describedBy"
+                                />
+                            </template>
+                        </FormField>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <FormField id="saUkStep" label="Step" :error="form.errors['steps.0.step']" hint="Use 0.5 for half sizes.">
+                            <template #default="{ invalid, describedBy }">
+                                <input
+                                    id="saUkStep"
+                                    v-model.number="sizeUkStep"
+                                    type="number"
+                                    step="0.1"
+                                    min="0.1"
+                                    max="2"
+                                    class="form-control"
+                                    :class="{ 'is-invalid': invalid }"
+                                    :aria-describedby="describedBy"
+                                />
+                            </template>
+                        </FormField>
+                    </div>
+                </div>
+
+                <div class="form-check mt-2">
+                    <input id="saUkMultiple" v-model="sizeUkMultiple" type="checkbox" class="form-check-input" />
+                    <label class="form-check-label" for="saUkMultiple">
+                        Allow multiple sizes
+                    </label>
+                </div>
+            </FormSection>
+
             <FormSection title="Pages allowlist">
                 <FormField
                     id="saAllowlist"
@@ -154,6 +279,30 @@ function submit() {
                 <FormField id="saWelcome" label="Welcome message" :error="form.errors['ui.welcome']">
                     <template #default="{ invalid, describedBy }">
                         <textarea id="saWelcome" v-model="form.ui.welcome" rows="3" class="form-control" :class="{ 'is-invalid': invalid }" :aria-describedby="describedBy" />
+                    </template>
+                </FormField>
+
+                <FormField
+                    id="saSizeChartId"
+                    label="Size chart (optional)"
+                    :error="form.errors['ui.size_chart_id']"
+                    hint="Shown in the assistant’s UK size step."
+                >
+                    <template #default="{ invalid, describedBy }">
+                        <select
+                            id="saSizeChartId"
+                            v-model="form.ui.size_chart_id"
+                            class="form-select"
+                            :class="{ 'is-invalid': invalid }"
+                            :aria-describedby="describedBy"
+                        >
+                            <option :value="null">
+                                None
+                            </option>
+                            <option v-for="c in sizeCharts" :key="c.id" :value="c.id">
+                                #{{ c.id }} — {{ c.name }}
+                            </option>
+                        </select>
                     </template>
                 </FormField>
 

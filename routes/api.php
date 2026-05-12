@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\CheckoutController;
 use App\Http\Controllers\Api\V1\GuestOrderLookupController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\OrderController;
+use App\Http\Controllers\Api\V1\SizeChartController;
 use App\Http\Controllers\Webhooks\EasypaisaWebhookController;
 use App\Http\Controllers\Webhooks\JazzCashWebhookController;
 use Illuminate\Support\Facades\Route;
@@ -32,6 +33,8 @@ Route::prefix('v1')->middleware('throttle:api')->group(function (): void {
     Route::get('/categories', [CatalogController::class, 'categories']);
     Route::get('/categories/{slug}/products', [CatalogController::class, 'categoryProducts']);
     Route::get('/products/{slug}', [CatalogController::class, 'product']);
+    Route::get('/size-charts/{sizeChart}', [SizeChartController::class, 'show'])
+        ->name('api.size-charts.show');
 
     Route::get('/cart', [CartController::class, 'show']);
     Route::post('/cart/items', [CartController::class, 'store']);

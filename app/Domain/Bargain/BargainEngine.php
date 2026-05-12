@@ -74,7 +74,7 @@ final class BargainEngine
             ]);
 
             $label = $this->variantLabel($variant);
-            $base = DeterministicShopkeeperReply::welcome($customerName, $variant->product->name, $label, $policy->listPrice);
+            $base = DeterministicShopkeeperReply::welcome($customerName, $variant->product->name, $label, $policy->listPrice, 'welcome:'.$session->id);
             $text = $this->polisher->polishShopkeeperWithContext(
                 draftText: $base,
                 contextMessages: [],
@@ -130,34 +130,165 @@ final class BargainEngine
                 throw new \InvalidArgumentException('Bargaining is not available for this product right now.');
             }
 
-            BargainMessage::query()->create([
+            $parsed = OfferExtractor::extractPkrAmount($message);
+            /** @var BargainMessage $customerMsg */
+            $customerMsg = BargainMessage::query()->create([
                 'bargain_session_id' => $session->id,
                 'role' => 'customer',
                 'body' => $message,
                 'meta' => [
-                    'parsed_offer' => OfferExtractor::extractPkrAmount($message),
+                    'parsed_offer' => $parsed,
                 ],
             ]);
 
-            $parsed = OfferExtractor::extractPkrAmount($message);
-            if ($parsed === null) {
-                [$context, $hint, $lastCustomerOffer] = $this->buildAiContext($session->id);
+            $lastCustomerId = (int) $customerMsg->id;
+
+            $window = ConversationWindow::load($session->id);
+            $msgs = $window->messagesChronological;
+            $priorMsgs = array_slice($msgs, 0, -1);
+            $priorSignals = (new ConversationAnalyzer)->analyze($priorMsgs);
+            $intent = (new CustomerIntentAnalyzer)->analyze($message, $session, $parsed, $priorSignals);
+
+            $customerMsg->forceFill([
+                'meta' => array_merge(is_array($customerMsg->meta) ? $customerMsg->meta : [], [
+                    'parsed_offer' => $parsed,
+                    'intent' => $intent->type->value,
+                    'intent_confidence' => $intent->confidence,
+                    'intent_patterns' => $intent->matchedPatterns,
+                ]),
+            ])->save();
+
+            $pkg = $window->buildAiContextPackage();
+            $dialogMem = AssistantDialogMemory::fromMessages($msgs);
+            $avoid = $pkg['assistant_phrases']->avoidSnippets;
+            $acceptMinConf = (float) config('bargain.intent.accept_min_confidence', 0.72);
+            $typoMinConf = (float) config('bargain.intent.offer_typo_min_confidence', 0.82);
+            $seedTail = 'msg:'.$session->id.':'.$lastCustomerId;
+
+            if ($intent->type === CustomerIntentType::Exit && $intent->confidence >= 0.85) {
+                return $this->performDeclineLocked($session, $variant);
+            }
+
+            $treatAsAccept = ($intent->type === CustomerIntentType::Accept)
+                || ($intent->type === CustomerIntentType::Hesitation && $intent->confidence >= $acceptMinConf);
+
+            if ($treatAsAccept && $intent->confidence >= $acceptMinConf) {
+                if ($session->current_offer === null) {
+                    $base = DeterministicShopkeeperReply::clarifyAcceptNeedOfferLine(
+                        null,
+                        $policy->listPrice,
+                        $seedTail.':clarify',
+                        $avoid,
+                    );
+
+                    return $this->replyIntentAssistant($session, $variant, $policy, $pkg, $msgs, 'intent_clarify_accept', $base, $intent);
+                }
+
+                $resolved = $this->resolveAcceptExplicitPrice($parsed, $session, $policy);
+                if ($resolved === false) {
+                    $base = DeterministicShopkeeperReply::clarifyAcceptNeedOfferLine(
+                        $session->current_offer !== null ? (string) $session->current_offer : null,
+                        $policy->listPrice,
+                        $seedTail.':clarify_amount',
+                        $avoid,
+                    );
+
+                    return $this->replyIntentAssistant($session, $variant, $policy, $pkg, $msgs, 'intent_clarify_accept', $base, $intent);
+                }
+
+                $explicitForAccept = $resolved === null ? null : $resolved;
+
+                return $this->performAcceptLockedPrice($session, $variant, $policy, $explicitForAccept);
+            }
+
+            if ($intent->type === CustomerIntentType::AskDiscount) {
+                $base = DeterministicShopkeeperReply::askDiscountOrBestPrice(
+                    false,
+                    $policy->listPrice,
+                    $session->current_offer !== null ? (string) $session->current_offer : null,
+                    $seedTail.':disc',
+                    $avoid,
+                );
+
+                return $this->replyIntentAssistant($session, $variant, $policy, $pkg, $msgs, 'intent_discount', $base, $intent);
+            }
+
+            if ($intent->type === CustomerIntentType::AskBestPrice) {
+                $base = DeterministicShopkeeperReply::askDiscountOrBestPrice(
+                    true,
+                    $policy->listPrice,
+                    $session->current_offer !== null ? (string) $session->current_offer : null,
+                    $seedTail.':best',
+                    $avoid,
+                );
+
+                return $this->replyIntentAssistant($session, $variant, $policy, $pkg, $msgs, 'intent_discount', $base, $intent);
+            }
+
+            if ($intent->type === CustomerIntentType::Reject && $intent->confidence >= 0.7) {
+                $base = DeterministicShopkeeperReply::intentRejectSoft($seedTail.':rej', $avoid);
+
+                return $this->replyIntentAssistant($session, $variant, $policy, $pkg, $msgs, 'intent_reject_soft', $base, $intent);
+            }
+
+            if ($intent->type === CustomerIntentType::Greeting) {
+                $base = DeterministicShopkeeperReply::intentGreetingShort($seedTail.':hi', $avoid);
+
+                return $this->replyIntentAssistant($session, $variant, $policy, $pkg, $msgs, 'intent_greeting', $base, $intent);
+            }
+
+            if ($intent->type === CustomerIntentType::Confused) {
+                $base = DeterministicShopkeeperReply::intentConfusedClarify(
+                    $policy->listPrice,
+                    $session->current_offer !== null ? (string) $session->current_offer : null,
+                    $seedTail.':conf',
+                    $avoid,
+                );
+
+                return $this->replyIntentAssistant($session, $variant, $policy, $pkg, $msgs, 'intent_confused', $base, $intent);
+            }
+
+            $stated = $parsed;
+            if ($stated !== null) {
+                $recent = $this->recentCustomerOfferAmountsFromWindow($msgs);
+                $shopLine = $session->current_offer !== null ? (string) $session->current_offer : null;
+                $correction = (new ContextualOfferCorrector)->correct($stated, $policy->listPrice, $shopLine, $recent);
+                if ($correction->corrected !== null && $correction->confidence >= $typoMinConf) {
+                    $stated = $correction->corrected;
+                    $customerMsg->forceFill([
+                        'meta' => array_merge(is_array($customerMsg->meta) ? $customerMsg->meta : [], [
+                            'offer_corrected' => $correction->corrected,
+                            'offer_correction_confidence' => $correction->confidence,
+                        ]),
+                    ])->save();
+                }
+            }
+
+            if ($stated === null) {
+                $state = NegotiationState::fromConversation(
+                    $session,
+                    $msgs,
+                    null,
+                    $session->current_offer !== null ? (string) $session->current_offer : null,
+                );
+                $lastCustomerOffer = $pkg['last_customer_offer'];
                 $base = $lastCustomerOffer !== null
-                    ? DeterministicShopkeeperReply::nudgeIncreaseFromLastOffer($lastCustomerOffer)
-                    : DeterministicShopkeeperReply::askForOfferWithAmount($policy->listPrice);
+                    ? DeterministicShopkeeperReply::nudgeIncreaseFromLastOffer($lastCustomerOffer, $seedTail.':nudge', $avoid)
+                    : DeterministicShopkeeperReply::askForOfferWithAmount($policy->listPrice, $seedTail.':ask', $avoid, $dialogMem->budgetPromptCount);
+                $facts = $this->mergeNegotiationFacts([
+                    'list_price' => $policy->listPrice,
+                    'current_offer' => $session->current_offer !== null ? (string) $session->current_offer : null,
+                    'last_customer_offer' => $lastCustomerOffer,
+                    'customer_name' => $session->customer_name ?? null,
+                    'product_name' => (string) $variant->product->name,
+                    'variant_label' => $this->variantLabel($variant),
+                    'color_name' => (string) ($variant->color?->name ?? ''),
+                ], $state, $pkg['assistant_phrases'], $intent);
                 $text = $this->polisher->polishShopkeeperWithContext(
                     draftText: $base,
-                    contextMessages: $context,
-                    facts: [
-                        'list_price' => $policy->listPrice,
-                        'current_offer' => $session->current_offer !== null ? (string) $session->current_offer : null,
-                        'last_customer_offer' => $lastCustomerOffer,
-                        'customer_name' => $session->customer_name ?? null,
-                        'product_name' => (string) $variant->product->name,
-                        'variant_label' => $this->variantLabel($variant),
-                        'color_name' => (string) ($variant->color?->name ?? ''),
-                    ],
-                    languageHint: $hint,
+                    contextMessages: $pkg['context'],
+                    facts: $facts,
+                    languageHint: $pkg['language_hint'],
                 );
 
                 return BargainMessage::query()->create([
@@ -173,10 +304,12 @@ final class BargainEngine
 
             // Compare the customer's stated amount to the floor before clamping up to min:
             // otherwise e.g. "PKR 850" would clamp to 900 and be treated as an acceptable offer.
-            $stated = $parsed;
             if (bccomp($stated, $policy->listPrice, 2) === 1) {
                 $stated = $policy->listPrice;
             }
+
+            $signalsFull = (new ConversationAnalyzer)->analyze($msgs);
+            $this->recordPricedCustomerTurnMemory($session, $stated);
 
             if (bccomp($stated, $policy->minAllowedPrice, 2) === -1) {
                 $prevShopLine = $session->current_offer !== null ? (string) $session->current_offer : null;
@@ -187,27 +320,95 @@ final class BargainEngine
                     ->value('id');
                 $seedMaterial = 'bargain:'.$session->id.':'.$lastCustomerId;
 
-                $counter = $policy->steppedCounterBelowMin($prevShopLine, $seedMaterial);
+                $integrity = $session->customer_integrity_floor !== null ? (string) $session->customer_integrity_floor : null;
+                $resistanceScore = NegotiationResistance::scoreFromShopLine($prevShopLine ?? $policy->listPrice, $policy);
+                $ctx = new ConcessionContext(
+                    concessionCount: (int) $session->concession_count,
+                    resistanceScore: $resistanceScore,
+                    sameOfferStreakAtEnd: $signalsFull->sameOfferStreakAtEnd,
+                    stubbornCustomerMode: (bool) $session->stubborn_customer_mode,
+                    integrityFloorPkr: $integrity,
+                );
+
+                $counterCalc = $policy->steppedCounterBelowMin($prevShopLine, $seedMaterial, $ctx);
+                $counter = $this->clampShopLineWithIntegrity($counterCalc, $integrity, $prevShopLine);
+                $counter = $this->applyConcessionCooldownIfNeeded($session, $prevShopLine, $counter);
+
+                if ($this->shouldForceHoldFirmPlateau($session, $signalsFull, $resistanceScore, $prevShopLine)
+                    && $prevShopLine !== null
+                    && bccomp($counter, $prevShopLine, 2) === -1) {
+                    $counter = $prevShopLine;
+                }
+
+                $noDecrease = $prevShopLine !== null && bccomp($counter, $prevShopLine, 2) >= 0;
+                $useDefend = $noDecrease
+                    && NegotiationToneDetector::shouldDefendMicroPush($message, $stated, $prevShopLine ?? $counter);
+
+                if ($noDecrease && $useDefend) {
+                    $counter = $prevShopLine ?? $counter;
+                }
+
+                if (bccomp($counter, $stated, 2) === 1) {
+                    $this->mergeIntegrityFloorMax($session, $stated);
+                }
 
                 $session->current_offer = $counter;
                 $session->state = BargainSessionState::Countered;
+                $this->persistShopLineEconomics($session, $prevShopLine, $counter);
+                $session->resistance_score = NegotiationResistance::scoreFromShopLine($counter, $policy);
+                $session->stubborn_customer_mode = $this->computeStubbornCustomerMode($session, $signalsFull);
                 $session->save();
 
-                $base = DeterministicShopkeeperReply::counterTooLow($stated, $counter, $policy->listPrice);
-                [$context, $hint, $lastCustomerOffer] = $this->buildAiContext($session->id);
+                $window = ConversationWindow::load($session->id);
+                $pkg = $window->buildAiContextPackage();
+                $msgs = $window->messagesChronological;
+                $state = NegotiationState::fromConversation($session, $msgs, $stated, $counter);
+                $avoid = $pkg['assistant_phrases']->avoidSnippets;
+
+                if ($noDecrease && $useDefend) {
+                    $base = DeterministicShopkeeperReply::defendHoldLine(
+                        $counter,
+                        $policy->listPrice,
+                        $seedMaterial,
+                        $avoid,
+                    );
+                    $metaKind = 'counter_defend';
+                } elseif ($noDecrease) {
+                    $base = DeterministicShopkeeperReply::counterHoldFirm(
+                        $counter,
+                        $stated,
+                        $policy->listPrice,
+                        $seedMaterial,
+                        $avoid,
+                    );
+                    $metaKind = 'counter_hold';
+                } else {
+                    $base = DeterministicShopkeeperReply::generateCounterReply(
+                        $state,
+                        $state->signals,
+                        $stated,
+                        $counter,
+                        $policy->listPrice,
+                        $seedMaterial,
+                        $avoid,
+                    );
+                    $metaKind = 'counter';
+                }
+
+                $facts = $this->mergeNegotiationFacts([
+                    'list_price' => $policy->listPrice,
+                    'current_offer' => $counter,
+                    'last_customer_offer' => $pkg['last_customer_offer'],
+                    'customer_name' => $session->customer_name ?? null,
+                    'product_name' => (string) $variant->product->name,
+                    'variant_label' => $this->variantLabel($variant),
+                    'color_name' => (string) ($variant->color?->name ?? ''),
+                ], $state, $pkg['assistant_phrases'], $intent);
                 $text = $this->polisher->polishShopkeeperWithContext(
                     draftText: $base,
-                    contextMessages: $context,
-                    facts: [
-                        'list_price' => $policy->listPrice,
-                        'current_offer' => $counter,
-                        'last_customer_offer' => $lastCustomerOffer,
-                        'customer_name' => $session->customer_name ?? null,
-                        'product_name' => (string) $variant->product->name,
-                        'variant_label' => $this->variantLabel($variant),
-                        'color_name' => (string) ($variant->color?->name ?? ''),
-                    ],
-                    languageHint: $hint,
+                    contextMessages: $pkg['context'],
+                    facts: $facts,
+                    languageHint: $pkg['language_hint'],
                 );
 
                 return BargainMessage::query()->create([
@@ -215,7 +416,7 @@ final class BargainEngine
                     'role' => 'assistant',
                     'body' => $text,
                     'meta' => [
-                        'kind' => 'counter',
+                        'kind' => $metaKind,
                         'customer_offer' => $stated,
                         'counter_offer' => $counter,
                         'list_price' => $policy->listPrice,
@@ -226,6 +427,11 @@ final class BargainEngine
             $offer = $policy->clampToAllowedRange($stated);
             $prevShopLine = $session->current_offer !== null ? (string) $session->current_offer : null;
             $nudged = $policy->nudgeInRangeStatedPrice($offer);
+
+            $integrity = $session->customer_integrity_floor !== null ? (string) $session->customer_integrity_floor : null;
+            if ($integrity !== null && bccomp($nudged, $integrity, 2) === -1) {
+                $nudged = $integrity;
+            }
 
             if ($prevShopLine !== null && $prevShopLine !== '' && bccomp($prevShopLine, '0', 2) === 1) {
                 // Hard rule: shop offers must never increase within a session.
@@ -241,28 +447,46 @@ final class BargainEngine
                 }
             }
 
+            $nudgeApplied = bccomp($nudged, $offer, 2) === 1;
+            if ($nudgeApplied) {
+                $this->mergeIntegrityFloorMax($session, $offer);
+            }
+
             $session->current_offer = $nudged;
             $session->state = BargainSessionState::Countered;
+            $this->persistShopLineEconomics($session, $prevShopLine, $nudged);
+            $session->resistance_score = NegotiationResistance::scoreFromShopLine($nudged, $policy);
+            $session->stubborn_customer_mode = $this->computeStubbornCustomerMode($session, $signalsFull);
             $session->save();
 
-            $nudgeApplied = bccomp($nudged, $offer, 2) === 1;
+            $lastCustomerId = (int) BargainMessage::query()
+                ->where('bargain_session_id', $session->id)
+                ->where('role', 'customer')
+                ->orderByDesc('id')
+                ->value('id');
+            $seedTail = 'in_range:'.$session->id.':'.$lastCustomerId;
+            $window = ConversationWindow::load($session->id);
+            $pkg = $window->buildAiContextPackage();
+            $msgs = $window->messagesChronological;
+            $state = NegotiationState::fromConversation($session, $msgs, $offer, $nudged);
+            $avoid = $pkg['assistant_phrases']->avoidSnippets;
             $base = $nudgeApplied
-                ? DeterministicShopkeeperReply::acceptableNudged($offer, $nudged, $policy->listPrice)
-                : DeterministicShopkeeperReply::acceptable($nudged);
-            [$context, $hint, $lastCustomerOffer] = $this->buildAiContext($session->id);
+                ? DeterministicShopkeeperReply::acceptableNudged($offer, $nudged, $policy->listPrice, $seedTail, $avoid)
+                : DeterministicShopkeeperReply::acceptable($nudged, $seedTail, $avoid);
+            $facts = $this->mergeNegotiationFacts([
+                'list_price' => $policy->listPrice,
+                'current_offer' => $nudged,
+                'last_customer_offer' => $pkg['last_customer_offer'],
+                'customer_name' => $session->customer_name ?? null,
+                'product_name' => (string) $variant->product->name,
+                'variant_label' => $this->variantLabel($variant),
+                'color_name' => (string) ($variant->color?->name ?? ''),
+            ], $state, $pkg['assistant_phrases'], $intent);
             $text = $this->polisher->polishShopkeeperWithContext(
                 draftText: $base,
-                contextMessages: $context,
-                facts: [
-                    'list_price' => $policy->listPrice,
-                    'current_offer' => $nudged,
-                    'last_customer_offer' => $lastCustomerOffer,
-                    'customer_name' => $session->customer_name ?? null,
-                    'product_name' => (string) $variant->product->name,
-                    'variant_label' => $this->variantLabel($variant),
-                    'color_name' => (string) ($variant->color?->name ?? ''),
-                ],
-                languageHint: $hint,
+                contextMessages: $pkg['context'],
+                facts: $facts,
+                languageHint: $pkg['language_hint'],
             );
 
             return BargainMessage::query()->create([
@@ -304,72 +528,7 @@ final class BargainEngine
                 throw new \InvalidArgumentException('Bargaining is not available for this product right now.');
             }
 
-            if ($acceptedPrice !== null) {
-                $explicit = number_format((float) $acceptedPrice, 2, '.', '');
-                if (bccomp($explicit, $policy->listPrice, 2) === 1) {
-                    $explicit = $policy->listPrice;
-                }
-                if (! $policy->isAllowedPrice($explicit)) {
-                    throw new \InvalidArgumentException('That price isn’t allowed for this product.');
-                }
-                $chosen = $explicit;
-            } else {
-                $chosen = $session->current_offer !== null ? (string) $session->current_offer : null;
-                if ($chosen === null) {
-                    throw new \InvalidArgumentException('There is no offer to accept yet — make an offer first.');
-                }
-                $chosen = $policy->clampToAllowedRange($chosen);
-                if (! $policy->isAllowedPrice($chosen)) {
-                    throw new \InvalidArgumentException('That price isn’t allowed for this product.');
-                }
-            }
-
-            BargainSession::query()
-                ->where('customer_key', $session->customer_key)
-                ->where('product_variant_id', $session->product_variant_id)
-                ->where('id', '!=', $session->id)
-                ->where('state', BargainSessionState::Accepted)
-                ->whereNull('lock_consumed_at')
-                ->update([
-                    'lock_consumed_at' => now(),
-                    'state' => BargainSessionState::Consumed,
-                    'checkout_token' => null,
-                ]);
-
-            $session->accepted_price = $chosen;
-            $session->checkout_token = Str::random(48);
-            $session->state = BargainSessionState::Accepted;
-            $session->expires_at = now()->addMinutes((int) config('bargain.lock_ttl_minutes', 60));
-            $session->save();
-
-            $base = "Done — I’ve locked PKR {$chosen} for you for checkout. This lock is time‑limited, so when you’re ready, add to bag and checkout with the same phone number you used here.";
-            [$context, $hint, $lastCustomerOffer] = $this->buildAiContext($session->id);
-            $text = $this->polisher->polishShopkeeperWithContext(
-                draftText: $base,
-                contextMessages: $context,
-                facts: [
-                    'list_price' => $policy->listPrice,
-                    'current_offer' => $session->current_offer !== null ? (string) $session->current_offer : null,
-                    'last_customer_offer' => $lastCustomerOffer,
-                    'customer_name' => $session->customer_name ?? null,
-                    'product_name' => (string) $variant->product->name,
-                    'variant_label' => $this->variantLabel($variant),
-                    'color_name' => (string) ($variant->color?->name ?? ''),
-                ],
-                languageHint: $hint,
-            );
-
-            BargainMessage::query()->create([
-                'bargain_session_id' => $session->id,
-                'role' => 'assistant',
-                'body' => $text,
-                'meta' => [
-                    'kind' => 'accepted',
-                    'accepted_price' => $chosen,
-                    'checkout_token' => $session->checkout_token,
-                    'lock_expires_at' => $session->expires_at?->toIso8601String(),
-                ],
-            ]);
+            $this->performAcceptLockedPrice($session, $variant, $policy, $acceptedPrice);
 
             return $session->fresh(['messages']);
         });
@@ -396,35 +555,7 @@ final class BargainEngine
             $variant = ProductVariant::query()->whereKey($session->product_variant_id)->lockForUpdate()->firstOrFail();
             $variant->loadMissing(['product', 'color']);
 
-            $session->state = BargainSessionState::Declined;
-            $session->current_offer = null;
-            $session->save();
-
-            $base = DeterministicShopkeeperReply::decline();
-            [$context, $hint, $lastCustomerOffer] = $this->buildAiContext($session->id);
-            $text = $this->polisher->polishShopkeeperWithContext(
-                draftText: $base,
-                contextMessages: $context,
-                facts: [
-                    'list_price' => (string) $session->list_price,
-                    'current_offer' => null,
-                    'last_customer_offer' => $lastCustomerOffer,
-                    'customer_name' => $session->customer_name ?? null,
-                    'product_name' => (string) $variant->product->name,
-                    'variant_label' => $this->variantLabel($variant),
-                    'color_name' => (string) ($variant->color?->name ?? ''),
-                ],
-                languageHint: $hint,
-            );
-
-            BargainMessage::query()->create([
-                'bargain_session_id' => $session->id,
-                'role' => 'assistant',
-                'body' => $text,
-                'meta' => [
-                    'kind' => 'declined',
-                ],
-            ]);
+            $this->performDeclineLocked($session, $variant);
 
             return $session->fresh(['messages']);
         });
@@ -492,55 +623,364 @@ final class BargainEngine
         return $color.' · '.$variant->sku;
     }
 
-    /**
-     * @return array{0: array<int, array{role:string, body:string}>, 1: string, 2: ?string}
-     */
-    private function buildAiContext(int $sessionId): array
+    private function performAcceptLockedPrice(BargainSession $session, ProductVariant $variant, BargainPolicy $policy, ?string $acceptedPrice): BargainMessage
     {
-        $maxMessages = (int) config('bargain.ai.context.max_messages', 6);
-        $maxCharsPer = (int) config('bargain.ai.context.max_chars_per_message', 300);
-        $maxTotal = (int) config('bargain.ai.context.max_total_chars', 1800);
-
-        $messages = BargainMessage::query()
-            ->where('bargain_session_id', $sessionId)
-            ->orderByDesc('id')
-            ->limit(max(1, $maxMessages))
-            ->get(['role', 'body', 'meta'])
-            ->reverse()
-            ->values();
-
-        $context = [];
-        $total = 0;
-        $lastCustomerBody = null;
-        $lastCustomerOffer = null;
-
-        foreach ($messages as $m) {
-            $body = preg_replace('/\s+/u', ' ', trim((string) $m->body)) ?? '';
-            if ($body === '') {
-                continue;
+        if ($acceptedPrice !== null) {
+            $explicit = number_format((float) $acceptedPrice, 2, '.', '');
+            if (bccomp($explicit, $policy->listPrice, 2) === 1) {
+                $explicit = $policy->listPrice;
             }
-            if (mb_strlen($body) > $maxCharsPer) {
-                $body = mb_substr($body, 0, $maxCharsPer);
+            if (! $policy->isAllowedPrice($explicit)) {
+                throw new \InvalidArgumentException('That price isn’t allowed for this product.');
             }
-
-            $addLen = mb_strlen($body);
-            if ($total + $addLen > $maxTotal) {
-                break;
+            $chosen = $explicit;
+        } else {
+            $chosen = $session->current_offer !== null ? (string) $session->current_offer : null;
+            if ($chosen === null) {
+                throw new \InvalidArgumentException('There is no offer to accept yet — make an offer first.');
             }
-
-            $context[] = ['role' => (string) $m->role, 'body' => $body];
-            $total += $addLen;
-
-            if ((string) $m->role === 'customer') {
-                $lastCustomerBody = $body;
-                $meta = is_array($m->meta) ? $m->meta : [];
-                $parsed = $meta['parsed_offer'] ?? null;
-                $lastCustomerOffer = is_string($parsed) && $parsed !== '' ? $parsed : $lastCustomerOffer;
+            $chosen = $policy->clampToAllowedRange($chosen);
+            if (! $policy->isAllowedPrice($chosen)) {
+                throw new \InvalidArgumentException('That price isn’t allowed for this product.');
             }
         }
 
-        $hint = BargainLanguageHint::fromCustomerText($lastCustomerBody ?? '');
+        $floor = $session->customer_integrity_floor !== null ? (string) $session->customer_integrity_floor : null;
+        if ($floor !== null && bccomp($chosen, $floor, 2) === -1) {
+            $chosen = $floor;
+        }
+        if (bccomp($chosen, $policy->minAllowedPrice, 2) === -1) {
+            $chosen = $policy->minAllowedPrice;
+        }
+        $chosen = $policy->clampToAllowedRange($chosen);
+        if (! $policy->isAllowedPrice($chosen)) {
+            throw new \InvalidArgumentException('That price isn’t allowed for this product.');
+        }
 
-        return [$context, $hint, $lastCustomerOffer];
+        BargainSession::query()
+            ->where('customer_key', $session->customer_key)
+            ->where('product_variant_id', $session->product_variant_id)
+            ->where('id', '!=', $session->id)
+            ->where('state', BargainSessionState::Accepted)
+            ->whereNull('lock_consumed_at')
+            ->update([
+                'lock_consumed_at' => now(),
+                'state' => BargainSessionState::Consumed,
+                'checkout_token' => null,
+            ]);
+
+        $session->accepted_price = $chosen;
+        $session->checkout_token = Str::random(48);
+        $session->state = BargainSessionState::Accepted;
+        $session->expires_at = now()->addMinutes((int) config('bargain.lock_ttl_minutes', 60));
+        $session->save();
+
+        $window = ConversationWindow::load($session->id);
+        $pkg = $window->buildAiContextPackage();
+        $msgs = $window->messagesChronological;
+        $state = NegotiationState::fromConversation($session, $msgs, $chosen, $chosen);
+        $base = DeterministicShopkeeperReply::acceptLockDraft(
+            $chosen,
+            'accept:'.$session->id.':'.(string) $session->checkout_token,
+            $pkg['assistant_phrases']->avoidSnippets,
+        );
+        $facts = $this->mergeNegotiationFacts([
+            'list_price' => $policy->listPrice,
+            'current_offer' => $session->current_offer !== null ? (string) $session->current_offer : null,
+            'last_customer_offer' => $pkg['last_customer_offer'],
+            'customer_name' => $session->customer_name ?? null,
+            'product_name' => (string) $variant->product->name,
+            'variant_label' => $this->variantLabel($variant),
+            'color_name' => (string) ($variant->color?->name ?? ''),
+        ], $state, $pkg['assistant_phrases'], null);
+        $text = $this->polisher->polishShopkeeperWithContext(
+            draftText: $base,
+            contextMessages: $pkg['context'],
+            facts: $facts,
+            languageHint: $pkg['language_hint'],
+        );
+
+        return BargainMessage::query()->create([
+            'bargain_session_id' => $session->id,
+            'role' => 'assistant',
+            'body' => $text,
+            'meta' => [
+                'kind' => 'accepted',
+                'accepted_price' => $chosen,
+                'checkout_token' => $session->checkout_token,
+                'lock_expires_at' => $session->expires_at?->toIso8601String(),
+            ],
+        ]);
+    }
+
+    private function performDeclineLocked(BargainSession $session, ProductVariant $variant): BargainMessage
+    {
+        $session->state = BargainSessionState::Declined;
+        $session->current_offer = null;
+        $session->save();
+
+        $window = ConversationWindow::load($session->id);
+        $pkg = $window->buildAiContextPackage();
+        $msgs = $window->messagesChronological;
+        $state = NegotiationState::fromConversation($session, $msgs, null, null);
+        $base = DeterministicShopkeeperReply::decline('decline:'.$session->id, $pkg['assistant_phrases']->avoidSnippets);
+        $facts = $this->mergeNegotiationFacts([
+            'list_price' => (string) $session->list_price,
+            'current_offer' => null,
+            'last_customer_offer' => $pkg['last_customer_offer'],
+            'customer_name' => $session->customer_name ?? null,
+            'product_name' => (string) $variant->product->name,
+            'variant_label' => $this->variantLabel($variant),
+            'color_name' => (string) ($variant->color?->name ?? ''),
+        ], $state, $pkg['assistant_phrases'], null);
+        $text = $this->polisher->polishShopkeeperWithContext(
+            draftText: $base,
+            contextMessages: $pkg['context'],
+            facts: $facts,
+            languageHint: $pkg['language_hint'],
+        );
+
+        return BargainMessage::query()->create([
+            'bargain_session_id' => $session->id,
+            'role' => 'assistant',
+            'body' => $text,
+            'meta' => [
+                'kind' => 'declined',
+            ],
+        ]);
+    }
+
+    /**
+     * @return string|false|null chosen explicit PKR, false if message amount blocks accept, null to use session line
+     */
+    private function resolveAcceptExplicitPrice(?string $parsed, BargainSession $session, BargainPolicy $policy): string|false|null
+    {
+        if ($parsed === null) {
+            return null;
+        }
+
+        $explicit = number_format((float) $parsed, 2, '.', '');
+        if (bccomp($explicit, $policy->listPrice, 2) === 1) {
+            $explicit = $policy->listPrice;
+        }
+        $explicit = $policy->clampToAllowedRange($explicit);
+        if (! $policy->isAllowedPrice($explicit)) {
+            return false;
+        }
+
+        $line = $session->current_offer !== null ? (string) $session->current_offer : null;
+        if ($line !== null && bccomp($explicit, $line, 2) === -1) {
+            return false;
+        }
+
+        return $explicit;
+    }
+
+    /**
+     * @param  list<array{id?:int, role:string, body:string, meta?:array<string, mixed>}>  $messagesChronological
+     * @return list<string>
+     */
+    private function recentCustomerOfferAmountsFromWindow(array $messagesChronological): array
+    {
+        $out = [];
+        foreach ($messagesChronological as $m) {
+            if (($m['role'] ?? '') !== 'customer') {
+                continue;
+            }
+            $meta = is_array($m['meta'] ?? null) ? $m['meta'] : [];
+            $p = $meta['parsed_offer'] ?? null;
+            if (is_string($p) && $p !== '') {
+                $out[] = $p;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param  array{context: list<array{role:string, body:string}>, language_hint: string, last_customer_offer: ?string, assistant_phrases: AssistantRecentPhrases}  $pkg
+     * @param  list<array{id?:int, role:string, body:string, meta?:array<string, mixed>}>  $msgs
+     */
+    private function replyIntentAssistant(
+        BargainSession $session,
+        ProductVariant $variant,
+        BargainPolicy $policy,
+        array $pkg,
+        array $msgs,
+        string $kind,
+        string $baseDraft,
+        ?CustomerIntentResult $intent,
+    ): BargainMessage {
+        $state = NegotiationState::fromConversation(
+            $session,
+            $msgs,
+            null,
+            $session->current_offer !== null ? (string) $session->current_offer : null,
+        );
+        $facts = $this->mergeNegotiationFacts([
+            'list_price' => $policy->listPrice,
+            'current_offer' => $session->current_offer !== null ? (string) $session->current_offer : null,
+            'last_customer_offer' => $pkg['last_customer_offer'],
+            'customer_name' => $session->customer_name ?? null,
+            'product_name' => (string) $variant->product->name,
+            'variant_label' => $this->variantLabel($variant),
+            'color_name' => (string) ($variant->color?->name ?? ''),
+        ], $state, $pkg['assistant_phrases'], $intent);
+        $text = $this->polisher->polishShopkeeperWithContext(
+            draftText: $baseDraft,
+            contextMessages: $pkg['context'],
+            facts: $facts,
+            languageHint: $pkg['language_hint'],
+        );
+
+        return BargainMessage::query()->create([
+            'bargain_session_id' => $session->id,
+            'role' => 'assistant',
+            'body' => $text,
+            'meta' => [
+                'kind' => $kind,
+                'list_price' => $policy->listPrice,
+            ],
+        ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     * @return array<string, mixed>
+     */
+    private function mergeNegotiationFacts(array $facts, NegotiationState $state, AssistantRecentPhrases $phrases, ?CustomerIntentResult $intent = null): array
+    {
+        $snips = array_slice($phrases->avoidSnippets, 0, 6);
+
+        $out = array_merge($facts, [
+            'negotiation_stage' => $state->negotiationStage->value,
+            'tone_style' => $state->toneStyle,
+            'customer_seriousness' => $state->customerSeriousness,
+            'repetition_level' => $state->repetitionLevel,
+            'close_probability' => number_format($state->closeProbability, 2, '.', ''),
+            'assistant_avoid_snippets' => implode(' || ', $snips),
+        ]);
+
+        if ($intent !== null) {
+            $out['customer_intent'] = $intent->type->value;
+            $out['intent_confidence'] = number_format($intent->confidence, 2, '.', '');
+        }
+
+        return $out;
+    }
+
+    private function recordPricedCustomerTurnMemory(BargainSession $session, string $stated): void
+    {
+        $session->negotiation_turn_count = (int) $session->negotiation_turn_count + 1;
+        $h = $session->highest_customer_offer_seen;
+        if ($h === null || bccomp($stated, (string) $h, 2) === 1) {
+            $session->highest_customer_offer_seen = $stated;
+        }
+        $this->maybeRelaxIntegrityFloor($session, $stated);
+    }
+
+    private function maybeRelaxIntegrityFloor(BargainSession $session, string $stated): void
+    {
+        if (! filter_var(config('bargain.integrity.allow_strategic_floor_relaxation', false), FILTER_VALIDATE_BOOLEAN)) {
+            return;
+        }
+        $floor = $session->customer_integrity_floor;
+        if ($floor === null) {
+            return;
+        }
+        $floorStr = (string) $floor;
+        if (bccomp($stated, $floorStr, 2) !== 1) {
+            return;
+        }
+        $minDelta = (string) config('bargain.integrity.strategic_relax_min_pkr', '500.00');
+        if (bccomp(bcsub($stated, $floorStr, 2), $minDelta, 2) < 0) {
+            return;
+        }
+        $minTurns = (int) config('bargain.integrity.strategic_relax_min_negotiation_turns', 4);
+        if ((int) $session->negotiation_turn_count < $minTurns) {
+            return;
+        }
+        $session->customer_integrity_floor = null;
+    }
+
+    private function mergeIntegrityFloorMax(BargainSession $session, string $amount): void
+    {
+        $f = $session->customer_integrity_floor !== null ? (string) $session->customer_integrity_floor : null;
+        if ($f === null) {
+            $session->customer_integrity_floor = $amount;
+
+            return;
+        }
+        if (bccomp($amount, $f, 2) === 1) {
+            $session->customer_integrity_floor = $amount;
+        }
+    }
+
+    private function clampShopLineWithIntegrity(string $line, ?string $integrityFloor, ?string $prevShopLine): string
+    {
+        $x = $line;
+        if ($integrityFloor !== null && $integrityFloor !== '' && bccomp($x, $integrityFloor, 2) === -1) {
+            $x = $integrityFloor;
+        }
+        if ($prevShopLine !== null && $prevShopLine !== '' && bccomp($prevShopLine, '0', 2) === 1) {
+            if (bccomp($x, $prevShopLine, 2) === 1) {
+                $x = $prevShopLine;
+            }
+        }
+
+        return $x;
+    }
+
+    private function applyConcessionCooldownIfNeeded(BargainSession $session, ?string $prevShopLine, string $candidate): string
+    {
+        $mins = (int) config('bargain.concession_cooldown_minutes', 0);
+        if ($mins <= 0 || $prevShopLine === null) {
+            return $candidate;
+        }
+        if (bccomp($candidate, $prevShopLine, 2) >= 0) {
+            return $candidate;
+        }
+        $at = $session->last_shop_concession_at;
+        if ($at !== null && $at->greaterThan(now()->subMinutes($mins))) {
+            return $prevShopLine;
+        }
+
+        return $candidate;
+    }
+
+    private function shouldForceHoldFirmPlateau(BargainSession $session, ConversationSignals $signals, int $resistanceScore, ?string $prevShopLine): bool
+    {
+        if ($prevShopLine === null) {
+            return false;
+        }
+        $thr = (int) config('bargain.resistance.hold_firm_score_threshold', 85);
+        $streakNeed = (int) config('bargain.resistance.hold_firm_min_same_offer_streak', 2);
+        if ($resistanceScore < $thr) {
+            return false;
+        }
+
+        return $signals->sameOfferStreakAtEnd >= $streakNeed
+            || $session->stubborn_customer_mode;
+    }
+
+    private function persistShopLineEconomics(BargainSession $session, ?string $prevShop, string $newLine): void
+    {
+        $low = $session->lowest_shop_offer_given;
+        if ($low === null || bccomp($newLine, (string) $low, 2) === -1) {
+            $session->lowest_shop_offer_given = $newLine;
+        }
+        if ($prevShop !== null && bccomp($newLine, $prevShop, 2) === -1) {
+            $session->concession_count = (int) $session->concession_count + 1;
+            $session->last_shop_concession_at = now();
+        }
+    }
+
+    private function computeStubbornCustomerMode(BargainSession $session, ConversationSignals $signals): bool
+    {
+        $streakNeed = (int) config('bargain.stubborn.same_offer_streak', 3);
+        $minCons = (int) config('bargain.stubborn.min_concessions_without_customer_up', 5);
+
+        return $signals->sameOfferStreakAtEnd >= $streakNeed
+            && (int) $session->concession_count >= $minCons;
     }
 }

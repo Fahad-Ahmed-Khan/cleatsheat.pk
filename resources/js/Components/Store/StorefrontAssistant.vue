@@ -14,6 +14,13 @@ const mapping = computed(() => (cfg.value && typeof cfg.value.mapping === 'objec
 const visibleWidget = ref(false);
 const open = ref(false);
 
+const sizeChartOpen = ref(false);
+const sizeChartState = reactive({
+    loading: false,
+    error: '',
+    chart: null,
+});
+
 const stepIndex = ref(-1); // -1 = welcome
 const answers = reactive({});
 const errors = reactive({});
@@ -22,7 +29,29 @@ const snoozeKey = 'tryino_storefront_assistant_snooze_until';
 
 function stepOptions(step) {
     const opts = step?.options;
-    return Array.isArray(opts) ? opts.filter((o) => o && o.value != null) : [];
+    if (Array.isArray(opts) && opts.length) {
+        return opts.filter((o) => o && o.value != null);
+    }
+
+    // UX fallback: if size_uk is configured as a number (no options),
+    // render it as badge picks using min/max.
+    if (step?.key === 'size_uk') {
+        const min = step?.min != null ? Number(step.min) : 1;
+        const max = step?.max != null ? Number(step.max) : 15;
+        const incRaw = step?.step != null ? Number(step.step) : 0.5;
+        const inc = Number.isFinite(incRaw) && incRaw > 0 ? incRaw : 0.5;
+        const start = Number.isFinite(min) ? min : 1;
+        const end = Number.isFinite(max) ? Math.max(start, max) : 15;
+        const out = [];
+        for (let n = start; n <= end + 1e-9; n += inc) {
+            const rounded = Math.round(n * 10) / 10;
+            const v = Number.isInteger(rounded) ? String(rounded) : String(rounded).replace(/\.0+$/, '');
+            out.push({ label: v, value: v });
+        }
+        return out;
+    }
+
+    return [];
 }
 
 function isMultiple(step) {
@@ -87,6 +116,43 @@ function selectAll(step) {
         return;
     }
     answers[step.key] = opts.map((o) => String(o.value));
+}
+
+async function loadSizeChart() {
+    const id = ui.value?.size_chart_id;
+    if (!id) {
+        sizeChartState.error = 'Size chart not configured.';
+        sizeChartState.chart = null;
+        return;
+    }
+
+    sizeChartState.loading = true;
+    sizeChartState.error = '';
+    try {
+        const res = await fetch(`/api/v1/size-charts/${encodeURIComponent(String(id))}`, {
+            headers: { Accept: 'application/json' },
+        });
+        if (!res.ok) {
+            sizeChartState.error = `Unable to load size chart (HTTP ${res.status}).`;
+            sizeChartState.chart = null;
+            return;
+        }
+        const json = await res.json();
+        // ApiResponder::ok returns { data: ... }
+        sizeChartState.chart = json?.data ?? null;
+    } catch (e) {
+        sizeChartState.error = 'Unable to load size chart.';
+        sizeChartState.chart = null;
+    } finally {
+        sizeChartState.loading = false;
+    }
+}
+
+async function toggleSizeChart() {
+    sizeChartOpen.value = !sizeChartOpen.value;
+    if (sizeChartOpen.value && !sizeChartState.chart && !sizeChartState.loading) {
+        await loadSizeChart();
+    }
 }
 
 function nowMs() {
@@ -162,6 +228,7 @@ function scheduleWidget() {
 
 function resetFlow() {
     stepIndex.value = -1;
+    sizeChartOpen.value = false;
     Object.keys(answers).forEach((k) => delete answers[k]);
     Object.keys(errors).forEach((k) => delete errors[k]);
 }
@@ -353,8 +420,62 @@ onUnmounted(() => {
                     </p>
                 </div>
 
+                <div v-if="steps[stepIndex].key === 'size_uk'" class="flex items-center justify-between">
+                    <button
+                        type="button"
+                        class="text-xs font-semibold text-stone-700 underline underline-offset-2 hover:text-stone-900"
+                        @click="toggleSizeChart"
+                    >
+                        {{ sizeChartOpen ? 'Hide size chart' : 'View size chart' }}
+                    </button>
+                    <span v-if="isMultiple(steps[stepIndex])" class="text-[11px] text-stone-500">You can pick multiple</span>
+                </div>
+
+                <div v-if="steps[stepIndex].key === 'size_uk' && sizeChartOpen" class="rounded-2xl border border-stone-200 bg-white p-3">
+                    <div v-if="sizeChartState.loading" class="text-xs text-stone-500">Loading size chart…</div>
+                    <div v-else-if="sizeChartState.error" class="text-xs text-red-700">{{ sizeChartState.error }}</div>
+                    <div v-else-if="sizeChartState.chart" class="space-y-3">
+                        <p class="text-xs font-semibold text-stone-700">
+                            {{ sizeChartState.chart.name || 'Size chart' }}
+                        </p>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full text-left text-xs">
+                                <thead class="text-[11px] uppercase tracking-wide text-stone-500">
+                                    <tr>
+                                        <th class="py-2 pr-3">UK</th>
+                                        <th class="py-2 pr-3">EU</th>
+                                        <th class="py-2 pr-3">PK</th>
+                                        <th class="py-2 pr-3">CM</th>
+                                        <th class="py-2 pr-1"></th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-stone-100">
+                                    <tr v-for="(r, i) in sizeChartState.chart.rows || []" :key="`${r.uk_size || r.label}-${i}`">
+                                        <td class="py-2 pr-3 text-stone-700">{{ r.eu_size || '—' }}</td>
+                                        <td class="py-2 pr-3 font-semibold text-stone-900">{{ r.uk_size || r.label || '—' }}</td>
+                                        <td class="py-2 pr-3 text-stone-700">{{ r.pk_size || '—' }}</td>
+                                        <td class="py-2 pr-3 text-stone-700">{{ r.foot_cm != null ? r.foot_cm : r.cm != null ? r.cm : '—' }}</td>
+                                        <td class="py-2 pr-1 text-right">
+                                            <button
+                                                type="button"
+                                                class="rounded-full bg-stone-900 px-3 py-1.5 text-[11px] font-semibold text-white"
+                                                @click="toggleBadge(steps[stepIndex], r.uk_size || r.label)"
+                                            >
+                                                Use
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div v-else class="text-xs text-stone-500">
+                        No size chart found.
+                    </div>
+                </div>
+
                 <!-- number -->
-                <div v-if="steps[stepIndex].type === 'number' && !steps[stepIndex].options">
+                <div v-if="steps[stepIndex].type === 'number' && !stepOptions(steps[stepIndex]).length">
                     <input
                         :id="`sa_${steps[stepIndex].key}`"
                         v-model="answers[steps[stepIndex].key]"
@@ -367,8 +488,8 @@ onUnmounted(() => {
                     />
                 </div>
 
-                <!-- badges (options) -->
-                <div v-else-if="steps[stepIndex].options && stepOptions(steps[stepIndex]).length" class="space-y-3">
+                <!-- badges (options or generated) -->
+                <div v-else-if="stepOptions(steps[stepIndex]).length" class="space-y-3">
                     <div class="flex flex-wrap gap-2">
                         <button
                             type="button"

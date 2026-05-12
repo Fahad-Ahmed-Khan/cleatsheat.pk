@@ -15,6 +15,7 @@ final class ConcessionStepCalculator
         string $minAllowedPrice,
         ?string $previousShopOffer,
         string $seedMaterial,
+        ?ConcessionContext $context = null,
     ): string {
         $list = self::toIntPkr($listPrice);
         $min = self::toIntPkr($minAllowedPrice);
@@ -44,9 +45,31 @@ final class ConcessionStepCalculator
         $maxStepFrac = (float) config('bargain.counter.concession.max_step_fraction_of_gap', 0.35);
         $randomness = (float) config('bargain.counter.concession.randomness', 0.18);
 
+        if ($context !== null) {
+            $resRatio = max(0, min(100, $context->resistanceScore)) / 100.0;
+            $scale = 1.0 - ($resRatio * (float) config('bargain.resistance.max_step_frac_resistance_scale', 0.55));
+            $maxStepFrac *= max(0.12, $scale);
+
+            $cc = max(0, $context->concessionCount);
+            $w = (float) config('bargain.resistance.concession_count_curve_weight', 0.05);
+            $stub = $context->stubbornCustomerMode ? 0.08 : 0.0;
+            $streak = max(0, $context->sameOfferStreakAtEnd - 1) * 0.02;
+            $progressBoost = min(0.35, $cc * $w + $stub + $streak);
+
+            if ($context->integrityFloorPkr !== null && $context->integrityFloorPkr !== '') {
+                $ifloor = self::toIntPkr($context->integrityFloorPkr);
+                $gfi = max(0, $prev - $ifloor);
+                if ($gfi > 0 && $gfi < 450) {
+                    $maxStepFrac *= 0.4;
+                }
+            }
+        } else {
+            $progressBoost = 0.0;
+        }
+
         $totalRoom = max(1, $list - $min);
         $progress = 1.0 - ($gap / $totalRoom); // 0 early; -> 1 near floor
-        $progress = max(0.0, min(1.0, $progress));
+        $progress = max(0.0, min(1.0, $progress + $progressBoost));
 
         $fracHigh = 0.22;
         $fracLow = 0.06;
@@ -56,7 +79,7 @@ final class ConcessionStepCalculator
         $maxStep = (int) floor($gap * $maxStepFrac);
         $step = self::clampInt($stepFromGap, $minStep, max($minStep, $maxStep));
 
-        $rng = new \App\Domain\Bargain\SeededRng($seedMaterial);
+        $rng = new SeededRng($seedMaterial);
         $r = $rng->float01(); // [0,1)
         $jitter = 1.0 + ((($r * 2.0) - 1.0) * $randomness);
         $step = (int) round($step * $jitter);
@@ -129,4 +152,3 @@ final class ConcessionStepCalculator
         return $c;
     }
 }
-

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UpdateStorefrontAssistantSettingsRequest;
+use App\Models\SizeChart;
 use App\Models\StorefrontAssistantSetting;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -16,6 +17,12 @@ class StorefrontAssistantSettingsAdminController extends Controller
         $s = StorefrontAssistantSetting::current();
 
         return Inertia::render('Admin/StorefrontAssistant/Settings', [
+            'sizeCharts' => SizeChart::query()
+                ->orderBy('name')
+                ->get(['id', 'name'])
+                ->map(fn ($c) => ['id' => $c->id, 'name' => $c->name])
+                ->values()
+                ->all(),
             'settings' => [
                 'enabled' => (bool) $s->enabled,
                 'preview_enabled' => (bool) $s->preview_enabled,
@@ -50,4 +57,3 @@ class StorefrontAssistantSettingsAdminController extends Controller
         return redirect()->route('admin.storefront-assistant.edit')->with('status', 'Storefront Assistant settings saved.');
     }
 }
-

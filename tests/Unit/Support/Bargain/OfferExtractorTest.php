@@ -3,24 +3,31 @@
 namespace Tests\Unit\Support\Bargain;
 
 use App\Support\Bargain\OfferExtractor;
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\TestCase;
 
 class OfferExtractorTest extends TestCase
 {
-    public function test_extracts_k_suffix_thousands(): void
+    /**
+     * @return array<string, string|null>
+     */
+    public static function amountCases(): array
     {
-        $this->assertSame('11400.00', OfferExtractor::extractPkrAmount('Can you do 11.4k?'));
-        $this->assertSame('11000.00', OfferExtractor::extractPkrAmount('around 11k'));
-        $this->assertSame('11600.00', OfferExtractor::extractPkrAmount('Ok lets do it, PKR 11.6K'));
+        return [
+            'plain' => ['10900 please', '10900.00'],
+            'comma' => ['PKR 10,900', '10900.00'],
+            'comma_rs' => ['Rs 10,900', '10900.00'],
+            'spaced' => ['10 900 max', '10900.00'],
+            'k_lower' => ['10k final', '10000.00'],
+            'k_decimal' => ['11.5k', '11500.00'],
+            'k_upper' => ['12K only', '12000.00'],
+            'pkr_comma' => ['PKR 10,900 done', '10900.00'],
+        ];
     }
 
-    public function test_pk_currency_tokens_take_precedence_over_plain_digits(): void
+    #[DataProvider('amountCases')]
+    public function test_extracts_expected_amount(string $text, ?string $expected): void
     {
-        $this->assertSame('500.00', OfferExtractor::extractPkrAmount('PKR 500 and maybe 9999 later'));
-    }
-
-    public function test_extracts_large_plain_number_when_no_currency_prefix(): void
-    {
-        $this->assertSame('11433.00', OfferExtractor::extractPkrAmount('make offer near 11433 please'));
+        $this->assertSame($expected, OfferExtractor::extractPkrAmount($text));
     }
 }

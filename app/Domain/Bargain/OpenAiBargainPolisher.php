@@ -20,7 +20,7 @@ final class OpenAiBargainPolisher
     /**
      * @param  array<int, array{role:string, body:string}>  $contextMessages  Ordered oldest -> newest
      * @param  array<string, mixed>  $facts
-     * @param  'roman_urdu'|'english'  $languageHint
+     * @param  'roman_urdu'|'english'|'mixed'  $languageHint
      */
     public function polishShopkeeperWithContext(
         string $draftText,
@@ -46,20 +46,25 @@ final class OpenAiBargainPolisher
         $maxTokens = (int) config('bargain.ai.max_tokens', 180);
 
         $system = implode("\n", [
-            'You write messages for a shoe shop in Pakistan speaking to customers online.',
+            'You write short chat replies as a Pakistani online shoe seller (WhatsApp / website chat vibe).',
             'You will receive conversation CONTEXT and a DRAFT shopkeeper message.',
-            'Rewrite it so it feels warm, clear, and like a real salesperson.',
-            'Do NOT copy the draft sentence-for-sentence — vary openings and structure.',
-            'Keep it short and to the point.',
-            'Mirror language: if the customer uses Roman Urdu, reply in Roman Urdu; otherwise Pakistani English.',
-            'If the customer tone is casual, reply casually but respectfully (never rude).',
-            'Avoid robotic filler: do not over-thank, do not over-apologize, do not repeat greetings.',
-            'Do not repeat the same price lines again and again if they already appear in CONTEXT; only restate a PKR amount when it improves clarity or the customer asks.',
-            'If you mention the item, do it naturally (e.g. “is pair”, “ye color/variant”) and only sometimes — don’t force it every message.',
-            'When negotiating, you can add ONE short value/emotion line sometimes (comfort, quality, style) to justify a small increase — keep it believable and brief.',
-            'Keep ALL PKR amounts EXACTLY as written (same digits and decimals). Do not invent prices.',
-            'Never mention minimum prices, margins, floors, discount caps, bottom dollar, or internal limits — customers must never infer the lowest allowed price.',
-            'Do not ask for the “lowest” price or sound desperate; anchor politely to the listed amount when relevant.',
+            'Rewrite the draft in the same meaning. Do NOT copy it sentence-for-sentence — change openings, clause order, and rhythm.',
+            'Never use the same opening grammatical pattern as the assistant’s immediately previous message in CONTEXT (if any).',
+            'If the customer message is ultra-short, you may reply in one or two very short lines.',
+            'Mirror energy: calm customer → calm; hype/casual → casual; blunt → slightly blunt but never rude.',
+            'Language:',
+            '- Language hint "roman_urdu": mostly Roman Urdu (Latin script), natural Karachi/Lahore ecommerce tone.',
+            '- "english": clear Pakistani English.',
+            '- "mixed": blend naturally; keep customer’s English phrases if they mixed; sprinkle Roman Urdu, don’t force 100% Urdu.',
+            'Tone: human stall/shopkeeper — not corporate support, not polished “sales AI”.',
+            'Banned phrases (never use, even paraphrased closely): "great investment", "great news", "secured for you", "happy shopping".',
+            'Avoid: "I understand your budget", "The best I can do is", "Considering the listed price" unless CONTEXT already uses them (prefer fresh angles).',
+            'Sometimes use ultra-short closers near a deal (examples only, do not always use): "Chalein done karte hain", "Aap close hain", "Itna kar deta hun", "Isi pe final kar dein".',
+            'Do not over-thank, over-apologize, or repeat salaams if CONTEXT already greeted.',
+            'Do not repeat identical PKR lines from CONTEXT unless the customer needs clarity.',
+            'If you mention the product, keep it natural ("is pair", "ye color") and optional.',
+            'Keep ALL PKR amounts EXACTLY as in the draft (same digits and two decimals). Do not invent or round new prices.',
+            'Never mention minimum prices, margins, floors, discount caps, or internal limits.',
             'Keep under ~55 words. Plain text only (no markdown, no bullets).',
         ]);
 
@@ -185,7 +190,7 @@ final class OpenAiBargainPolisher
     /**
      * @param  array<int, array{role:string, body:string}>  $contextMessages
      * @param  array<string, mixed>  $facts
-     * @param  'roman_urdu'|'english'  $languageHint
+     * @param  'roman_urdu'|'english'|'mixed'  $languageHint
      */
     private function buildUserPrompt(array $contextMessages, array $facts, string $draftText, string $languageHint): string
     {
@@ -222,6 +227,33 @@ final class OpenAiBargainPolisher
         $lines[] = '- Variant label: '.(is_string($vLabel) && trim($vLabel) !== '' ? trim($vLabel) : '(unknown)');
         $lines[] = '- Color name: '.(is_string($cName) && trim($cName) !== '' ? trim($cName) : '(unknown)');
         $lines[] = '- Language hint: '.$languageHint;
+
+        if (isset($facts['negotiation_stage'])) {
+            $lines[] = '- Negotiation stage: '.(string) $facts['negotiation_stage'];
+        }
+        if (isset($facts['tone_style'])) {
+            $lines[] = '- Tone target: '.(string) $facts['tone_style'];
+        }
+        if (isset($facts['customer_seriousness'])) {
+            $lines[] = '- Customer seriousness: '.(string) $facts['customer_seriousness'];
+        }
+        if (isset($facts['repetition_level'])) {
+            $lines[] = '- Repetition level (0=low): '.(string) $facts['repetition_level'];
+        }
+        if (isset($facts['close_probability'])) {
+            $lines[] = '- Close probability (heuristic): '.(string) $facts['close_probability'];
+        }
+        if (isset($facts['customer_intent'])) {
+            $lines[] = '- Detected customer intent: '.(string) $facts['customer_intent'];
+        }
+        if (isset($facts['intent_confidence'])) {
+            $lines[] = '- Intent confidence: '.(string) $facts['intent_confidence'];
+        }
+        $avoid = $facts['assistant_avoid_snippets'] ?? '';
+        if (is_string($avoid) && trim($avoid) !== '') {
+            $lines[] = '- Avoid opening/closing similar to recent assistant lines: '.$avoid;
+        }
+
         $lines[] = '';
         $lines[] = 'DRAFT (rewrite this; keep PKR amounts exactly):';
         $lines[] = $draftText;

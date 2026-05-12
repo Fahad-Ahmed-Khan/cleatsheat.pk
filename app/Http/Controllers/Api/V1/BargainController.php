@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Domain\Bargain\BargainEngine;
+use App\Enums\BargainSessionState;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\BargainAcceptRequest;
 use App\Http\Requests\Api\V1\BargainDeclineRequest;
@@ -10,7 +11,6 @@ use App\Http\Requests\Api\V1\BargainMessageRequest;
 use App\Http\Requests\Api\V1\StartBargainSessionRequest;
 use App\Models\BargainMessage;
 use App\Models\BargainSession;
-use App\Models\User;
 use App\Support\Api\ApiResponder;
 use App\Support\Api\SanctumBearerUser;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -66,7 +66,10 @@ class BargainController extends Controller
 
             return ApiResponder::ok([
                 'assistant_message' => $this->serializeMessage($assistant),
-                'session' => $this->serializeSession($session, includeCheckoutToken: false),
+                'session' => $this->serializeSession(
+                    $session,
+                    includeCheckoutToken: $session->state === BargainSessionState::Accepted,
+                ),
             ]);
         } catch (\InvalidArgumentException $e) {
             return ApiResponder::error($e->getMessage(), 422, code: 'bargain_invalid');

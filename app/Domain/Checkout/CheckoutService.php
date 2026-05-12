@@ -8,6 +8,7 @@ use App\Domain\Payments\PaymentCoordinator;
 use App\Domain\Shipping\CourierDispatchService;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
+use App\Events\OrderCreated;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -17,7 +18,6 @@ use App\Models\ProductVariant;
 use App\Models\ShippingSetting;
 use App\Models\User;
 use App\Models\VariantSize;
-use App\Events\OrderCreated;
 use App\Support\Bargain\PhoneNormalizer;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -162,11 +162,7 @@ class CheckoutService
             $variantIds = $cart->items->pluck('product_variant_id')->unique()->values()->all();
 
             $normalizedPhone = PhoneNormalizer::normalize((string) ($address['phone'] ?? ''));
-            if ($user !== null) {
-                $this->priceLocks->consumeLocksForCheckout($user, null, $variantIds);
-            } elseif ($normalizedPhone !== null) {
-                $this->priceLocks->consumeLocksForCheckout(null, $normalizedPhone, $variantIds);
-            }
+            $this->priceLocks->consumeLocksForCheckout($user, $normalizedPhone, $variantIds);
 
             $cart->items()->delete();
 

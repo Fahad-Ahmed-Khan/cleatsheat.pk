@@ -1,5 +1,6 @@
 import { onMounted, ref, watch } from 'vue';
 import { usePage } from '@inertiajs/vue3';
+import { toastError, toastSuccess } from './swalToast';
 
 export function useFlash() {
     const page = usePage();
@@ -16,12 +17,12 @@ export function useFlash() {
 
     function consumeFlashProps() {
         const flash = page.props.flash || {};
-        if (flash.success) pushToast({ message: flash.success, variant: 'success' });
-        if (flash.error) pushToast({ message: flash.error, variant: 'danger' });
-        if (flash.status) pushToast({ message: flash.status, variant: 'info' });
+        if (flash.success) toastSuccess(flash.success);
+        if (flash.error) toastError(flash.error);
+        if (flash.status) toastSuccess(flash.status);
 
         // Existing app already shares this key (used for checkout); keep compatible.
-        if (page.props.flashPaymentError) pushToast({ message: page.props.flashPaymentError, variant: 'danger' });
+        if (page.props.flashPaymentError) toastError(page.props.flashPaymentError);
     }
 
     onMounted(() => {

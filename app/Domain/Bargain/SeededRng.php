@@ -5,6 +5,7 @@ namespace App\Domain\Bargain;
 final class SeededRng
 {
     private int $stateLo;
+
     private int $stateHi;
 
     public function __construct(string $seedMaterial)
@@ -54,4 +55,3 @@ final class SeededRng
         return $t;
     }
 }
-

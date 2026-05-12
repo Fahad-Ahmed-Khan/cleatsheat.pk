@@ -101,6 +101,11 @@ class HandleInertiaRequests extends Middleware
 
         return [
             ...parent::share($request),
+            'flash' => [
+                'success' => $request->session()->get('success'),
+                'error' => $request->session()->get('error'),
+                'status' => $request->session()->get('status'),
+            ],
             'bargainEnabled' => (bool) config('bargain.enabled', true),
             'marketing' => $marketing,
             'storefrontAssistant' => $storefrontAssistant,

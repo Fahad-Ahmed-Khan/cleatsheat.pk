@@ -23,6 +23,7 @@ class CartController extends Controller
     public function index(Request $request, SeoPresenter $seo): Response
     {
         $cartModel = $this->cart->getOrCreateCart($request->user(), $request);
+        $this->cart->revertStaleBargainLines($cartModel);
         $cartModel->load(['items.variant.product.images', 'items.variant.color']);
 
         $lines = $cartModel->items->map(function (CartItem $item) {
