@@ -12,21 +12,21 @@ const emit = defineEmits(['close']);
         <Transition name="store-fade">
             <div
                 v-if="open"
-                :class="['fixed inset-0 flex flex-col justify-end bg-stone-900/50 backdrop-blur-[2px]', zClass]"
+                :class="['fixed inset-0 flex flex-col justify-end bg-stadium-ink/50 backdrop-blur-[2px]', zClass]"
                 @click.self="emit('close')"
             >
                 <Transition name="store-slide">
                     <div
                         v-if="open"
-                        class="max-h-[min(90vh,720px)] w-full overflow-y-auto rounded-t-3xl bg-white shadow-2xl"
+                        class="max-h-[min(90vh,720px)] w-full overflow-y-auto rounded-t-3xl bg-stadium-white shadow-2xl"
                         role="dialog"
                         aria-modal="true"
                     >
-                        <div class="sticky top-0 z-10 flex items-center justify-center bg-white/95 py-2 backdrop-blur-sm">
-                            <span class="h-1.5 w-10 rounded-full bg-stone-200" aria-hidden="true" />
+                        <div class="sticky top-0 z-10 flex items-center justify-center border-b border-stadium-outline-soft bg-stadium-white py-2">
+                            <span class="h-1.5 w-10 rounded-full bg-stadium-outline-soft" aria-hidden="true" />
                         </div>
                         <div class="px-4 pb-8 pt-1 sm:px-6">
-                            <h2 v-if="title" class="text-lg font-semibold tracking-tight text-stone-900">
+                            <h2 v-if="title" class="font-display text-lg font-bold tracking-tight text-stadium-ink">
                                 {{ title }}
                             </h2>
                             <slot />

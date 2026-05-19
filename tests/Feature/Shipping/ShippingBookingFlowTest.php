@@ -3,9 +3,13 @@
 namespace Tests\Feature\Shipping;
 
 use App\Domain\Shipping\ShipmentBookingService;
+use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
 use App\Enums\ShipmentStatus;
+use App\Jobs\BookShipmentJob;
 use App\Models\Courier;
 use App\Models\Order;
+use App\Models\ProductVariant;
 use App\Models\Shipment;
 use Database\Seeders\DemoCatalogSeeder;
 use Database\Seeders\ShippingCourierSeeder;
@@ -22,7 +26,7 @@ class ShippingBookingFlowTest extends TestCase
         $this->seed(ShippingCourierSeeder::class);
         $this->seed(DemoCatalogSeeder::class);
 
-        $variant = \App\Models\ProductVariant::query()->where('sku', 'URB-BLK-001')->firstOrFail();
+        $variant = ProductVariant::query()->where('sku', 'URB-BLK-001')->firstOrFail();
 
         $this->post(route('store.cart.add'), [
             'product_variant_id' => $variant->id,
@@ -55,8 +59,8 @@ class ShippingBookingFlowTest extends TestCase
         $order = Order::query()->create([
             'order_number' => 'TR-BK-01',
             'guest_email' => 'x@y.com',
-            'status' => \App\Enums\OrderStatus::Processing,
-            'payment_status' => \App\Enums\PaymentStatus::Pending,
+            'status' => OrderStatus::Processing,
+            'payment_status' => PaymentStatus::Pending,
             'payment_gateway' => 'cod',
             'subtotal' => '100',
             'discount_total' => '0',
@@ -90,8 +94,8 @@ class ShippingBookingFlowTest extends TestCase
         $order = Order::query()->create([
             'order_number' => 'TR-JOB-01',
             'guest_email' => 'x@y.com',
-            'status' => \App\Enums\OrderStatus::Processing,
-            'payment_status' => \App\Enums\PaymentStatus::Pending,
+            'status' => OrderStatus::Processing,
+            'payment_status' => PaymentStatus::Pending,
             'payment_gateway' => 'cod',
             'subtotal' => '100',
             'discount_total' => '0',
@@ -109,9 +113,47 @@ class ShippingBookingFlowTest extends TestCase
             'receiver_snapshot' => ['city' => 'Islamabad'],
         ]);
 
-        Bus::dispatchSync(new \App\Jobs\BookShipmentJob($shipment->id));
+        Bus::dispatchSync(new BookShipmentJob($shipment->id));
 
         $this->assertEquals(ShipmentStatus::Booked, $shipment->fresh()->status);
+    }
+
+    public function test_book_shipment_job_marks_failed_without_exception_when_courier_account_missing(): void
+    {
+        config(['shipping.sandbox' => false]);
+        $this->seed(ShippingCourierSeeder::class);
+
+        $postex = Courier::query()->where('code', 'postex')->firstOrFail();
+
+        $order = Order::query()->create([
+            'order_number' => 'TR-JOB-NO-ACC',
+            'guest_email' => 'x@y.com',
+            'status' => OrderStatus::Processing,
+            'payment_status' => PaymentStatus::Pending,
+            'payment_gateway' => 'cod',
+            'subtotal' => '100',
+            'discount_total' => '0',
+            'shipping_total' => '200',
+            'cod_fee' => '0',
+            'grand_total' => '300',
+            'shipping_address_snapshot' => ['full_name' => 'A', 'phone' => '1', 'line1' => 'L', 'city' => 'Islamabad'],
+            'preferred_courier_id' => $postex->id,
+            'courier_assignment' => 'auto',
+        ]);
+
+        $shipment = Shipment::query()->create([
+            'order_id' => $order->id,
+            'courier_id' => $postex->id,
+            'courier_account_id' => null,
+            'status' => ShipmentStatus::Pending,
+            'receiver_snapshot' => ['city' => 'Islamabad'],
+        ]);
+
+        Bus::dispatchSync(new BookShipmentJob($shipment->id));
+
+        $fresh = $shipment->fresh();
+        $this->assertEquals(ShipmentStatus::Failed, $fresh->status);
+        $this->assertStringContainsString('No active API account', (string) ($fresh->meta['booking_error'] ?? ''));
     }
 
     public function test_shipping_webhook_endpoint_returns_ok(): void

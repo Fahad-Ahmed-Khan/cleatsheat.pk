@@ -1,7 +1,8 @@
 <script setup>
-import { computed, reactive, watch } from 'vue';
+import { computed, reactive, watch, ref } from 'vue';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
+import AdminPageHeader from '@/Components/Admin/AdminPageHeader.vue';
 import DataTable from '@/Components/Admin/DataTable.vue';
 import StatusBadge from '@/Components/Admin/StatusBadge.vue';
 
@@ -170,20 +171,106 @@ async function ensureVariantsLoaded(productId) {
     }
 }
 
-async function toggleRow(productId, e) {
+function toggleRow(productId, e) {
     if (stopRowToggle(e)) return;
     if (expanded.has(productId)) {
         expanded.delete(productId);
-        return;
+    } else {
+        expanded.add(productId);
+        void ensureVariantsLoaded(productId);
     }
-    expanded.add(productId);
-    await ensureVariantsLoaded(productId);
+}
+
+const importFileRef = ref(null);
+
+function buildExportQueryParams() {
+    const p = new URLSearchParams();
+    if (state.search.trim()) p.set('search', state.search.trim());
+    if (state.brand_id) p.set('brand_id', String(state.brand_id));
+    if (state.category_id) p.set('category_id', String(state.category_id));
+    if (state.status) p.set('status', String(state.status));
+    if (state.stock) p.set('stock', String(state.stock));
+    if (state.color_id) p.set('color_id', String(state.color_id));
+    if (state.size) p.set('size', String(state.size));
+    if (state.price_min) p.set('price_min', String(state.price_min));
+    if (state.price_max) p.set('price_max', String(state.price_max));
+    return p;
+}
+
+function downloadExport(format) {
+    const p = buildExportQueryParams();
+    p.set('format', format);
+    window.location.href = `${route('admin.products.export')}?${p.toString()}`;
+}
+
+function openImportPicker() {
+    importFileRef.value?.click();
+}
+
+function onImportFileChange(e) {
+    const input = e.target;
+    const file = input?.files?.[0];
+    if (!file) return;
+    const fd = new FormData();
+    fd.append('file', file);
+    router.post(route('admin.products.import'), fd, {
+        forceFormData: true,
+        preserveScroll: true,
+        onFinish: () => {
+            input.value = '';
+        },
+    });
 }
 </script>
 
 <template>
     <Head title="Admin — Products" />
     <AdminLayout>
+        <AdminPageHeader
+            title="Products"
+            subtitle="Import or export a flat spreadsheet (CSV or Excel). Current list filters apply to exports."
+            :breadcrumbs="[{ label: 'Admin', href: route('admin.dashboard') }, { label: 'Products' }]"
+        >
+            <template #actions>
+                <div class="btn-group">
+                    <button
+                        type="button"
+                        class="btn btn-label-secondary dropdown-toggle"
+                        data-bs-toggle="dropdown"
+                        aria-expanded="false"
+                    >
+                        <i class="icon-base ti tabler-download icon-xs me-1"></i>
+                        Export
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <button class="dropdown-item" type="button" @click="() => downloadExport('csv')">CSV</button>
+                        </li>
+                        <li>
+                            <button class="dropdown-item" type="button" @click="() => downloadExport('xlsx')">
+                                Excel (.xlsx)
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+                <input
+                    ref="importFileRef"
+                    type="file"
+                    class="d-none"
+                    accept=".csv,.txt,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                    @change="onImportFileChange"
+                />
+                <button type="button" class="btn btn-label-secondary" @click="openImportPicker">
+                    <i class="icon-base ti tabler-upload icon-xs me-1"></i>
+                    Import
+                </button>
+                <Link class="btn btn-primary" :href="route('admin.products.create')">
+                    <i class="icon-base ti tabler-plus icon-xs me-1"></i>
+                    Add Product
+                </Link>
+            </template>
+        </AdminPageHeader>
+
         <!-- KPI cards (theme-style) -->
         <div class="row g-3 mb-4">
             <div class="col-12 col-md-4">
@@ -303,16 +390,6 @@ async function toggleRow(productId, e) {
                                 <option value="50">50</option>
                                 <option value="100">100</option>
                             </select>
-
-                            <button type="button" class="btn btn-label-secondary" disabled>
-                                <i class="icon-base ti tabler-upload icon-xs me-1"></i>
-                                Export
-                            </button>
-
-                            <Link class="btn btn-primary" :href="route('admin.products.create')">
-                                <i class="icon-base ti tabler-plus icon-xs me-1"></i>
-                                Add Product
-                            </Link>
 
                             <button v-if="hasAnyFilter" type="button" class="btn btn-label-secondary" @click="clearFilters">
                                 <i class="icon-base ti tabler-x icon-18px me-1"></i>

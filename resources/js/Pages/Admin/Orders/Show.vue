@@ -6,6 +6,7 @@ import FormField from '@/Components/Admin/FormField.vue';
 import PaymentStatusText from '@/Components/Admin/PaymentStatusText.vue';
 import OrderStatusPill from '@/Components/Admin/OrderStatusPill.vue';
 import { confirmDanger, toastFromInertiaError, toastSuccess, toastError } from '@/admin/swalToast';
+import { useFocusTrap } from '@/admin/useFocusTrap';
 
 const props = defineProps({
     order: { type: Object, required: true },
@@ -38,11 +39,23 @@ const adminDiscountForm = useForm({
 });
 
 const returnModalOpen = ref(false);
+const returnDialogRef = ref(null);
+useFocusTrap(returnDialogRef, computed(() => returnModalOpen.value), () => { returnModalOpen.value = false; });
+
 const returnForm = useForm({
     reason: '',
     restock: true,
     items: (props.order.items ?? []).map((it) => ({ order_item_id: it.id, qty: 0 })),
 });
+
+const expandedPaymentMeta = ref(new Set());
+
+function toggleMeta(id) {
+    const next = new Set(expandedPaymentMeta.value);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    expandedPaymentMeta.value = next;
+}
 
 const selectedBookingCourier = computed(
     () => props.couriers.find((c) => c.id === bookingCourierId.value) ?? null,
@@ -72,10 +85,19 @@ function money(n) {
     }).format(n);
 }
 
-function bookOrder() {
+async function bookOrder() {
     if (bookingInFlight.value || !bookingCourierId.value) {
         return;
     }
+
+    const courierName = selectedBookingCourier.value?.name ?? 'selected courier';
+    const ok = await confirmDanger({
+        title: `Book shipment with ${courierName}?`,
+        text: `A BookShipmentJob will be queued for order ${props.order.order_number}. You can cancel from the courier dashboard after.`,
+        confirmText: `Yes, book with ${courierName}`,
+    });
+    if (!ok) return;
+
     bookingInFlight.value = true;
     router.post(
         route('admin.orders.shipment.book', props.order.id),
@@ -172,7 +194,34 @@ function itemSubtitle(it) {
     return bits.join(' · ');
 }
 
-function saveAdminDiscount() {
+function computeDiscountAmount() {
+    const type = adminDiscountForm.type;
+    const value = Number(adminDiscountForm.value || 0);
+    if (!value) return 0;
+    if (type === 'percent') {
+        const base = Number(props.order.subtotal || 0);
+        return Math.max(0, (base * value) / 100);
+    }
+    return Math.max(0, value);
+}
+
+async function saveAdminDiscount() {
+    const grand = Number(props.order.grand_total || 0);
+    const currentAdminDiscount = Number(props.order.admin_discount?.value
+        ? (props.order.admin_discount.type === 'percent'
+            ? (Number(props.order.subtotal || 0) * Number(props.order.admin_discount.value)) / 100
+            : props.order.admin_discount.value)
+        : 0);
+    const nextAdminDiscount = computeDiscountAmount();
+    const projected = Math.max(0, grand + currentAdminDiscount - nextAdminDiscount);
+
+    const ok = await confirmDanger({
+        title: 'Apply admin discount?',
+        text: `Current total: ${money(grand)} → projected: ${money(projected)}. Server will recompute exact totals on save.`,
+        confirmText: 'Yes, save discount',
+    });
+    if (!ok) return;
+
     adminDiscountForm.post(route('admin.orders.admin-discount.set', props.order.id), {
         preserveScroll: true,
         onSuccess: () => toastSuccess('Admin discount saved'),
@@ -187,12 +236,20 @@ function openReturnModal() {
     returnModalOpen.value = true;
 }
 
-function submitReturn() {
+async function submitReturn() {
     const picked = (returnForm.items || []).filter((x) => Number(x.qty || 0) > 0);
     if (!picked.length) {
         toastError('Select at least one item qty to return');
         return;
     }
+
+    const totalUnits = picked.reduce((sum, x) => sum + Number(x.qty || 0), 0);
+    const ok = await confirmDanger({
+        title: `Create return for ${totalUnits} unit(s)?`,
+        text: `Reason: "${(returnForm.reason || '').trim() || '(none)'}". Restock: ${returnForm.restock ? 'yes' : 'no'}. This updates inventory and order totals — it cannot be undone from this screen.`,
+        confirmText: 'Yes, create return',
+    });
+    if (!ok) return;
 
     returnForm.post(
         route('admin.orders.returns.store', props.order.id),
@@ -455,6 +512,13 @@ function printPackingSlip() {
                                     <div class="text-muted small mt-1 font-monospace">
                                         {{ s.tracking_number ?? 'No tracking yet' }}
                                     </div>
+                                    <div
+                                        v-if="s.meta?.booking_error"
+                                        class="alert alert-danger py-1 px-2 small mt-2 mb-0"
+                                        role="alert"
+                                    >
+                                        {{ s.meta.booking_error }}
+                                    </div>
                                     <div v-if="s.courier?.adapter === 'postex' && s.tracking_number" class="mt-1 d-flex flex-wrap gap-2">
                                         <a
                                             :href="route('admin.orders.shipment.postex.invoice', [order.id, s.id])"
@@ -474,6 +538,62 @@ function printPackingSlip() {
                                 </div>
                             </div>
                             <div v-else class="text-muted small">No shipment rows yet. Book above to create one.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-3">
+                    <div class="card-header py-2 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <h6 class="card-title m-0">Payments</h6>
+                        <span class="text-muted small">{{ (order.payments || []).length }} attempt(s)</span>
+                    </div>
+                    <div class="card-body pt-2 pb-2">
+                        <div v-if="(order.payments || []).length" class="table-responsive">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Gateway</th>
+                                        <th>Status</th>
+                                        <th class="text-end">Amount</th>
+                                        <th class="text-nowrap">External id</th>
+                                        <th class="text-nowrap">Paid at</th>
+                                        <th class="text-nowrap">Created</th>
+                                        <th class="text-end" style="width: 90px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template v-for="p in order.payments" :key="p.id">
+                                        <tr>
+                                            <td>
+                                                <span class="badge bg-label-secondary">{{ p.gateway ?? '—' }}</span>
+                                            </td>
+                                            <td><PaymentStatusText :status="p.status" /></td>
+                                            <td class="text-end fw-semibold">{{ money(Number(p.amount || 0)) }}</td>
+                                            <td class="text-nowrap font-monospace small">{{ p.external_id ?? '—' }}</td>
+                                            <td class="text-nowrap text-muted small">{{ p.paid_at ?? '—' }}</td>
+                                            <td class="text-nowrap text-muted small">{{ p.created_at ?? '—' }}</td>
+                                            <td class="text-end">
+                                                <button
+                                                    v-if="p.meta && Object.keys(p.meta).length"
+                                                    type="button"
+                                                    class="btn btn-sm btn-link p-0"
+                                                    @click="toggleMeta(p.id)"
+                                                >
+                                                    {{ expandedPaymentMeta.has(p.id) ? 'Hide' : 'Meta' }}
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr v-if="expandedPaymentMeta.has(p.id)">
+                                            <td colspan="7" class="bg-body-tertiary">
+                                                <pre class="small mb-0 text-body" style="white-space: pre-wrap; word-break: break-word;">{{ JSON.stringify(p.meta, null, 2) }}</pre>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div v-else class="text-muted small py-2">
+                            No payments recorded yet for this order.
                         </div>
                     </div>
                 </div>
@@ -655,11 +775,11 @@ function printPackingSlip() {
                 </div>
 
         <template v-if="returnModalOpen">
-            <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true">
+            <div ref="returnDialogRef" class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="returnModalTitle">
                 <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">Create return</h5>
+                            <h5 id="returnModalTitle" class="modal-title">Create return</h5>
                             <button type="button" class="btn-close" aria-label="Close" @click="returnModalOpen = false"></button>
                         </div>
                         <div class="modal-body">

@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Web\Admin;
 
-use App\Domain\Payments\PaymentStatusRecorder;
-use App\Domain\Admin\Orders\OrderPrintService;
 use App\Domain\Admin\Orders\OrderAuditLogger;
+use App\Domain\Admin\Orders\OrderPrintService;
+use App\Domain\Payments\PaymentStatusRecorder;
 use App\Domain\Shipping\CourierDispatchService;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
@@ -15,12 +15,14 @@ use App\Http\Requests\Admin\BulkPrintLabelsRequest;
 use App\Http\Requests\Admin\BulkPrintPackingSlipsRequest;
 use App\Http\Requests\Admin\BulkSyncTrackingRequest;
 use App\Http\Requests\Admin\BulkUpdateOrderStatusRequest;
+use App\Http\Requests\Admin\BulkUpdatePaymentStatusRequest;
 use App\Jobs\BookShipmentJob;
 use App\Jobs\SyncShipmentTrackingJob;
 use App\Models\Courier;
 use App\Models\Order;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response as HttpResponse;
+use Illuminate\Support\Collection;
 
 class OrderBulkAdminController extends Controller
 {
@@ -51,7 +53,7 @@ class OrderBulkAdminController extends Controller
         $booked = 0;
         $skipped = [];
 
-        /** @var \Illuminate\Support\Collection<int, Order> $orders */
+        /** @var Collection<int, Order> $orders */
         $orders = Order::query()
             ->whereIn('id', $orderIds)
             ->with(['shipments'])
@@ -70,6 +72,7 @@ class OrderBulkAdminController extends Controller
                     'order_id' => $order->id,
                     'reason' => 'Missing shipping fields: '.implode(', ', $missing),
                 ];
+
                 continue;
             }
 
@@ -82,6 +85,7 @@ class OrderBulkAdminController extends Controller
                     'order_id' => $order->id,
                     'reason' => 'No active courier available (configure a default courier or set manual courier).',
                 ];
+
                 continue;
             }
 
@@ -95,10 +99,20 @@ class OrderBulkAdminController extends Controller
                     'order_id' => $order->id,
                     'reason' => 'Resolved courier is not active.',
                 ];
+
                 continue;
             }
 
             $shipment = $this->dispatch->ensurePendingShipmentWithCourier($order, $courier);
+            if ($courier->adapter !== 'generic' && $courier->adapter !== '' && $shipment->courier_account_id === null) {
+                $skipped[] = [
+                    'order_id' => $order->id,
+                    'reason' => 'No API account for '.$courier->name.' (for COD, enable COD on the courier account in Shipping settings).',
+                ];
+
+                continue;
+            }
+
             BookShipmentJob::dispatch($shipment->id);
             $booked++;
         }
@@ -150,61 +164,105 @@ class OrderBulkAdminController extends Controller
         $data = $request->validated();
 
         $orderIds = $data['order_ids'];
-        $toStatus = $data['status'] ?? null;
-        $toPaymentStatus = $data['payment_status'] ?? null;
+        $toStatus = OrderStatus::from($data['status']);
 
         $updated = 0;
         $orders = Order::query()->whereIn('id', $orderIds)->get();
 
         foreach ($orders as $order) {
-            $changes = [];
-            $changed = false;
-
-            if ($toStatus !== null) {
-                $enum = OrderStatus::from($toStatus);
-                if ($order->status !== $enum) {
-                    $changes['status'] = ['from' => $order->status->value, 'to' => $enum->value];
-                    $order->status = $enum;
-                    $changed = true;
-                }
+            if ($order->status === $toStatus) {
+                continue;
             }
 
-            if ($toPaymentStatus !== null) {
-                $enumPay = PaymentStatus::from($toPaymentStatus);
-                if ($order->payment_status !== $enumPay) {
-                    $changes['payment_status'] = ['from' => $order->payment_status->value, 'to' => $enumPay->value];
-                    $this->paymentStatusRecorder->transitionOrderPayment(
-                        $order,
-                        $enumPay,
-                        'admin_bulk',
-                        payment: null,
-                        message: 'Admin bulk update',
-                        meta: ['order_id' => $order->id],
-                        force: true,
-                    );
-                    $changed = true;
-                }
-            }
+            $changes = ['status' => ['from' => $order->status->value, 'to' => $toStatus->value]];
+            $order->status = $toStatus;
+            $order->save();
 
-            if ($changed) {
-                $order->save();
-                $this->audit->log(
-                    $order,
-                    'bulk_status_update',
-                    $request->user(),
-                    $changes,
-                    [
-                        'payload' => [
-                            'status' => $toStatus,
-                            'payment_status' => $toPaymentStatus,
-                        ],
-                    ],
-                );
-                $updated++;
-            }
+            $this->audit->log(
+                $order,
+                'bulk_status_update',
+                $request->user(),
+                $changes,
+                ['payload' => ['status' => $toStatus->value]],
+            );
+            $updated++;
         }
 
         return back()->with('status', "Updated {$updated} order(s).");
+    }
+
+    /**
+     * Bulk-transition payment_status with explicit guardrails for destructive moves.
+     *
+     * - Non-destructive transitions (pending / failed) flow through PaymentStatusRecorder
+     *   without `force` so duplicate writes are no-ops.
+     * - Destructive transitions (paid / refunded / canceled) require `override=true` and
+     *   a non-empty `reason`; both are recorded in the payment history `meta` and the
+     *   order audit log to keep reconciliation evidence intact.
+     */
+    public function updatePaymentStatus(BulkUpdatePaymentStatusRequest $request): RedirectResponse
+    {
+        $data = $request->validated();
+
+        $orderIds = $data['order_ids'];
+        $toPaymentStatus = PaymentStatus::from($data['payment_status']);
+        $override = (bool) ($data['override'] ?? false);
+        $reason = trim((string) ($data['reason'] ?? ''));
+        $isDestructive = in_array(
+            $toPaymentStatus->value,
+            BulkUpdatePaymentStatusRequest::DESTRUCTIVE_TRANSITIONS,
+            true,
+        );
+
+        $updated = 0;
+        $orders = Order::query()->whereIn('id', $orderIds)->get();
+
+        foreach ($orders as $order) {
+            if ($order->payment_status === $toPaymentStatus) {
+                continue;
+            }
+
+            $changes = [
+                'payment_status' => [
+                    'from' => $order->payment_status->value,
+                    'to' => $toPaymentStatus->value,
+                ],
+            ];
+
+            $this->paymentStatusRecorder->transitionOrderPayment(
+                $order,
+                $toPaymentStatus,
+                'admin_bulk',
+                payment: null,
+                message: $reason !== '' ? $reason : 'Admin bulk payment update',
+                meta: [
+                    'order_id' => $order->id,
+                    'override' => $isDestructive ? $override : false,
+                    'reason' => $reason,
+                    'actor_user_id' => $request->user()?->id,
+                ],
+                force: $isDestructive ? $override : false,
+            );
+
+            $order->save();
+
+            $this->audit->log(
+                $order,
+                'bulk_payment_status_update',
+                $request->user(),
+                $changes,
+                [
+                    'payload' => [
+                        'payment_status' => $toPaymentStatus->value,
+                        'override' => $isDestructive ? $override : false,
+                        'reason' => $reason,
+                    ],
+                ],
+            );
+            $updated++;
+        }
+
+        return back()->with('status', "Updated payment status on {$updated} order(s).");
     }
 
     /**
@@ -228,7 +286,7 @@ class OrderBulkAdminController extends Controller
     public function printPackingSlips(BulkPrintPackingSlipsRequest $request): HttpResponse
     {
         $data = $request->validated();
+
         return $this->print->packingSlipsPdf($data['order_ids']);
     }
 }
-

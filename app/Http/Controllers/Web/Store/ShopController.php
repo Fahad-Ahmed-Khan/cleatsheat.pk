@@ -54,6 +54,7 @@ class ShopController extends Controller
                     'hex' => $c->hex,
                 ])->values()->all(),
                 'sizes' => $options['sizes'],
+                'sizes_uk' => $options['sizes_uk'] ?? [],
                 'genders' => $options['genders'],
                 'categories' => $options['categories']->map(fn ($cat) => [
                     'id' => $cat->id,

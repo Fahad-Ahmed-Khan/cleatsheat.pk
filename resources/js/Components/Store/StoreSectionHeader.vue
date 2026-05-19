@@ -6,16 +6,16 @@ defineProps({
 </script>
 
 <template>
-    <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-            <h2 class="text-lg font-semibold tracking-tight text-stone-900 sm:text-xl">
+            <h2 class="font-display text-2xl font-bold tracking-tight text-stadium-ink sm:text-[28px] lg:text-[32px]">
                 {{ title }}
             </h2>
-            <p v-if="subtitle" class="mt-1 max-w-xl text-sm text-stone-500">
+            <p v-if="subtitle" class="mt-1 max-w-xl text-base leading-relaxed text-stadium-secondary">
                 {{ subtitle }}
             </p>
         </div>
-        <div v-if="$slots.action" class="mt-2 shrink-0 sm:mt-0">
+        <div v-if="$slots.action" class="mt-1 shrink-0 sm:mt-0">
             <slot name="action" />
         </div>
     </div>

@@ -6,9 +6,10 @@ use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\ProductVariant;
 use App\Models\VariantSize;
+use Illuminate\Filesystem\FilesystemAdapter;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Http\UploadedFile;
 
 class ProductManagementService
 {
@@ -78,7 +79,7 @@ class ProductManagementService
         // If an uploaded video file is provided, store it and use its public URL as video_url.
         $videoFile = $data['video_file'] ?? null;
         if ($videoFile instanceof UploadedFile) {
-            /** @var \Illuminate\Filesystem\FilesystemAdapter $disk */
+            /** @var FilesystemAdapter $disk */
             $disk = Storage::disk('public');
             $stored = $disk->putFile('products/videos', $videoFile);
             $attrs['video_url'] = $disk->url($stored);
@@ -106,7 +107,7 @@ class ProductManagementService
             $file = $row['file'] ?? null;
 
             if ($file instanceof UploadedFile) {
-                /** @var \Illuminate\Filesystem\FilesystemAdapter $disk */
+                /** @var FilesystemAdapter $disk */
                 $disk = Storage::disk('public');
                 $stored = $disk->putFile('products', $file);
                 $path = $disk->url($stored);
@@ -137,6 +138,9 @@ class ProductManagementService
                 'sku' => $variantRow['sku'],
                 'price' => $variantRow['price'],
                 'compare_at_price' => $variantRow['compare_at_price'] ?? null,
+                'bargain_enabled' => $variantRow['bargain_enabled'] ?? false,
+                'bargain_min_price' => $variantRow['bargain_min_price'] ?? null,
+                'bargain_max_discount_percent' => $variantRow['bargain_max_discount_percent'] ?? null,
                 'is_active' => $variantRow['is_active'] ?? true,
             ]);
 

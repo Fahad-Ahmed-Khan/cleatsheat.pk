@@ -13,6 +13,10 @@ const props = defineProps({
     /** Variant allows bargaining */
     variantBargainEnabled: { type: Boolean, default: false },
     colorName: { type: String, default: '' },
+    /** Hide floating FAB on small screens (e.g. PDP uses sticky-bar bargain control). */
+    hideMobileFab: { type: Boolean, default: false },
+    /** Raise FAB above a second sticky action bar (product page). */
+    stackAboveActionBar: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['locked', 'cleared']);
@@ -379,7 +383,12 @@ watch(
         <Teleport to="body">
             <div
                 v-if="canNegotiate"
-                class="fixed right-4 z-[70] flex flex-col-reverse items-end gap-2 max-sm:bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:bottom-4"
+                class="fixed z-[70] flex flex-col-reverse gap-2 max-sm:left-4 max-sm:items-start sm:right-4 sm:bottom-4 sm:items-end"
+                :class="
+                    hideMobileFab || stackAboveActionBar
+                        ? 'store-fab-above-purchase max-sm:right-4 max-sm:items-end'
+                        : 'store-sticky-above-nav'
+                "
                 aria-live="polite"
             >
                 <!-- Expanded panel -->
@@ -555,10 +564,11 @@ watch(
                     </div>
                 </div>
 
-                <!-- FAB -->
+                <!-- FAB (hidden on mobile when page provides its own control) -->
                 <button
                     type="button"
-                    class="flex h-14 items-center gap-2 rounded-full bg-emerald-700 pl-4 pr-5 text-sm font-semibold text-white shadow-lg ring-2 ring-white/30 transition hover:bg-emerald-600"
+                    class="h-14 items-center gap-2 rounded-full bg-emerald-700 pl-4 pr-5 text-sm font-semibold text-white shadow-lg ring-2 ring-white/30 transition hover:bg-emerald-600"
+                    :class="hideMobileFab ? 'hidden sm:flex' : 'flex'"
                     :aria-expanded="panelOpen"
                     aria-controls="bargain-chat-panel"
                     @click="panelOpen = !panelOpen"

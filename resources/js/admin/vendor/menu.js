@@ -17,6 +17,63 @@ function safeRemove(node) {
  * Wrap destroy with defensive checks so admin navigation never crashes.
  */
 class Menu extends VendorMenu {
+    /**
+     * Horizontal theme menu: vendor scrolls `.menu-inner` (negative margin) when a
+     * dropdown opens so the toggled item is aligned — that jumps the strip left and
+     * hides earlier links on hover. Skip that auto-slide; keep submenu flip/margins.
+     */
+    _toggleDropdown(show, item, closeChildren) {
+        const menu = VendorMenu._findMenu(item);
+        const actualItem = item;
+        let subMenuItem = false;
+
+        if (show) {
+            if (VendorMenu._findParent(item, 'menu-sub', false)) {
+                subMenuItem = true;
+                item = this._topParent ? this._topParent.parentNode : item;
+            }
+
+            const wrapperWidth = Math.round(this._wrapper.getBoundingClientRect().width);
+            const itemOffset = this._getItemOffset(item);
+            const itemWidth = Math.round(item.getBoundingClientRect().width);
+
+            actualItem.classList.add('open');
+
+            const menuWidth = Math.round(menu.getBoundingClientRect().width);
+
+            if (subMenuItem) {
+                if (
+                    itemOffset + this._innerPosition + menuWidth * 2 > wrapperWidth &&
+                    menuWidth < wrapperWidth &&
+                    menuWidth >= itemWidth
+                ) {
+                    menu.style.left = [this._rtl ? '100%' : '-100%'];
+                }
+            } else if (
+                itemOffset + this._innerPosition + menuWidth > wrapperWidth &&
+                menuWidth < wrapperWidth &&
+                menuWidth > itemWidth
+            ) {
+                menu.style[this._rtl ? 'marginRight' : 'marginLeft'] = `-${menuWidth - itemWidth}px`;
+            }
+
+            this._closeOther(actualItem, closeChildren);
+            this._updateSlider();
+        } else {
+            const toggle = VendorMenu._findChild(item, ['menu-toggle']);
+
+            toggle.length && toggle[0].removeAttribute('data-hover', 'true');
+            item.classList.remove('open');
+            menu.style[this._rtl ? 'marginRight' : 'marginLeft'] = null;
+
+            if (closeChildren) {
+                const opened = menu.querySelectorAll('.menu-item.open');
+
+                for (let i = 0, l = opened.length; i < l; i++) opened[i].classList.remove('open');
+            }
+        }
+    }
+
     destroy() {
         try {
             super.destroy();

@@ -2,8 +2,8 @@
 
 namespace Tests\Unit\Shipping;
 
-use App\Domain\Shipping\Couriers\PostExCourierAdapter;
 use App\Domain\Shipping\CourierApiLogger;
+use App\Domain\Shipping\Couriers\PostExCourierAdapter;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\ShipmentStatus;
@@ -106,6 +106,7 @@ class PostExCourierAdapterTest extends TestCase
                 && $req->method() === 'POST'
                 && $req->hasHeader('token', 'tok-123')
                 && ($req['orderRefNumber'] ?? null) === 'TR-PX-01'
+                && ($req['cityName'] ?? null) === 'KARACHI'
                 && ($req['pickupAddressCode'] ?? null) === 'PICK-001'
                 && ($req['storeAddressCode'] ?? null) === 'STORE-001';
         });
@@ -188,5 +189,139 @@ class PostExCourierAdapterTest extends TestCase
 
         Http::assertSent(fn ($req) => $req->method() === 'GET' && $req->hasHeader('token', 'tok-123'));
     }
-}
 
+    public function test_postex_booking_fails_when_api_token_missing(): void
+    {
+        config(['shipping.sandbox' => false]);
+        config(['shipping.endpoints.postex' => 'https://api.postex.pk']);
+
+        $courier = Courier::query()->create([
+            'code' => 'postex',
+            'name' => 'PostEx',
+            'adapter' => 'postex',
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
+
+        $account = CourierAccount::query()->create([
+            'courier_id' => $courier->id,
+            'name' => 'Main',
+            'credentials' => ['api_token' => ''],
+            'service_code' => null,
+            'cod_allowed' => true,
+            'city_restrictions' => null,
+            'is_active' => true,
+            'is_default' => true,
+        ]);
+
+        $order = Order::query()->create([
+            'order_number' => 'TR-PX-NO-TOK',
+            'guest_email' => 'buyer@example.com',
+            'status' => OrderStatus::Processing,
+            'payment_status' => PaymentStatus::Pending,
+            'payment_gateway' => 'cod',
+            'subtotal' => '1000',
+            'discount_total' => '0',
+            'shipping_total' => '200',
+            'cod_fee' => '0',
+            'grand_total' => '1200',
+            'shipping_address_snapshot' => [
+                'full_name' => 'Buyer',
+                'phone' => '03001234567',
+                'line1' => 'Street 1',
+                'city' => 'Lahore',
+            ],
+            'preferred_courier_id' => $courier->id,
+            'courier_assignment' => 'auto',
+        ]);
+
+        $shipment = Shipment::query()->create([
+            'order_id' => $order->id,
+            'courier_id' => $courier->id,
+            'courier_account_id' => $account->id,
+            'status' => ShipmentStatus::Pending,
+            'cod_amount' => '1200',
+            'receiver_snapshot' => $order->shipping_address_snapshot,
+        ]);
+        $shipment->load(['order', 'order.items']);
+
+        Http::fake();
+
+        $adapter = new PostExCourierAdapter($this->createMock(CourierApiLogger::class));
+        $result = $adapter->book($shipment, $courier, $account);
+
+        $this->assertFalse($result->success);
+        $this->assertStringContainsString('token', strtolower($result->errorMessage ?? ''));
+        Http::assertNothingSent();
+    }
+
+    public function test_postex_booking_fails_when_tracking_missing_in_success_body(): void
+    {
+        config(['shipping.sandbox' => false]);
+        config(['shipping.endpoints.postex' => 'https://api.postex.pk']);
+
+        $courier = Courier::query()->create([
+            'code' => 'postex',
+            'name' => 'PostEx',
+            'adapter' => 'postex',
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
+
+        $account = CourierAccount::query()->create([
+            'courier_id' => $courier->id,
+            'name' => 'Main',
+            'credentials' => ['api_token' => 'tok-123'],
+            'service_code' => null,
+            'cod_allowed' => true,
+            'city_restrictions' => null,
+            'is_active' => true,
+            'is_default' => true,
+        ]);
+
+        $order = Order::query()->create([
+            'order_number' => 'TR-PX-NO-TRK',
+            'guest_email' => 'buyer@example.com',
+            'status' => OrderStatus::Processing,
+            'payment_status' => PaymentStatus::Pending,
+            'payment_gateway' => 'cod',
+            'subtotal' => '1000',
+            'discount_total' => '0',
+            'shipping_total' => '200',
+            'cod_fee' => '0',
+            'grand_total' => '1200',
+            'shipping_address_snapshot' => [
+                'full_name' => 'Buyer',
+                'phone' => '03001234567',
+                'line1' => 'Street 1',
+                'city' => 'Karachi',
+            ],
+            'preferred_courier_id' => $courier->id,
+            'courier_assignment' => 'auto',
+        ]);
+
+        $shipment = Shipment::query()->create([
+            'order_id' => $order->id,
+            'courier_id' => $courier->id,
+            'courier_account_id' => $account->id,
+            'status' => ShipmentStatus::Pending,
+            'cod_amount' => '1200',
+            'receiver_snapshot' => $order->shipping_address_snapshot,
+        ]);
+        $shipment->load(['order', 'order.items']);
+
+        Http::fake([
+            'https://api.postex.pk/services/integration/api/order/v3/create-order' => Http::response([
+                'statusCode' => 200,
+                'statusMessage' => 'OK',
+                'dist' => [],
+            ], 200),
+        ]);
+
+        $adapter = new PostExCourierAdapter($this->createMock(CourierApiLogger::class));
+        $result = $adapter->book($shipment, $courier, $account);
+
+        $this->assertFalse($result->success);
+        $this->assertStringContainsString('no tracking', strtolower($result->errorMessage ?? ''));
+    }
+}

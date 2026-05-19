@@ -1,9 +1,10 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
-import { reactive, ref, watch } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import AdminPageHeader from '@/Components/Admin/AdminPageHeader.vue';
 import DataTable from '@/Components/Admin/DataTable.vue';
+import { confirmDanger, toastError, toastSuccess } from '@/admin/swalToast';
 
 const props = defineProps({
     carts: { type: Object, required: true },
@@ -23,6 +24,9 @@ watch(
 );
 
 const expanded = ref(new Set());
+const selectedIds = ref(new Set());
+const sendInFlight = ref(new Set());
+const bulkSendInFlight = ref(false);
 
 function toggle(id) {
     const next = new Set(expanded.value);
@@ -31,11 +35,90 @@ function toggle(id) {
     expanded.value = next;
 }
 
+function toggleSelect(id) {
+    const next = new Set(selectedIds.value);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    selectedIds.value = next;
+}
+
+const reachableCarts = computed(() => (props.carts?.data ?? []).filter((c) => c.is_reachable));
+const allSelected = computed(() => reachableCarts.value.length > 0 && reachableCarts.value.every((c) => selectedIds.value.has(c.id)));
+
+function toggleSelectAll() {
+    const next = new Set(selectedIds.value);
+    if (allSelected.value) {
+        reachableCarts.value.forEach((c) => next.delete(c.id));
+    } else {
+        reachableCarts.value.forEach((c) => next.add(c.id));
+    }
+    selectedIds.value = next;
+}
+
+const selectedCount = computed(() => selectedIds.value.size);
+
 function applyFilters() {
     router.get(
         route('admin.abandoned-carts.index'),
         { search: state.search || undefined },
         { preserveState: true, preserveScroll: true, replace: true },
+    );
+}
+
+async function sendOne(cart) {
+    if (!cart.is_reachable) {
+        toastError('No phone number on file for this account.');
+        return;
+    }
+    const ok = await confirmDanger({
+        title: `Send WhatsApp reminder to ${cart.account_label}?`,
+        text: `One message will be queued via your configured WhatsApp gateway. Recipient: ${cart.phone}.`,
+        confirmText: 'Yes, send reminder',
+    });
+    if (!ok) return;
+
+    const next = new Set(sendInFlight.value);
+    next.add(cart.id);
+    sendInFlight.value = next;
+
+    router.post(route('admin.abandoned-carts.whatsapp.send', cart.id), {}, {
+        preserveScroll: true,
+        onSuccess: () => toastSuccess('WhatsApp reminder queued'),
+        onError: () => toastError('WhatsApp reminder failed'),
+        onFinish: () => {
+            const after = new Set(sendInFlight.value);
+            after.delete(cart.id);
+            sendInFlight.value = after;
+        },
+    });
+}
+
+async function bulkSend() {
+    if (selectedCount.value === 0) {
+        toastError('Pick at least one reachable cart.');
+        return;
+    }
+    const ok = await confirmDanger({
+        title: `Send WhatsApp to ${selectedCount.value} cart(s)?`,
+        text: 'A message is dispatched per row. Skipped rows are reported in the post-action summary.',
+        confirmText: 'Yes, send all',
+    });
+    if (!ok) return;
+
+    bulkSendInFlight.value = true;
+    router.post(
+        route('admin.abandoned-carts.whatsapp.bulk'),
+        { cart_ids: [...selectedIds.value] },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                selectedIds.value = new Set();
+            },
+            onError: () => toastError('Bulk send failed'),
+            onFinish: () => {
+                bulkSendInFlight.value = false;
+            },
+        },
     );
 }
 
@@ -80,7 +163,7 @@ function lineSummary(cart) {
         <div class="card mb-3">
             <div class="card-body py-3">
                 <div class="row g-2 align-items-end">
-                    <div class="col-12 col-md-8">
+                    <div class="col-12 col-md-6">
                         <label class="form-label small mb-1" for="ac_search">Search</label>
                         <input
                             id="ac_search"
@@ -91,9 +174,20 @@ function lineSummary(cart) {
                             @keydown.enter.prevent="applyFilters"
                         />
                     </div>
-                    <div class="col-12 col-md-4 d-flex gap-2">
+                    <div class="col-12 col-md-3 d-flex gap-2">
                         <button type="button" class="btn btn-sm btn-primary flex-grow-1" @click="applyFilters">Apply</button>
                         <button type="button" class="btn btn-sm btn-label-secondary" @click="state.search = ''; applyFilters()">Reset</button>
+                    </div>
+                    <div class="col-12 col-md-3 d-flex justify-content-md-end">
+                        <button
+                            type="button"
+                            class="btn btn-sm btn-success"
+                            :disabled="selectedCount === 0 || bulkSendInFlight"
+                            @click="bulkSend"
+                        >
+                            <i class="icon-base ti tabler-brand-whatsapp me-1"></i>
+                            Send WhatsApp to {{ selectedCount }} selected
+                        </button>
                     </div>
                 </div>
             </div>
@@ -101,17 +195,38 @@ function lineSummary(cart) {
 
         <DataTable :paginator="carts" empty-title="No abandoned carts" empty-description="Carts are cleared after a successful order, so only active bags appear here.">
             <template #head>
+                <th style="width: 40px">
+                    <input
+                        type="checkbox"
+                        class="form-check-input"
+                        :checked="allSelected"
+                        :disabled="reachableCarts.length === 0"
+                        title="Select all reachable on this page"
+                        @change="toggleSelectAll"
+                    />
+                </th>
                 <th style="width: 40px"></th>
                 <th>Cart</th>
                 <th>Account</th>
+                <th>Phone</th>
                 <th class="text-end">Lines</th>
                 <th class="text-end">Subtotal</th>
                 <th>Preview</th>
                 <th>Last activity</th>
+                <th class="text-end">Actions</th>
             </template>
             <template #body>
                 <template v-for="c in carts.data" :key="c.id">
                     <tr>
+                        <td class="align-middle">
+                            <input
+                                type="checkbox"
+                                class="form-check-input"
+                                :checked="selectedIds.has(c.id)"
+                                :disabled="!c.is_reachable"
+                                @change="toggleSelect(c.id)"
+                            />
+                        </td>
                         <td class="align-middle">
                             <button
                                 type="button"
@@ -128,13 +243,30 @@ function lineSummary(cart) {
                             <div class="small fw-semibold">{{ c.account_label }}</div>
                             <div v-if="c.guest_token_short" class="text-muted small">Token {{ c.guest_token_short }}</div>
                         </td>
+                        <td class="align-middle small">
+                            <span v-if="c.is_reachable" class="font-monospace">{{ c.phone }}</span>
+                            <span v-else class="text-muted">—</span>
+                        </td>
                         <td class="align-middle text-end">{{ c.items_count }}</td>
                         <td class="align-middle text-end">{{ money(c.subtotal, c.currency) }}</td>
                         <td class="align-middle small text-muted">{{ lineSummary(c) }}</td>
                         <td class="align-middle text-muted small text-nowrap">{{ formatWhen(c.updated_at) }}</td>
+                        <td class="align-middle text-end">
+                            <button
+                                type="button"
+                                class="btn btn-sm"
+                                :class="c.is_reachable ? 'btn-outline-success' : 'btn-outline-secondary'"
+                                :disabled="!c.is_reachable || sendInFlight.has(c.id)"
+                                :title="c.is_reachable ? 'Send WhatsApp reminder' : 'No phone number on the customer account'"
+                                @click="sendOne(c)"
+                            >
+                                <i class="icon-base ti tabler-brand-whatsapp"></i>
+                                <span class="d-none d-md-inline ms-1">{{ sendInFlight.has(c.id) ? 'Sending…' : 'WhatsApp' }}</span>
+                            </button>
+                        </td>
                     </tr>
                     <tr v-if="expanded.has(c.id)">
-                        <td colspan="7" class="p-0 bg-body-tertiary">
+                        <td colspan="10" class="p-0 bg-body-tertiary">
                             <div class="p-3 border-top">
                                 <div class="small fw-semibold mb-2">Line items</div>
                                 <div class="table-responsive">

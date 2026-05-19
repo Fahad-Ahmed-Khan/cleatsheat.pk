@@ -71,16 +71,20 @@ const items = computed(() => [
 <template>
     <nav
         aria-label="Primary"
-        class="fixed inset-x-0 bottom-0 z-50 border-t border-stone-200 bg-white/95 backdrop-blur-md sm:hidden"
+        class="fixed inset-x-0 bottom-0 z-50 rounded-t-xl border-t border-stadium-outline-soft bg-stadium-white shadow-stadium-nav sm:hidden"
         style="padding-bottom: env(safe-area-inset-bottom)"
     >
-        <ul class="mx-auto flex max-w-lg items-stretch justify-around">
+        <ul class="mx-auto flex max-w-lg items-stretch justify-around px-1 pt-1">
             <li v-for="item in items" :key="item.key" class="flex-1">
                 <Link
                     :href="item.href"
                     :aria-current="item.active ? 'page' : undefined"
-                    class="relative flex h-16 flex-col items-center justify-center gap-0.5 px-1 text-[11px] font-medium transition active:scale-[0.97]"
-                    :class="item.active ? 'text-stone-900' : 'text-stone-500 hover:text-stone-800'"
+                    class="relative mb-1 flex min-h-[4.25rem] flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1 text-[10px] font-bold uppercase tracking-wide transition active:scale-[0.97]"
+                    :class="
+                        item.active
+                            ? 'bg-stadium-lime text-stadium-lime-ink shadow-sm'
+                            : 'bg-stadium-muted text-stadium-ink hover:bg-stadium-container-high'
+                    "
                 >
                     <span class="relative inline-flex h-6 w-6 items-center justify-center">
                         <!-- Home -->
@@ -99,7 +103,7 @@ const items = computed(() => [
                             <path d="M5 10v10h14V10" />
                             <path d="M10 20v-6h4v6" />
                         </svg>
-                        <!-- Shop / bag -->
+                        <!-- Shop -->
                         <svg
                             v-else-if="item.icon === 'shop'"
                             viewBox="0 0 24 24"
@@ -111,8 +115,9 @@ const items = computed(() => [
                             class="h-6 w-6"
                             aria-hidden="true"
                         >
-                            <path d="M4 7h16l-1.2 12.3a2 2 0 0 1-2 1.7H7.2a2 2 0 0 1-2-1.7L4 7z" />
-                            <path d="M9 7V5a3 3 0 1 1 6 0v2" />
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+                            <path d="M2 12h20" />
                         </svg>
                         <!-- Cart -->
                         <svg
@@ -130,7 +135,7 @@ const items = computed(() => [
                             <circle cx="17" cy="20" r="1.5" />
                             <path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.5a2 2 0 0 0 2-1.5L21 8H6" />
                         </svg>
-                        <!-- Track / delivery truck -->
+                        <!-- Truck -->
                         <svg
                             v-else-if="item.icon === 'truck'"
                             viewBox="0 0 24 24"
@@ -147,7 +152,7 @@ const items = computed(() => [
                             <circle cx="7.5" cy="17.5" r="1.8" />
                             <circle cx="17.5" cy="17.5" r="1.8" />
                         </svg>
-                        <!-- User / account -->
+                        <!-- User -->
                         <svg
                             v-else
                             viewBox="0 0 24 24"
@@ -165,7 +170,7 @@ const items = computed(() => [
 
                         <span
                             v-if="item.badge && item.badge > 0"
-                            class="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-stone-900 px-1 text-[10px] font-semibold leading-none text-white ring-2 ring-white"
+                            class="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-stadium-ink px-1 text-[9px] font-bold leading-none text-stadium-lime ring-2 ring-stadium-white"
                         >
                             {{ item.badge > 99 ? '99+' : item.badge }}
                         </span>

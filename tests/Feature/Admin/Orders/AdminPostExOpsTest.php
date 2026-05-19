@@ -10,6 +10,7 @@ use App\Models\CourierAccount;
 use App\Models\Order;
 use App\Models\Shipment;
 use App\Models\ShipmentEvent;
+use App\Models\ShippingSetting;
 use App\Models\User;
 use Database\Seeders\ShippingCourierSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -88,6 +89,10 @@ class AdminPostExOpsTest extends TestCase
         $account->credentials = ['api_token' => 'tok-123'];
         $account->save();
 
+        $settings = ShippingSetting::current();
+        $settings->postex_pickup_address_code = 'WH-MAIN-01';
+        $settings->save();
+
         $order = $this->makeOrder($postex);
         Shipment::query()->create([
             'order_id' => $order->id,
@@ -105,7 +110,10 @@ class AdminPostExOpsTest extends TestCase
         $resp->assertOk();
         $resp->assertHeader('content-type', 'application/pdf');
 
-        Http::assertSent(fn ($req) => $req->method() === 'POST' && $req->hasHeader('token', 'tok-123'));
+        Http::assertSent(fn ($req) => $req->method() === 'POST'
+            && $req->hasHeader('token', 'tok-123')
+            && ($req['pickupAddress'] ?? null) === 'WH-MAIN-01'
+            && ($req['trackingNumbers'] ?? null) === ['CX-222']);
     }
 
     public function test_admin_can_cancel_postex_shipment(): void
@@ -147,4 +155,3 @@ class AdminPostExOpsTest extends TestCase
         Http::assertSent(fn ($req) => $req->method() === 'PUT' && $req->hasHeader('token', 'tok-123'));
     }
 }
-

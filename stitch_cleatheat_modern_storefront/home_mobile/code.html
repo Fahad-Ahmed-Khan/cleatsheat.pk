@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CleatSheat.pk - Dominate Every Square Inch</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&amp;family=Sora:wght@700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-secondary": "#ffffff",
+                    "surface-bright": "#f9f9f9",
+                    "tertiary-container": "#f0f0f0",
+                    "outline-variant": "#c6c9ab",
+                    "on-tertiary-fixed": "#1a1c1c",
+                    "on-error-container": "#93000a",
+                    "on-secondary-fixed": "#1c1b1b",
+                    "secondary-container": "#e2dfde",
+                    "on-surface-variant": "#454932",
+                    "on-tertiary": "#ffffff",
+                    "secondary-fixed-dim": "#c8c6c5",
+                    "tertiary-fixed-dim": "#c6c6c6",
+                    "on-primary-fixed-variant": "#414c00",
+                    "secondary": "#5f5e5e",
+                    "surface-container": "#eeeeee",
+                    "surface-container-highest": "#e2e2e2",
+                    "background": "#f9f9f9",
+                    "on-primary": "#ffffff",
+                    "on-tertiary-fixed-variant": "#454747",
+                    "primary-fixed-dim": "#b8d300",
+                    "tertiary": "#5d5f5f",
+                    "secondary-fixed": "#e5e2e1",
+                    "primary": "#576500",
+                    "error-container": "#ffdad6",
+                    "on-tertiary-container": "#6c6d6d",
+                    "error": "#ba1a1a",
+                    "on-surface": "#1a1c1c",
+                    "surface": "#f9f9f9",
+                    "surface-container-high": "#e8e8e8",
+                    "on-background": "#1a1c1c",
+                    "on-primary-container": "#647400",
+                    "tertiary-fixed": "#e2e2e2",
+                    "outline": "#767960",
+                    "surface-container-low": "#f3f3f3",
+                    "primary-container": "#dfff00",
+                    "on-secondary-fixed-variant": "#474746",
+                    "inverse-on-surface": "#f1f1f1",
+                    "inverse-surface": "#2f3131",
+                    "on-primary-fixed": "#191e00",
+                    "on-error": "#ffffff",
+                    "surface-dim": "#dadada",
+                    "surface-tint": "#576500",
+                    "surface-container-lowest": "#ffffff",
+                    "primary-fixed": "#d2f000",
+                    "inverse-primary": "#b8d300",
+                    "on-secondary-container": "#636262",
+                    "surface-variant": "#e2e2e2"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "container-margin": "24px",
+                    "base": "8px",
+                    "gutter": "16px",
+                    "section-padding": "80px"
+            },
+            "fontFamily": {
+                    "caption": [
+                            "Inter"
+                    ],
+                    "display-lg-mobile": [
+                            "Sora"
+                    ],
+                    "body-md": [
+                            "Inter"
+                    ],
+                    "display-lg": [
+                            "Sora"
+                    ],
+                    "label-bold": [
+                            "Sora"
+                    ],
+                    "headline-md": [
+                            "Sora"
+                    ],
+                    "headline-lg": [
+                            "Sora"
+                    ],
+                    "body-lg": [
+                            "Inter"
+                    ]
+            },
+            "fontSize": {
+                    "caption": [
+                            "12px",
+                            {
+                                    "lineHeight": "1.4",
+                                    "letterSpacing": "0",
+                                    "fontWeight": "500"
+                            }
+                    ],
+                    "display-lg-mobile": [
+                            "40px",
+                            {
+                                    "lineHeight": "1.1",
+                                    "letterSpacing": "-0.03em",
+                                    "fontWeight": "800"
+                            }
+                    ],
+                    "body-md": [
+                            "16px",
+                            {
+                                    "lineHeight": "1.6",
+                                    "letterSpacing": "0",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "display-lg": [
+                            "64px",
+                            {
+                                    "lineHeight": "1.1",
+                                    "letterSpacing": "-0.04em",
+                                    "fontWeight": "800"
+                            }
+                    ],
+                    "label-bold": [
+                            "14px",
+                            {
+                                    "lineHeight": "1",
+                                    "letterSpacing": "0.05em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "headline-md": [
+                            "24px",
+                            {
+                                    "lineHeight": "1.2",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "headline-lg": [
+                            "32px",
+                            {
+                                    "lineHeight": "1.2",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "body-lg": [
+                            "18px",
+                            {
+                                    "lineHeight": "1.6",
+                                    "letterSpacing": "-0.01em",
+                                    "fontWeight": "400"
+                            }
+                    ]
+            }
+    },
+        },
+      }
+    </script>
+<style>
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body-md antialiased pb-24 md:pb-0">
+<!-- TopAppBar Component -->
+<header class="sticky top-0 w-full z-50 bg-surface/95 dark:bg-surface-dim/95 backdrop-blur-md shadow-sm">
+<div class="flex justify-between items-center w-full px-container-margin py-base max-w-7xl mx-auto">
+<button class="text-primary dark:text-primary-fixed-dim hover:opacity-80 transition-opacity active:scale-95 transition-transform duration-200 flex items-center justify-center p-2">
+<span class="material-symbols-outlined text-2xl">menu</span>
+</button>
+<h1 class="font-display-lg-mobile text-headline-lg-mobile font-extrabold tracking-tighter text-on-surface dark:text-surface-bright m-0">CLEATSHEAT</h1>
+<button class="text-primary dark:text-primary-fixed-dim hover:opacity-80 transition-opacity active:scale-95 transition-transform duration-200 flex items-center justify-center p-2">
+<span class="material-symbols-outlined text-2xl">search</span>
+</button>
+</div>
+</header>
+<main class="w-full max-w-7xl mx-auto flex flex-col gap-section-padding pt-6">
+<!-- Hero Section -->
+<section class="px-container-margin">
+<div class="relative w-full h-[530px] min-h-[480px] rounded-2xl overflow-hidden shadow-lg group">
+<img alt="Hero Background" class="absolute inset-0 w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-105" data-alt="A highly detailed action shot of a professional football boot striking a ball on lush green stadium turf under bright, intense floodlights. The scene exudes high-performance 'Stadium Energy' with a light-mode aesthetic, utilizing deep shadows and crisp, bright highlights. The boot features striking electric yellow accents against a dark base, capturing motion, speed, and elite athleticism." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBIE23LjUFu34MzK_RYGXFY4mkcdGXm9HPSW40aYD5Qo64ohCWwL1IcTT5JGoJPrpV3acpTW8zJ5hn5SDojvgK24fvnQJWaJ_G_QAMYAfLDokam5BY_fHNznG4IG6nKEAzzFxB14cdp30kT1z1QLChoc99QM0Uj6y3ZbGecLZR3blF9dYIjRDgu3uvg9rC1Ody9dKsI_SU3qwHlObWVl5vLHT39S87RNnxABx4IWne4dea_no6RhgtySAoXfa5tJ84KFWgEIoroFCQ"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+<div class="absolute inset-0 p-6 flex flex-col justify-end items-start pb-10">
+<span class="bg-primary-container text-on-primary-fixed font-label-bold text-label-bold px-3 py-1 rounded-md mb-4 uppercase tracking-widest shadow-sm">New Collection</span>
+<h2 class="font-display-lg-mobile text-display-lg-mobile text-white mb-6 uppercase max-w-[12ch] leading-tight drop-shadow-md">DOMINATE EVERY SQUARE INCH</h2>
+<button class="bg-primary-container text-on-primary-fixed font-label-bold text-label-bold px-8 py-4 rounded-xl flex items-center gap-2 hover:-translate-y-[2px] hover:shadow-lg transition-all active:scale-95 shadow-md">
+                        Shop FG Boots
+                        <span class="material-symbols-outlined text-lg">arrow_forward</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Surface Shortcuts -->
+<section>
+<div class="px-container-margin mb-4 flex justify-between items-end">
+<h3 class="font-headline-md text-headline-md text-on-surface">Pitch Surface</h3>
+</div>
+<div class="flex overflow-x-auto gap-3 px-container-margin pb-4 no-scrollbar snap-x">
+<button class="snap-start shrink-0 bg-surface-container-high text-on-surface hover:bg-surface-container-highest transition-colors font-label-bold text-label-bold px-5 py-3 rounded-xl border border-outline-variant/30 flex items-center gap-2 shadow-sm">
+<span class="material-symbols-outlined text-[20px]">grass</span>
+                    FG (Firm Ground)
+                </button>
+<button class="snap-start shrink-0 bg-surface text-on-surface hover:bg-surface-container-highest transition-colors font-label-bold text-label-bold px-5 py-3 rounded-xl border border-outline-variant/30 flex items-center gap-2 shadow-sm">
+<span class="material-symbols-outlined text-[20px]">water_drop</span>
+                    SG (Soft Ground)
+                </button>
+<button class="snap-start shrink-0 bg-surface text-on-surface hover:bg-surface-container-highest transition-colors font-label-bold text-label-bold px-5 py-3 rounded-xl border border-outline-variant/30 flex items-center gap-2 shadow-sm">
+<span class="material-symbols-outlined text-[20px]">grid_view</span>
+                    AG (Artificial)
+                </button>
+<button class="snap-start shrink-0 bg-surface text-on-surface hover:bg-surface-container-highest transition-colors font-label-bold text-label-bold px-5 py-3 rounded-xl border border-outline-variant/30 flex items-center gap-2 shadow-sm">
+<span class="material-symbols-outlined text-[20px]">layers</span>
+                    Turf
+                </button>
+<button class="snap-start shrink-0 bg-surface text-on-surface hover:bg-surface-container-highest transition-colors font-label-bold text-label-bold px-5 py-3 rounded-xl border border-outline-variant/30 flex items-center gap-2 shadow-sm">
+<span class="material-symbols-outlined text-[20px]">domain</span>
+                    Indoor
+                </button>
+</div>
+</section>
+<!-- Curated Collection: Trending on Pitch -->
+<section class="px-container-margin">
+<div class="flex justify-between items-end mb-6">
+<h3 class="font-headline-md text-headline-md text-on-surface">Trending on Pitch</h3>
+<a class="font-label-bold text-label-bold text-primary hover:underline flex items-center gap-1" href="#">View All <span class="material-symbols-outlined text-sm">chevron_right</span></a>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+<!-- Product Card 1 -->
+<div class="bg-surface-container-lowest rounded-2xl shadow-[0_4px_24px_0_rgba(0,0,0,0.04)] overflow-hidden flex flex-col group cursor-pointer border border-outline-variant/10 hover:shadow-[0_8px_32px_0_rgba(0,0,0,0.08)] transition-shadow">
+<div class="relative aspect-square bg-surface-container-low flex items-center justify-center p-4">
+<span class="absolute top-3 left-3 bg-on-surface text-primary-container font-caption text-caption px-2 py-1 rounded-md uppercase z-10">Elite</span>
+<button class="absolute top-3 right-3 text-secondary hover:text-error transition-colors z-10 p-1">
+<span class="material-symbols-outlined">favorite</span>
+</button>
+<img alt="Predator Elite" class="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500 drop-shadow-xl" data-alt="A pristine studio shot of a modern, elite-level football boot floating against a stark white background. The boot has a sleek, aerodynamic silhouette with high-contrast geometric patterns in deep charcoal and electric green. Soft, ambient under-shadow grounds the product, emphasizing its premium, technical construction and sharp, modern aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCG9Y9wRQg0rBOh9uz7DHyEo9nUV-zVGsb244M4eGT_0vqUn6wqfaabLnMfowtpZZ4SHq_AX2OLPCeW9yP9wPYStRm4UgOSb3rQIAraz7YJatZ9RkZmRnwmIskrRLcKUp0nGf51AwmXtUFvN2AffD_6S5TrKh_5WNX4G0c0XDiuUGJMDK25gvHy6XkiAsadbqn2qlnWJhzSBWOllYBE_BPEIy_iTrcDjtDDAD3Xf6E-oc2m0zNY3zUX54fT_AOhmlx6YIw_1JQDx2M"/>
+</div>
+<div class="p-4 flex flex-col grow">
+<span class="font-caption text-caption text-on-surface-variant mb-1">Firm Ground</span>
+<h4 class="font-label-bold text-label-bold text-on-surface mb-2 line-clamp-2">Predator Elite FT FG</h4>
+<div class="mt-auto flex items-center justify-between">
+<span class="font-headline-md text-headline-md text-on-surface">$280</span>
+<button class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center hover:bg-primary-container hover:text-on-primary-fixed transition-colors">
+<span class="material-symbols-outlined text-[20px]">add</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Product Card 2 -->
+<div class="bg-surface-container-lowest rounded-2xl shadow-[0_4px_24px_0_rgba(0,0,0,0.04)] overflow-hidden flex flex-col group cursor-pointer border border-outline-variant/10 hover:shadow-[0_8px_32px_0_rgba(0,0,0,0.08)] transition-shadow">
+<div class="relative aspect-square bg-surface-container-low flex items-center justify-center p-4">
+<span class="absolute top-3 left-3 bg-primary-container text-on-primary-fixed font-caption text-caption px-2 py-1 rounded-md uppercase z-10">New</span>
+<button class="absolute top-3 right-3 text-secondary hover:text-error transition-colors z-10 p-1">
+<span class="material-symbols-outlined">favorite</span>
+</button>
+<img alt="Mercurial Vapor" class="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500 drop-shadow-xl" data-alt="A high-end product photograph of a lightweight speed football boot in isolation on a bright, minimalist background. The boot features a translucent, minimalist upper in off-white with sharp, aggressive accents. A subtle, low-opacity shadow sits beneath the soleplate, highlighting the aggressive traction studs and reinforcing a clean, high-performance visual style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB3E4ajxBizLVN9HcsNuCpPZXesPB9H7DQlvqM-vqH-VF3eJNdbWLCt_q6puGFLjL3we3UzcglEsGeYV7mv3OR9Nf8gxHBIYshBtB0UvqRKheYJWOdMkVZldKNrWxXic6rIpod5O3X8jKZVACKUDuVlNBtVRulfSEfhfV2hv8f3Tf3UJOjGJsQNCWnfqlyJsITRXw8VP2Eg5myWJTv9uArFLIih_X4VPmcukxWZCTYoXg0YlOLowBBfFbsUJNq6_AY-yjnvjfRIUeA"/>
+</div>
+<div class="p-4 flex flex-col grow">
+<span class="font-caption text-caption text-on-surface-variant mb-1">Artificial Grass</span>
+<h4 class="font-label-bold text-label-bold text-on-surface mb-2 line-clamp-2">Vapor 15 Elite AG</h4>
+<div class="mt-auto flex items-center justify-between">
+<span class="font-headline-md text-headline-md text-on-surface">$260</span>
+<button class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center hover:bg-primary-container hover:text-on-primary-fixed transition-colors">
+<span class="material-symbols-outlined text-[20px]">add</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Editorial / Guide Card -->
+<section class="px-container-margin">
+<div class="bg-on-surface text-surface rounded-2xl overflow-hidden relative shadow-lg">
+<img alt="Editorial Background" class="absolute inset-0 w-full h-full object-cover opacity-40 mix-blend-luminosity" data-alt="A close-up, highly textured editorial shot of hands lacing up a premium football boot in a minimalist locker room setting. The lighting is dramatic and directional, creating high contrast between the dark environment and the bright white laces. The aesthetic is raw, professional, and focused on preparation, aligning with a high-end sports equipment brand identity." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCoHTdnqO-PlOmDzMjrVoowcCIWphAo3IOnU3xQAa6jtYfhQgr9W-us-aemojjkcKaMmAW9SaH14W2eT2FEnF6dX-Fg-aVz5ZGSot5taV8Ux3hWEW6bWoj-rZcoaqcrQ7lm-r0uCul8G3p0RZFkIDoObzCOLbg4jBTfJ27vU_fMUer1DfPB501unKzJKOh172HjtM4BSI2tW3ZM-4YX_c9vVJGpjeCzvXUOpY_jc7YjE8ajWWyvii7C25SzuP4HDVEBOSf8nlxm92E"/>
+<div class="relative p-8 md:p-12 flex flex-col items-start w-full md:w-2/3">
+<span class="font-label-bold text-label-bold text-primary-container uppercase tracking-widest mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">menu_book</span>
+                        Expert Guide
+                    </span>
+<h3 class="font-display-lg-mobile text-headline-lg-mobile font-extrabold mb-4 leading-tight">HOW TO CHOOSE YOUR BOOTS</h3>
+<p class="font-body-md text-body-md text-surface-variant mb-8 max-w-md">Master the pitch by matching your playstyle and surface to the perfect technology.</p>
+<button class="bg-transparent border-2 border-primary-container text-primary-container font-label-bold text-label-bold px-6 py-3 rounded-xl hover:bg-primary-container hover:text-on-primary-fixed transition-colors">
+                        Read Guide
+                    </button>
+</div>
+</div>
+</section>
+<!-- Trust Strip -->
+<section class="px-container-margin pb-8 pt-4 border-t border-outline-variant/20 grid grid-cols-3 gap-4 text-center mt-4">
+<div class="flex flex-col items-center gap-2">
+<div class="w-12 h-12 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface">
+<span class="material-symbols-outlined">local_shipping</span>
+</div>
+<span class="font-caption text-caption text-on-surface-variant">Fast Nationwide<br/>Delivery</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-12 h-12 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface">
+<span class="material-symbols-outlined">verified</span>
+</div>
+<span class="font-caption text-caption text-on-surface-variant">100% Authentic<br/>Gear</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-12 h-12 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface">
+<span class="material-symbols-outlined">support_agent</span>
+</div>
+<span class="font-caption text-caption text-on-surface-variant">Expert Pitch<br/>Advice</span>
+</div>
+</section>
+</main>
+<!-- BottomNavBar Component (Mobile Only usually, but kept fixed as per request for app-feel) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 rounded-t-xl border-t border-outline-variant/30 bg-surface dark:bg-surface-dim shadow-[0_-4px_20px_0_rgba(0,0,0,0.05)] flex justify-around items-center h-20 px-2 pb-safe">
+<!-- Active Tab: Home -->
+<button class="flex flex-col items-center justify-center bg-primary-container dark:bg-primary-fixed text-on-primary-container dark:text-on-primary-fixed rounded-xl px-3 py-1.5 hover:bg-surface-container dark:hover:bg-surface-container-highest transition-colors active:scale-90 transition-transform duration-150">
+<span class="material-symbols-outlined mb-1" data-weight="fill" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-caption text-caption uppercase">Home</span>
+</button>
+<!-- Inactive Tabs -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-secondary-fixed-dim px-3 py-1.5 hover:bg-surface-container dark:hover:bg-surface-container-highest transition-colors active:scale-90 transition-transform duration-150">
+<span class="material-symbols-outlined mb-1">sports_soccer</span>
+<span class="font-caption text-caption uppercase">Shop</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-secondary-fixed-dim px-3 py-1.5 hover:bg-surface-container dark:hover:bg-surface-container-highest transition-colors active:scale-90 transition-transform duration-150">
+<span class="material-symbols-outlined mb-1">shopping_cart</span>
+<span class="font-caption text-caption uppercase">Cart</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-secondary-fixed-dim px-3 py-1.5 hover:bg-surface-container dark:hover:bg-surface-container-highest transition-colors active:scale-90 transition-transform duration-150">
+<span class="material-symbols-outlined mb-1">local_shipping</span>
+<span class="font-caption text-caption uppercase">Track</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-secondary-fixed-dim px-3 py-1.5 hover:bg-surface-container dark:hover:bg-surface-container-highest transition-colors active:scale-90 transition-transform duration-150">
+<span class="material-symbols-outlined mb-1">person</span>
+<span class="font-caption text-caption uppercase">Account</span>
+</button>
+</nav>
+</body></html>

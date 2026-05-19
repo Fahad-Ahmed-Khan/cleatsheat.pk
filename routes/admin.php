@@ -8,11 +8,17 @@ use App\Http\Controllers\Web\Admin\ColorAdminController;
 use App\Http\Controllers\Web\Admin\ContentPostAdminController;
 use App\Http\Controllers\Web\Admin\CouponAdminController;
 use App\Http\Controllers\Web\Admin\CourierAdminController;
+use App\Http\Controllers\Web\Admin\CourierSettlementAdminController;
+use App\Http\Controllers\Web\Admin\CustomerAdminController;
 use App\Http\Controllers\Web\Admin\DashboardController;
+use App\Http\Controllers\Web\Admin\LogisticsTimelineAdminController;
+use App\Http\Controllers\Web\Admin\LowStockAdminController;
 use App\Http\Controllers\Web\Admin\MarketingSettingsAdminController;
+use App\Http\Controllers\Web\Admin\NotificationLogAdminController;
+use App\Http\Controllers\Web\Admin\OrderAdjustmentsAdminController;
 use App\Http\Controllers\Web\Admin\OrderAdminController;
 use App\Http\Controllers\Web\Admin\OrderBulkAdminController;
-use App\Http\Controllers\Web\Admin\OrderAdjustmentsAdminController;
+use App\Http\Controllers\Web\Admin\OrderReturnAdminController;
 use App\Http\Controllers\Web\Admin\OrderReturnsAdminController;
 use App\Http\Controllers\Web\Admin\PaymentSettingsAdminController;
 use App\Http\Controllers\Web\Admin\ProductAdminController;
@@ -28,6 +34,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::resource('brands', BrandAdminController::class)->except(['show']);
     Route::resource('categories', CategoryAdminController::class)->except(['show']);
     Route::resource('colors', ColorAdminController::class)->except(['show']);
+    Route::get('/products/export', [ProductAdminController::class, 'export'])->name('products.export');
+    Route::post('/products/import', [ProductAdminController::class, 'import'])->name('products.import');
     Route::resource('products', ProductAdminController::class)->except(['show']);
     Route::get('/products/{product}', [ProductAdminController::class, 'show'])->name('products.show');
     Route::patch('/products/{product}/toggle-active', [ProductAdminController::class, 'toggleActive'])
@@ -43,8 +51,13 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/bargaining/{bargain_session}', [BargainSessionAdminController::class, 'show'])->name('bargaining.show');
 
     Route::get('/abandoned-carts', [AbandonedCartAdminController::class, 'index'])->name('abandoned-carts.index');
+    Route::post('/abandoned-carts/{cart}/whatsapp', [AbandonedCartAdminController::class, 'sendReminder'])
+        ->name('abandoned-carts.whatsapp.send');
+    Route::post('/abandoned-carts/whatsapp/bulk', [AbandonedCartAdminController::class, 'bulkSendReminder'])
+        ->name('abandoned-carts.whatsapp.bulk');
 
     Route::get('/orders', [OrderAdminController::class, 'index'])->name('orders.index');
+    Route::get('/orders/export', [OrderAdminController::class, 'export'])->name('orders.export');
     Route::get('/orders/{order}', [OrderAdminController::class, 'show'])->name('orders.show');
     Route::patch('/orders/{order}', [OrderAdminController::class, 'update'])->name('orders.update');
     Route::post('/orders/{order}/shipment/book', [OrderAdminController::class, 'book'])
@@ -64,6 +77,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         ->name('orders.bulk.sync-tracking');
     Route::patch('/orders/bulk/update-status', [OrderBulkAdminController::class, 'updateStatus'])
         ->name('orders.bulk.update-status');
+    Route::patch('/orders/bulk/update-payment-status', [OrderBulkAdminController::class, 'updatePaymentStatus'])
+        ->name('orders.bulk.update-payment-status');
     Route::post('/orders/bulk/print/labels', [OrderBulkAdminController::class, 'printLabels'])
         ->name('orders.bulk.print-labels');
     Route::post('/orders/bulk/print/packing-slips', [OrderBulkAdminController::class, 'printPackingSlips'])
@@ -74,6 +89,19 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 
     Route::post('/orders/{order}/returns', [OrderReturnsAdminController::class, 'store'])
         ->name('orders.returns.store');
+
+    Route::get('/returns', [OrderReturnAdminController::class, 'index'])->name('returns.index');
+    Route::get('/returns/{orderReturn}', [OrderReturnAdminController::class, 'show'])->name('returns.show');
+
+    Route::get('/inventory/low-stock', [LowStockAdminController::class, 'index'])->name('inventory.low-stock');
+
+    Route::get('/customers', [CustomerAdminController::class, 'index'])->name('customers.index');
+
+    Route::get('/finance/courier-settlements', [CourierSettlementAdminController::class, 'index'])
+        ->name('finance.courier-settlements');
+
+    Route::get('/logistics/timeline', [LogisticsTimelineAdminController::class, 'index'])
+        ->name('logistics.timeline');
 
     Route::get('/couriers', [CourierAdminController::class, 'index'])->name('couriers.index');
     Route::get('/coupons', [CouponAdminController::class, 'index'])->name('coupons.index');
@@ -98,4 +126,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         ->name('storefront-assistant.update');
 
     Route::resource('content-posts', ContentPostAdminController::class)->except(['show']);
+
+    Route::get('/notifications', [NotificationLogAdminController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/{notificationLog}/retry', [NotificationLogAdminController::class, 'retry'])
+        ->name('notifications.retry');
 });

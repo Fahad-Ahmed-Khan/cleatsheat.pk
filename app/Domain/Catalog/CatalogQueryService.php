@@ -31,6 +31,7 @@ class CatalogQueryService
 
         if (is_string($value) || is_numeric($value)) {
             $s = trim((string) $value);
+
             return $s === '' ? [] : [$s];
         }
 
@@ -42,7 +43,7 @@ class CatalogQueryService
     {
         return Product::query()
             ->where('is_active', true)
-            ->with(['brand', 'images', 'variants.color'])
+            ->with(['brand', 'category', 'images', 'variants.color'])
             ->latest()
             ->limit($limit)
             ->get();
@@ -53,7 +54,7 @@ class CatalogQueryService
     {
         return Product::query()
             ->where('is_active', true)
-            ->with(['brand', 'images', 'variants.color'])
+            ->with(['brand', 'category', 'images', 'variants.color'])
             ->latest()
             ->limit($limit)
             ->get();
@@ -82,7 +83,7 @@ class CatalogQueryService
         $products = Product::query()
             ->whereIn('id', $ids)
             ->where('is_active', true)
-            ->with(['brand', 'images', 'variants.color'])
+            ->with(['brand', 'category', 'images', 'variants.color'])
             ->get()
             ->keyBy('id');
 
@@ -104,7 +105,7 @@ class CatalogQueryService
     {
         $slice = Product::query()
             ->where('is_active', true)
-            ->with(['brand', 'images', 'variants.color'])
+            ->with(['brand', 'category', 'images', 'variants.color'])
             ->latest()
             ->skip(8)
             ->take($limit)
@@ -174,6 +175,14 @@ class CatalogQueryService
             ->values()
             ->all();
 
+        $sizesUk = $this->ukSizeOptions(
+            DB::table('variant_sizes')
+                ->join('product_variants', 'variant_sizes.product_variant_id', '=', 'product_variants.id')
+                ->join('products', 'product_variants.product_id', '=', 'products.id')
+                ->where('products.category_id', $category->id)
+                ->where('products.is_active', true)
+        );
+
         $genders = (clone $base)
             ->select('gender')
             ->distinct()
@@ -187,10 +196,48 @@ class CatalogQueryService
             'brands' => $brands,
             'colors' => $colors,
             'sizes' => $sizes,
+            'sizes_uk' => $sizesUk,
             'genders' => $genders,
             'price_min' => $priceAgg?->min_price !== null ? (float) $priceAgg->min_price : 0,
             'price_max' => $priceAgg?->max_price !== null ? (float) $priceAgg->max_price : 0,
         ];
+    }
+
+    /**
+     * Collect a distinct, naturally-sorted list of UK size labels.
+     *
+     * @return array<int, string>
+     */
+    private function ukSizeOptions(\Illuminate\Database\Query\Builder $query): array
+    {
+        $values = (clone $query)
+            ->whereNotNull('variant_sizes.uk_size')
+            ->where('variant_sizes.uk_size', '!=', '')
+            ->distinct()
+            ->pluck('variant_sizes.uk_size')
+            ->map(static fn ($v) => trim((string) $v))
+            ->filter(static fn (string $v) => $v !== '')
+            ->unique()
+            ->values()
+            ->all();
+
+        usort($values, static function (string $a, string $b): int {
+            $af = is_numeric($a) ? (float) $a : null;
+            $bf = is_numeric($b) ? (float) $b : null;
+            if ($af !== null && $bf !== null) {
+                return $af <=> $bf;
+            }
+            if ($af !== null) {
+                return -1;
+            }
+            if ($bf !== null) {
+                return 1;
+            }
+
+            return strcmp($a, $b);
+        });
+
+        return $values;
     }
 
     /**
@@ -202,7 +249,7 @@ class CatalogQueryService
         $query = Product::query()
             ->where('category_id', $category->id)
             ->where('is_active', true)
-            ->with(['brand', 'images', 'variants.color', 'variants.sizes']);
+            ->with(['brand', 'category', 'images', 'variants.color', 'variants.sizes']);
 
         $brandIds = array_values(array_filter(array_map('intval', (array) ($filters['brand_ids'] ?? []))));
         if ($brandIds !== []) {
@@ -316,6 +363,13 @@ class CatalogQueryService
             ->values()
             ->all();
 
+        $sizesUk = $this->ukSizeOptions(
+            DB::table('variant_sizes')
+                ->join('product_variants', 'variant_sizes.product_variant_id', '=', 'product_variants.id')
+                ->join('products', 'product_variants.product_id', '=', 'products.id')
+                ->where('products.is_active', true)
+        );
+
         $genders = (clone $base)
             ->select('gender')
             ->distinct()
@@ -334,6 +388,7 @@ class CatalogQueryService
             'brands' => $brands,
             'colors' => $colors,
             'sizes' => $sizes,
+            'sizes_uk' => $sizesUk,
             'genders' => $genders,
             'categories' => $categories,
             'price_min' => $priceAgg?->min_price !== null ? (float) $priceAgg->min_price : 0,
@@ -352,7 +407,7 @@ class CatalogQueryService
     {
         $query = Product::query()
             ->where('is_active', true)
-            ->with(['brand', 'images', 'variants.color', 'variants.sizes']);
+            ->with(['brand', 'category', 'images', 'variants.color', 'variants.sizes']);
 
         $categoryIds = array_values(array_filter(array_map('intval', (array) ($filters['category_ids'] ?? []))));
         if ($categoryIds !== []) {
@@ -474,7 +529,7 @@ class CatalogQueryService
             'price_min' => $request->filled('price_min') ? (float) $request->input('price_min') : null,
             'price_max' => $request->filled('price_max') ? (float) $request->input('price_max') : null,
             'size' => $request->input('size') ?: null,
-            'size_uk' => $request->input('size_uk') ?: null,
+            'size_uk' => $this->normalizeStringList($request->input('size_uk')),
             'availability' => $request->input('availability') ?: null,
         ];
     }
@@ -504,7 +559,7 @@ class CatalogQueryService
      */
     public function relatedProducts(Product $product, int $limit = 8): Collection
     {
-        $with = ['brand', 'images', 'variants.color'];
+        $with = ['brand', 'category', 'images', 'variants.color'];
 
         $primary = Product::query()
             ->where('is_active', true)

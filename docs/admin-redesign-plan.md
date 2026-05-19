@@ -67,8 +67,38 @@ All routes inferred from `routes/admin.php` lines 19–61 plus controller bodies
 | GET | `/admin/content-posts/{content_post}/edit` | `admin.content-posts.edit` | `ContentPostAdminController@edit` | `Content/Edit.vue` |
 | PUT/PATCH | `/admin/content-posts/{content_post}` | `admin.content-posts.update` | `ContentPostAdminController@update` | redirect |
 | DELETE | `/admin/content-posts/{content_post}` | `admin.content-posts.destroy` | `ContentPostAdminController@destroy` | redirect |
+| GET | `/admin/products/export` | `admin.products.export` | `ProductAdminController@export` | CSV download |
+| POST | `/admin/products/import` | `admin.products.import` | `ProductAdminController@import` | redirect |
+| PATCH | `/admin/products/{product}/toggle-active` | `admin.products.toggle-active` | `ProductAdminController@toggleActive` | redirect |
+| GET | `/admin/products/{product}/variants` | `admin.products.variants` | `ProductAdminController@variants` | JSON |
+| GET | `/admin/orders/export` | `admin.orders.export` | `OrderAdminController@export` | CSV download |
+| POST | `/admin/orders/bulk/book` | `admin.orders.bulk.book` | `OrderBulkAdminController@book` | redirect |
+| POST | `/admin/orders/bulk/sync-tracking` | `admin.orders.bulk.sync-tracking` | `OrderBulkAdminController@syncTracking` | redirect |
+| PATCH | `/admin/orders/bulk/update-status` | `admin.orders.bulk.update-status` | `OrderBulkAdminController@updateStatus` | redirect |
+| PATCH | `/admin/orders/bulk/update-payment-status` | `admin.orders.bulk.update-payment-status` | `OrderBulkAdminController@updatePaymentStatus` | redirect |
+| POST | `/admin/orders/bulk/print/labels` | `admin.orders.bulk.print-labels` | `OrderBulkAdminController@printLabels` | inline PDF |
+| POST | `/admin/orders/bulk/print/packing-slips` | `admin.orders.bulk.print-packing-slips` | `OrderBulkAdminController@printPackingSlips` | inline PDF |
+| POST | `/admin/orders/{order}/admin-discount` | `admin.orders.admin-discount.set` | `OrderAdjustmentsAdminController@setAdminDiscount` | redirect → show |
+| POST | `/admin/orders/{order}/returns` | `admin.orders.returns.store` | `OrderReturnsAdminController@store` | redirect → show |
+| GET | `/admin/returns` | `admin.returns.index` | `OrderReturnAdminController@index` | `Returns/Index.vue` |
+| GET | `/admin/returns/{orderReturn}` | `admin.returns.show` | `OrderReturnAdminController@show` | redirect → orders.show |
+| GET | `/admin/inventory/low-stock` | `admin.inventory.low-stock` | `LowStockAdminController@index` | `Inventory/LowStock.vue` |
+| GET | `/admin/customers` | `admin.customers.index` | `CustomerAdminController@index` | `Customers/Index.vue` |
+| GET | `/admin/finance/courier-settlements` | `admin.finance.courier-settlements` | `CourierSettlementAdminController@index` | `Finance/CourierSettlements.vue` |
+| GET | `/admin/logistics/timeline` | `admin.logistics.timeline` | `LogisticsTimelineAdminController@index` | `Logistics/Timeline.vue` |
+| GET | `/admin/notifications` | `admin.notifications.index` | `NotificationLogAdminController@index` | `Notifications/Index.vue` |
+| POST | `/admin/notifications/{notificationLog}/retry` | `admin.notifications.retry` | `NotificationLogAdminController@retry` | redirect |
+| GET | `/admin/abandoned-carts` | `admin.abandoned-carts.index` | `AbandonedCartAdminController@index` | `AbandonedCarts/Index.vue` |
+| POST | `/admin/abandoned-carts/{cart}/whatsapp` | `admin.abandoned-carts.whatsapp.send` | `AbandonedCartAdminController@sendReminder` | redirect |
+| POST | `/admin/abandoned-carts/whatsapp/bulk` | `admin.abandoned-carts.whatsapp.bulk` | `AbandonedCartAdminController@bulkSendReminder` | redirect |
+| GET | `/admin/bargaining` | `admin.bargaining.index` | `BargainSessionAdminController@index` | `Bargaining/Index.vue` |
+| GET | `/admin/bargaining/{bargain_session}` | `admin.bargaining.show` | `BargainSessionAdminController@show` | `Bargaining/Show.vue` |
+| GET | `/admin/coupons/create` | `admin.coupons.create` | `CouponAdminController@create` | `Coupons/Create.vue` |
+| POST | `/admin/coupons` | `admin.coupons.store` | `CouponAdminController@store` | redirect |
+| GET | `/admin/storefront-assistant` | `admin.storefront-assistant.edit` | `StorefrontAssistantSettingsAdminController@edit` | `StorefrontAssistant/Settings.vue` |
+| PATCH | `/admin/storefront-assistant` | `admin.storefront-assistant.update` | `StorefrontAssistantSettingsAdminController@update` | redirect |
 
-> `OrderShipmentController` exists in `app/Http/Controllers/Web/Admin/` but is **not registered** in `routes/admin.php`. Treat as legacy/unused; flag during Phase 0 review.
+> Phase 5 (audit follow-up) deletes the unbound `OrderShipmentController` and the orphan `Pages/Admin/_DesignSystem.vue`. Both are no longer present in the codebase.
 
 ### 1.2 Vue admin pages (`resources/js/Pages/Admin/**`, 28 files)
 
@@ -237,6 +267,8 @@ Image references inside ported Vue components should use `/admin-assets/...` abs
 
 Single source of truth, no JSON import. Sketch:
 
+Real shape implemented in `resources/js/admin/menu.js` (after Phase 5 audit follow-ups):
+
 ```js
 export function buildAdminMenu(route) {
   return [
@@ -245,6 +277,7 @@ export function buildAdminMenu(route) {
       label: 'Catalog', icon: 'ti tabler-package',
       children: [
         { label: 'Products', href: route('admin.products.index'), active: 'admin.products.*' },
+        { label: 'Low / out of stock', href: route('admin.inventory.low-stock'), active: 'admin.inventory.*' },
         { label: 'Brands', href: route('admin.brands.index'), active: 'admin.brands.*' },
         { label: 'Categories', href: route('admin.categories.index'), active: 'admin.categories.*' },
         { label: 'Colors', href: route('admin.colors.index'), active: 'admin.colors.*' },
@@ -255,6 +288,10 @@ export function buildAdminMenu(route) {
       label: 'Sales', icon: 'ti tabler-shopping-cart',
       children: [
         { label: 'Orders', href: route('admin.orders.index'), active: 'admin.orders.*' },
+        { label: 'Customers', href: route('admin.customers.index'), active: 'admin.customers.*' },
+        { label: 'Returns', href: route('admin.returns.index'), active: 'admin.returns.*' },
+        { label: 'Abandoned carts', href: route('admin.abandoned-carts.index'), active: 'admin.abandoned-carts.*' },
+        { label: 'Bargaining', href: route('admin.bargaining.index'), active: 'admin.bargaining.*' },
         { label: 'Coupons', href: route('admin.coupons.index'), active: 'admin.coupons.*' },
       ],
     },
@@ -262,7 +299,15 @@ export function buildAdminMenu(route) {
       label: 'Logistics', icon: 'ti tabler-truck',
       children: [
         { label: 'Couriers', href: route('admin.couriers.index'), active: 'admin.couriers.*' },
+        { label: 'Shipment timeline', href: route('admin.logistics.timeline'), active: 'admin.logistics.*' },
         { label: 'Shipping settings', href: route('admin.shipping-settings.edit'), active: 'admin.shipping-settings.*' },
+      ],
+    },
+    {
+      label: 'Operations', icon: 'ti tabler-bell',
+      children: [
+        { label: 'Notifications', href: route('admin.notifications.index'), active: 'admin.notifications.*' },
+        { label: 'Courier settlements', href: route('admin.finance.courier-settlements'), active: 'admin.finance.*' },
       ],
     },
     {
@@ -270,6 +315,7 @@ export function buildAdminMenu(route) {
       children: [
         { label: 'Payments', href: route('admin.payment-settings.edit'), active: 'admin.payment-settings.*' },
         { label: 'WhatsApp', href: route('admin.whatsapp-settings.edit'), active: 'admin.whatsapp-settings.*' },
+        { label: 'Storefront Assistant', href: route('admin.storefront-assistant.edit'), active: 'admin.storefront-assistant.*' },
         { label: 'Marketing & SEO', href: route('admin.marketing-settings.edit'), active: 'admin.marketing-settings.*' },
       ],
     },
@@ -313,7 +359,8 @@ Theme reference paths are relative to `vue-admin-design/resources/views/`. Props
 | `Pages/Admin/Orders/Index.vue` | `content/apps/app-ecommerce-order-list.blade.php` | `DataTable`, `StatusBadge` | Columns: order #, customer, total, payment status, order status, created, actions. | `orders` paginator with `user`. | Add filters as a follow‑up (controller currently returns full latest list). |
 | `Pages/Admin/Orders/Show.vue` | `content/apps/app-ecommerce-order-details.blade.php` | `FormSection`, `StatusBadge`, `ConfirmDialog`, `useForm` | Two columns: left = items table + payments + shipments timeline; right = customer card, addresses, status update form, courier assignment form, "Book shipment", "Sync tracking", PostEx invoice/load‑sheet/cancel actions. | `order, order_statuses, payment_statuses, couriers, defaultBookingCourierId`. | PostEx endpoints return PDFs → open in a new tab (`<a target="_blank">`). The cancel action uses POST → handle via `<Link method="post" as="button">`. |
 | `Pages/Admin/Couriers/Index.vue` | `content/apps/app-ecommerce-customer-all.blade.php` | `DataTable`, `StatusBadge` | Columns: code, name, adapter, sort_order, active, actions. | `couriers` paginator. | Read‑only; no create/update/destroy routes today. |
-| `Pages/Admin/Coupons/Index.vue` | similar list | `DataTable`, `StatusBadge` | Columns: code, type, value, expires, status. | `coupons` paginator. | Read‑only; no create/update routes. |
+| `Pages/Admin/Coupons/Index.vue` | similar list | `DataTable`, `StatusBadge` | Columns: code, type, value, expires, status. | `coupons` paginator. | Has a `Create coupon` action wired to `admin.coupons.create` / `admin.coupons.store`; deletion / update routes are still TODO. |
+| `Pages/Admin/Coupons/Create.vue` | `app-ecommerce-product-add.blade.php` (single-column form) | `FormSection`, `FormField` | Code, type, value, scope, max_uses, expires_at, is_active. | none (POST `admin.coupons.store`). | Validate code uniqueness server-side via `StoreCouponRequest`. |
 | `Pages/Admin/PaymentSettings/Index.vue` | `content/apps/app-ecommerce-settings-payments.blade.php` | `FormSection`, `FormField`, repeater table | List of payment methods (id, gateway_code, customer_label, fee_fixed, fee_percent, sort_order, enabled toggle); global "Fallback online → COD" switch. | `methods, fallback_online_failed_to_cod`. | Submit one form covering the whole array; mirror existing `UpdatePaymentSettingsRequest` shape exactly. |
 | `Pages/Admin/Shipping/Settings.vue` | `content/apps/app-ecommerce-settings-shipping.blade.php` | `FormSection`, `FormField`, repeater | Default courier select, courier_assignment_default, auto‑book toggles, tracking interval, sender snapshot fields, PostEx pickup/store codes, default dimensions; Courier Accounts grid with credentials inputs (api_token write‑only). | `settings, couriers_for_select, courier_accounts_form`. | Credentials are write‑only — don't preload, only update if non‑empty. Validate that token never leaks back to client. |
 | `Pages/Admin/WhatsApp/Settings.vue` | `content/apps/app-ecommerce-settings-notifications.blade.php` | `FormSection`, `FormField` | Toggles + textarea for admin recipients (one per line) → array on submit. | `settings: { enabled_customer_notifications, enabled_admin_notifications, admin_recipients_text }`. | Need to convert textarea to array client‑side before submit (split on `\n`, trim, filter). |
@@ -357,7 +404,7 @@ Theme reference paths are relative to `vue-admin-design/resources/views/`. Props
   - [ ] Storefront pages (Home, Shop, Cart, Product) render visually identically (no Bootstrap leak).
   - [ ] `/admin` loads empty shell with horizontal menu placeholder; mobile toggler opens slide‑in.
   - [ ] `tests/Feature/Admin/AdminRoutesTest.php` still passes.
-- **Rollback**: revert two‑input change in `vite.config.js` and the conditional in `app.blade.php`; old `AdminLayout.vue` kept as `AdminLayoutLegacy.vue` for safe revert.
+- **Rollback**: revert two‑input change in `vite.config.js` and the conditional in `app.blade.php`. (The old `AdminLayoutLegacy.vue` file was retired in Phase 5 — restore from git history if a roll-back is ever needed.)
 
 ### Phase 1 — Navigation
 
@@ -368,12 +415,12 @@ Theme reference paths are relative to `vue-admin-design/resources/views/`. Props
   - [ ] Active state highlights match current route (test by visiting each top‑level area).
   - [ ] Logout link calls `route('logout')` POST and redirects.
   - [ ] Toast appears for flash `status` and `error` after redirect.
-- **Rollback**: feature flag in `AdminLayout.vue` toggles between Legacy nav and new nav.
+- **Rollback**: the feature-flagged Legacy nav was deleted in Phase 5; revert via git history if needed.
 
 ### Phase 2 — Reusable building blocks
 
-- **Deliverables**: `DataTable.vue`, `DataTablePagination.vue`, `FormSection.vue`, `FormField.vue`, `StatCard.vue`, `AdminPageHeader.vue`, `AdminBreadcrumb.vue`, `EmptyState.vue`, `StatusBadge.vue`, `ConfirmDialog.vue`.
-- **Files touched**: `resources/js/Components/Admin/**`, plus a Storybook‑style preview page at `Pages/Admin/_DesignSystem.vue` (gated by env) for visual QA.
+- **Deliverables**: `DataTable.vue`, `DataTablePagination.vue`, `FormSection.vue`, `FormField.vue`, `StatCard.vue`, `AdminPageHeader.vue`, `AdminBreadcrumb.vue`, `EmptyState.vue`, `StatusBadge.vue`, `ConfirmDialog.vue`. Phase 5 added `BulkSummaryModal.vue` and the `useFocusTrap` composable.
+- **Files touched**: `resources/js/Components/Admin/**`. (The originally proposed `Pages/Admin/_DesignSystem.vue` preview page was never wired to a route and was deleted in Phase 5.)
 - **Manual test checklist**
   - [ ] Each component renders with sample props on the preview page.
   - [ ] `DataTable` supports loading, empty, error states.
@@ -455,10 +502,54 @@ Each step ships a single PR that only touches the listed Vue page(s). Verified a
 - **Vite entries**: confirm two‑input split (`resources/js/app.js` + `resources/js/admin.js`) is acceptable. Alternative: single entry with conditional CSS import (simpler but heavier storefront bundle).
 - **Charts on Dashboard**: include ApexCharts widgets (revenue trend, orders sparkline) now or as a Phase 4 add‑on?
 - **Customizer panel**: do we want the theme's runtime customizer (skin / direction / layout switcher) shipped, or omit it entirely? Plan currently **omits** it.
-- **Legacy `OrderShipmentController`**: confirm it can be deleted (no route registers it) so it does not show up in linters.
+- ~~**Legacy `OrderShipmentController`**~~ — resolved in Phase 5: file deleted.
 
 ---
 
 ## Next step
 
 Start Phase 0: paste this prompt into Cursor — *“Execute Phase 0 of `docs/admin-redesign-plan.md`: add admin Vite entry + SCSS, copy theme assets, scaffold empty `AdminLayout.vue` shell, and gate it behind `?admin_preview=1`; do not touch any `Pages/Admin/*.vue` yet.”*
+
+---
+
+## Phase 5 — Audit follow-ups (delivered)
+
+This phase closed the gaps in the post-Phase-4 admin audit (security, ops visibility, missing screens, automation). Tracked in `cursor/plans/admin-audit-followups_*.plan.md`.
+
+### Security & data integrity (P0)
+
+- **Bulk payment guardrails** — split `admin.orders.bulk.update-status` into status-only and a new `admin.orders.bulk.update-payment-status`. The new `BulkUpdatePaymentStatusRequest` requires an `override` checkbox + non-empty `reason` for destructive transitions (`paid`, `refunded`, `canceled`); both flow into `PaymentStatusHistory.meta` and `OrderAuditEvent.meta` for audit. UI now opens a dedicated modal with `confirmDanger` summary (selected count + first 5 order numbers).
+- **Run Courier credentials** — `ShippingSettingsAdminController@edit` no longer echoes `client_code`, `profile_id`, `api_vendor`. Replaced with `has_*` booleans + masked password inputs and "Configured / Not set" badges.
+- **Order-detail dangerous actions** — `bookOrder`, `saveAdminDiscount` (with current → projected total preview) and `submitReturn` are wrapped in `confirmDanger` with summaries.
+- **Orphans removed** — `app/Http/Controllers/Web/Admin/OrderShipmentController.php` and `resources/js/Pages/Admin/_DesignSystem.vue` deleted.
+
+### Ops visibility (P1)
+
+- **Payments ledger card** on `Orders/Show.vue` rendering `order.payments` (gateway, status, amount, paid_at, external_id, expandable meta JSON).
+- **Order list filters & presets** — `OrderAdminController::index` now accepts `date_from`, `date_to`, `courier_id`, `delivery_status`, `payment_gateway`, `preset` (`today`, `today_unbooked`, `pending_payment_24h`, `booking_failed`). Vue exposes new selects + chip presets.
+- **bulk_summary surfacing** — extended `useFlash.js` to detect `flash.bulk_summary` and open a globally-mounted `BulkSummaryModal` (in `AdminLayout.vue`) listing skipped rows with per-order links.
+- **Notification logs** — new `NotificationLogAdminController` (index + WhatsApp retry), page `Pages/Admin/Notifications/Index.vue` with filters / payload drawer / "Failed only" + "WhatsApp DLQ" presets, and a new **Operations** menu group.
+- **Orders CSV export** — `admin.orders.export` reuses the same query builder as `index()`; the formerly-disabled Export button now downloads the current filtered view.
+- **Legacy layout** — `?admin_legacy=1` branch and `AdminLayoutLegacy.vue` removed from `AdminLayout.vue` so navigation is single-sourced from `buildAdminMenu`.
+
+### New screens & automation (F + C)
+
+- **Returns dashboard** — `OrderReturnAdminController` + `Pages/Admin/Returns/Index.vue` with KPI tiles, restock filter, date range. Detail link redirects to the order page hash.
+- **Low-stock work queue** — `LowStockAdminController` paginates `VariantSize` rows on two tabs (`low`, `out`); page is `Pages/Admin/Inventory/LowStock.vue` and the Dashboard "Low stock SKUs" / "Out of stock" tiles deep-link to the right tab.
+- **Customer directory** — `CustomerAdminController` exposes `users` with subquery-derived `orders_count`, `lifetime_spend`, `last_order_at`. Page `Pages/Admin/Customers/Index.vue` supports search + segment chips (`Has orders`, `No orders yet`, `VIP`).
+- **Courier COD settlement** — `App\Domain\Finance\CourierSettlementService` aggregates per-courier outstanding vs. settled COD and discrepancies. `CourierSettlementAdminController` + `Pages/Admin/Finance/CourierSettlements.vue` show the per-courier table and an outstanding-orders drill-down.
+- **Global shipment timeline** — `LogisticsTimelineAdminController` over `ShipmentEvent` with courier/status/date filters. Page `Pages/Admin/Logistics/Timeline.vue`.
+- **Abandoned cart WhatsApp** — `AbandonedCartAdminController::sendReminder` and `bulkSendReminder` dispatch via the new `App\Domain\Marketing\AbandonedCartReminderService`, log to `notification_logs`, and the page now exposes per-row + bulk "Send WhatsApp" buttons (disabled when no phone is on file). Skipped rows bubble through `bulk_summary`.
+- **Background reconciliation** — three new jobs (`ReconcileFailedBookingsJob`, `ProcessNotificationRetryJob`, `ReconcileCodFromCourierWebhookJob`) registered in `routes/console.php` (every 15m / 10m / hourly). The COD job removes the need for the bulk-Paid override path locked down above.
+
+### Polish (a11y + dashboard + docs)
+
+- **Dashboard "today" tiles** — `AdminDashboardMetrics::kpis` adds `orders_today`, `cod_collected_today`, `cod_pending_today`, `bookings_failed_today`. The new tile row in `Dashboard.vue` deep-links to the matching Orders presets.
+- **Modal a11y** — added `useFocusTrap` composable (`resources/js/admin/useFocusTrap.js`) and `aria-labelledby` on every bulk modal (`Orders/Index.vue`) and the return modal (`Orders/Show.vue`). Esc closes, Tab cycles, focus restored on close.
+- **Docs sync** — this section, the §1 route table additions, the §3.3 menu sketch refresh, and the Coupons row update.
+
+### Out of scope (still TODO)
+
+- Coupons update / destroy controllers.
+- Detailed `Pages/Admin/Returns/Show.vue` (currently redirects to the parent order; explicit page can be added later).
+- Lighthouse a11y verification ≥ 90 on the new screens (audit only; no measurement automation in this phase).

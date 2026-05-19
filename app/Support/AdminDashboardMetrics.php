@@ -99,6 +99,45 @@ final class AdminDashboardMetrics
             ->where('status', ShipmentStatus::InTransit)
             ->count();
 
+        // Today-scoped operational tiles. Used by Dashboard.vue with deep links
+        // to the new Orders index presets shipped in Phase 2.2 (today, today + not booked,
+        // booking_failed). cod_collected_today / cod_pending_today look at *delivered*
+        // shipments today on COD orders.
+        $todayStart = $now->copy()->startOfDay();
+
+        $ordersToday = (int) Order::query()
+            ->where('created_at', '>=', $todayStart)
+            ->whereNot('status', OrderStatus::Cancelled)
+            ->count();
+
+        $codTodayBase = Shipment::query()
+            ->where('delivered_at', '>=', $todayStart)
+            ->where('status', ShipmentStatus::Delivered)
+            ->whereHas('order', function ($q) {
+                $q->where(function ($qq) {
+                    $qq->where('payment_gateway', 'like', '%cod%')
+                        ->orWhere('payment_gateway', 'like', '%cash%');
+                });
+            });
+
+        $codCollectedToday = (float) (clone $codTodayBase)
+            ->whereHas('order', fn ($q) => $q->where('payment_status', PaymentStatus::Paid))
+            ->sum('cod_amount');
+
+        $codPendingToday = (float) (clone $codTodayBase)
+            ->whereHas('order', fn ($q) => $q->where('payment_status', '!=', PaymentStatus::Paid))
+            ->sum('cod_amount');
+
+        $bookingsFailedToday = (int) Shipment::query()
+            ->where('status', ShipmentStatus::Failed)
+            ->where(function ($q) use ($todayStart) {
+                $q->where('failed_at', '>=', $todayStart)
+                    ->orWhere(function ($qq) use ($todayStart) {
+                        $qq->whereNull('failed_at')->where('updated_at', '>=', $todayStart);
+                    });
+            })
+            ->count();
+
         return [
             'revenue_paid_mtd' => $paidMtd,
             'gmv_mtd' => $gmvMtd,
@@ -110,6 +149,10 @@ final class AdminDashboardMetrics
             'out_of_stock_variants' => $outOfStock,
             'shipments_pending_booked' => $pendingShipments,
             'shipments_in_transit' => $inTransit,
+            'orders_today' => $ordersToday,
+            'cod_collected_today' => $codCollectedToday,
+            'cod_pending_today' => $codPendingToday,
+            'bookings_failed_today' => $bookingsFailedToday,
         ];
     }
 

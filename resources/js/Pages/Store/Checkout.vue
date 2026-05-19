@@ -67,7 +67,7 @@ function feeHint(g) {
 <template>
     <StoreSeoHead :seo="seo" />
     <StoreLayout>
-        <div class="mx-auto max-w-lg px-4 pb-40 pt-8 sm:max-w-xl sm:pb-16">
+        <div class="mx-auto max-w-lg px-4 pb-44 pt-8 sm:max-w-xl sm:pb-16">
             <h1 class="text-2xl font-semibold tracking-tight text-stone-900">
                 Checkout
             </h1>
@@ -201,7 +201,7 @@ function feeHint(g) {
 
         <!-- Mobile sticky submit -->
         <div
-            class="fixed inset-x-0 bottom-0 z-40 border-t border-stone-200/90 bg-white/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-md sm:hidden"
+            class="store-sticky-above-nav fixed inset-x-0 z-[45] border-t border-stadium-outline-soft bg-stadium-white px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] sm:hidden"
         >
             <button
                 type="button"

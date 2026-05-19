@@ -9,7 +9,7 @@
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600|inter:400,500,700|sora:700,800&display=swap" rel="stylesheet" />
 
         <!-- Scripts -->
         @routes
@@ -17,6 +17,17 @@
             $isAdminPage = str_starts_with($page['component'] ?? '', 'Admin/');
             $entry = $isAdminPage ? 'resources/js/admin.js' : 'resources/js/app.js';
         @endphp
+        @if (! $isAdminPage)
+        <script>
+            (function () {
+                try {
+                    if (localStorage.getItem('store.theme') === 'dark') {
+                        document.documentElement.classList.add('dark');
+                    }
+                } catch (e) {}
+            })();
+        </script>
+        @endif
         @vite([$entry, "resources/js/Pages/{$page['component']}.vue"])
         @inertiaHead
     </head>

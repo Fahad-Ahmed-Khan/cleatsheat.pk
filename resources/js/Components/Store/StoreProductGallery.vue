@@ -82,8 +82,8 @@ function openVideo() {
                 v-for="(img, i) in imageTiles"
                 :key="i"
                 type="button"
-                class="aspect-square w-full overflow-hidden rounded-xl bg-stone-50 ring-1 transition"
-                :class="active === i ? 'ring-2 ring-stone-900' : 'ring-stone-200/80 hover:ring-stone-400'"
+                class="aspect-square w-full overflow-hidden rounded-xl bg-stadium-muted ring-1 transition"
+                :class="active === i ? 'ring-2 ring-stadium-ink' : 'ring-stadium-outline-soft/80 hover:ring-stadium-outline'"
                 :aria-label="`View image ${i + 1}`"
                 @click="active = i"
                 @dblclick="openLightbox(i)"
@@ -97,7 +97,7 @@ function openVideo() {
             <button
                 v-if="hasVideo"
                 type="button"
-                class="relative aspect-square w-full overflow-hidden rounded-xl bg-stone-900 ring-1 ring-stone-200/80 transition hover:ring-stone-400"
+                class="relative aspect-square w-full overflow-hidden rounded-xl bg-stadium-ink ring-1 ring-stadium-outline-soft/80 transition hover:ring-stadium-outline"
                 aria-label="Play product video"
                 @click="openVideo"
             >
@@ -118,7 +118,7 @@ function openVideo() {
         <!-- Main image -->
         <div class="relative flex-1">
             <div
-                class="group relative flex aspect-square w-full cursor-zoom-in items-center justify-center overflow-hidden rounded-2xl bg-stone-50 ring-1 ring-stone-200/80 sm:aspect-[4/5]"
+                class="group relative flex aspect-square w-full cursor-zoom-in items-center justify-center overflow-hidden rounded-2xl bg-stadium-muted shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-stadium-outline-soft/80 sm:aspect-[4/5]"
                 role="button"
                 tabindex="0"
                 :aria-label="`Open ${mainAlt} preview`"
@@ -132,12 +132,12 @@ function openVideo() {
                     :alt="mainAlt"
                     class="h-full w-full object-contain transition duration-200 group-hover:scale-[1.02]"
                 >
-                <div v-else class="text-sm text-stone-400">
+                <div v-else class="text-sm text-stadium-outline">
                     Image coming soon
                 </div>
 
                 <!-- Zoom hint -->
-                <span class="pointer-events-none absolute left-3 top-3 hidden items-center gap-1 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-medium text-stone-700 ring-1 ring-stone-200/80 sm:flex">
+                <span class="pointer-events-none absolute left-3 top-3 hidden items-center gap-1 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-medium text-stadium-secondary ring-1 ring-stadium-outline-soft/80 sm:flex">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5">
                         <circle cx="11" cy="11" r="7" />
                         <line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -151,7 +151,7 @@ function openVideo() {
                 <button
                     v-if="hasVideo"
                     type="button"
-                    class="absolute left-3 bottom-3 flex items-center gap-1.5 rounded-full bg-stone-900/90 px-3 py-1.5 text-xs font-semibold text-white shadow ring-1 ring-stone-900/40 backdrop-blur transition hover:bg-stone-900 active:scale-95"
+                    class="absolute left-3 bottom-3 flex items-center gap-1.5 rounded-full bg-stadium-ink/90 px-3 py-1.5 text-xs font-semibold text-white shadow ring-1 ring-stadium-ink/40 backdrop-blur transition hover:bg-stadium-ink active:scale-95"
                     aria-label="Play product video"
                     @click.stop="openVideo"
                 >
@@ -168,7 +168,7 @@ function openVideo() {
                 >
                     <button
                         type="button"
-                        class="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-stone-700 shadow ring-1 ring-stone-200 backdrop-blur transition hover:bg-white hover:text-stone-900 active:scale-95"
+                        class="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-stadium-secondary shadow ring-1 ring-stadium-outline-soft backdrop-blur transition hover:bg-white hover:text-stadium-ink active:scale-95"
                         aria-label="Previous image"
                         @click.stop="prev"
                     >
@@ -178,7 +178,7 @@ function openVideo() {
                     </button>
                     <button
                         type="button"
-                        class="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-stone-700 shadow ring-1 ring-stone-200 backdrop-blur transition hover:bg-white hover:text-stone-900 active:scale-95"
+                        class="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-stadium-secondary shadow ring-1 ring-stadium-outline-soft backdrop-blur transition hover:bg-white hover:text-stadium-ink active:scale-95"
                         aria-label="Next image"
                         @click.stop="next"
                     >
@@ -198,8 +198,8 @@ function openVideo() {
                     v-for="(img, i) in imageTiles"
                     :key="`m-${i}`"
                     type="button"
-                    class="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-stone-50 ring-1 transition"
-                    :class="active === i ? 'ring-2 ring-stone-900' : 'ring-stone-200/80'"
+                    class="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-stadium-muted ring-1 transition"
+                    :class="active === i ? 'ring-2 ring-stadium-ink' : 'ring-stadium-outline-soft/80'"
                     :aria-label="`View image ${i + 1}`"
                     @click="active = i"
                 >
@@ -208,7 +208,7 @@ function openVideo() {
                 <button
                     v-if="hasVideo"
                     type="button"
-                    class="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-stone-900 ring-1 ring-stone-200/80"
+                    class="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-stadium-ink ring-1 ring-stadium-outline-soft/80"
                     aria-label="Play product video"
                     @click="openVideo"
                 >
@@ -235,7 +235,7 @@ function openVideo() {
                     v-for="(t, i) in tiles"
                     :key="`stack-${i}`"
                     type="button"
-                    class="group relative flex aspect-[4/5] w-full items-center justify-center overflow-hidden rounded-2xl bg-stone-50 ring-1 ring-stone-200/80 transition hover:ring-stone-300"
+                    class="group relative flex aspect-[4/5] w-full items-center justify-center overflow-hidden rounded-2xl bg-stadium-muted ring-1 ring-stadium-outline-soft/80 transition hover:ring-stadium-outline"
                     :aria-label="t.kind === 'video' ? 'Play product video' : `Open image ${i + 1}`"
                     @click="openLightbox(i)"
                 >
@@ -254,9 +254,9 @@ function openVideo() {
                             class="h-full w-full object-cover opacity-90"
                             loading="lazy"
                         >
-                        <div v-else class="h-full w-full bg-stone-900" />
+                        <div v-else class="h-full w-full bg-stadium-ink" />
                         <span class="absolute inset-0 flex items-center justify-center bg-black/30">
-                            <span class="flex h-14 w-14 items-center justify-center rounded-full bg-white/95 text-stone-900 shadow ring-1 ring-stone-200 backdrop-blur transition group-hover:scale-105">
+                            <span class="flex h-14 w-14 items-center justify-center rounded-full bg-white/95 text-stadium-ink shadow ring-1 ring-stadium-outline-soft backdrop-blur transition group-hover:scale-105">
                                 <svg viewBox="0 0 24 24" fill="currentColor" class="ml-0.5 h-6 w-6">
                                     <path d="M8 5v14l11-7z" />
                                 </svg>

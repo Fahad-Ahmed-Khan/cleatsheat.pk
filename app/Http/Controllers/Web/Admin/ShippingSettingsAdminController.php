@@ -30,6 +30,7 @@ class ShippingSettingsAdminController extends Controller
                 $courierAccountRows[] = [
                     'id' => $account->id,
                     'courier_name' => $courier->name,
+                    'courier_adapter' => $courier->adapter,
                     'name' => $account->name,
                     'cod_allowed' => $account->cod_allowed,
                     'is_active' => $account->is_active,
@@ -38,10 +39,16 @@ class ShippingSettingsAdminController extends Controller
                     'city_restrictions_text' => $account->city_restrictions
                         ? implode(', ', $account->city_restrictions)
                         : '',
+                    // Never echo secrets back to the browser. The form preserves the
+                    // stored value when the field is left blank.
                     'api_token' => '',
-                    'client_code' => (string) ($creds['client_code'] ?? ''),
-                    'profile_id' => (string) ($creds['profile_id'] ?? ''),
-                    'api_vendor' => (string) ($creds['api_vendor'] ?? ''),
+                    'client_code' => '',
+                    'profile_id' => '',
+                    'api_vendor' => '',
+                    'has_api_token' => trim((string) ($creds['api_token'] ?? '')) !== '',
+                    'has_client_code' => trim((string) ($creds['client_code'] ?? '')) !== '',
+                    'has_profile_id' => trim((string) ($creds['profile_id'] ?? '')) !== '',
+                    'has_api_vendor' => trim((string) ($creds['api_vendor'] ?? '')) !== '',
                 ];
             }
         }
@@ -103,35 +110,38 @@ class ShippingSettingsAdminController extends Controller
                     : null,
             ]);
 
-            $account = CourierAccount::query()->find($row['id']);
+            $account = CourierAccount::query()->with('courier')->find($row['id']);
             if ($account === null) {
                 continue;
             }
 
             $creds = $account->credentials ?? [];
+            $credentialsChanged = false;
+
             if (! empty($row['api_token'])) {
                 $creds['api_token'] = $row['api_token'];
-            }
-            if (! empty($row['client_code'])) {
-                $creds['client_code'] = $row['client_code'];
-            }
-            if (! empty($row['profile_id'])) {
-                $creds['profile_id'] = $row['profile_id'];
-            }
-            $vendorProvided = array_key_exists('api_vendor', $row);
-            if ($vendorProvided) {
-                $trimmedVendor = trim((string) $row['api_vendor']);
-                if ($trimmedVendor !== '') {
-                    $creds['api_vendor'] = $trimmedVendor;
-                } else {
-                    unset($creds['api_vendor']);
-                }
+                $credentialsChanged = true;
             }
 
-            $credentialsChanged = ! empty($row['api_token'])
-                || ! empty($row['client_code'])
-                || ! empty($row['profile_id'])
-                || $vendorProvided;
+            if ($account->courier?->adapter === 'runcourier') {
+                if (! empty($row['client_code'])) {
+                    $creds['client_code'] = $row['client_code'];
+                    $credentialsChanged = true;
+                }
+                if (! empty($row['profile_id'])) {
+                    $creds['profile_id'] = $row['profile_id'];
+                    $credentialsChanged = true;
+                }
+                if (array_key_exists('api_vendor', $row)) {
+                    $trimmedVendor = trim((string) $row['api_vendor']);
+                    if ($trimmedVendor !== '') {
+                        $creds['api_vendor'] = $trimmedVendor;
+                    } else {
+                        unset($creds['api_vendor']);
+                    }
+                    $credentialsChanged = true;
+                }
+            }
 
             if ($credentialsChanged) {
                 $account->credentials = $creds;

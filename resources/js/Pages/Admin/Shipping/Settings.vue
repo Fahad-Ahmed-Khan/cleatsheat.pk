@@ -283,7 +283,14 @@ function submit() {
                                     </FormField>
                                 </div>
                                 <div class="col-12">
-                                    <FormField :id="`ca-token-${row.id}`" label="API token / primary credential" :error="form.errors[`courier_accounts.${idx}.api_token`]">
+                                    <FormField :id="`ca-token-${row.id}`" :error="form.errors[`courier_accounts.${idx}.api_token`]">
+                                        <template #label>
+                                            <span class="d-inline-flex align-items-center gap-2">
+                                                <span>API token / primary credential</span>
+                                                <span v-if="row.has_api_token" class="badge bg-label-success">Configured</span>
+                                                <span v-else class="badge bg-label-warning">Not set</span>
+                                            </span>
+                                        </template>
                                         <template #default="{ invalid, describedBy }">
                                             <input
                                                 :id="`ca-token-${row.id}`"
@@ -298,27 +305,77 @@ function submit() {
                                         </template>
                                     </FormField>
                                 </div>
-                                <div class="col-12 col-md-6">
-                                    <FormField :id="`ca-client-${row.id}`" label="Run Courier — client code" :error="form.errors[`courier_accounts.${idx}.client_code`]">
-                                        <template #default="{ invalid, describedBy }">
-                                            <input :id="`ca-client-${row.id}`" v-model="form.courier_accounts[idx].client_code" class="form-control" placeholder="Leave blank to keep unchanged" :class="{ 'is-invalid': invalid }" :aria-describedby="describedBy" />
-                                        </template>
-                                    </FormField>
-                                </div>
-                                <div class="col-12 col-md-6">
-                                    <FormField :id="`ca-profile-${row.id}`" label="Run Courier — profile id" :error="form.errors[`courier_accounts.${idx}.profile_id`]">
-                                        <template #default="{ invalid, describedBy }">
-                                            <input :id="`ca-profile-${row.id}`" v-model="form.courier_accounts[idx].profile_id" class="form-control" placeholder="Leave blank to keep unchanged" :class="{ 'is-invalid': invalid }" :aria-describedby="describedBy" />
-                                        </template>
-                                    </FormField>
-                                </div>
-                                <div class="col-12">
-                                    <FormField :id="`ca-vendor-${row.id}`" label="Run Courier — api vendor" :error="form.errors[`courier_accounts.${idx}.api_vendor`]">
-                                        <template #default="{ invalid, describedBy }">
-                                            <input :id="`ca-vendor-${row.id}`" v-model="form.courier_accounts[idx].api_vendor" class="form-control" placeholder="Empty = automatic routing" :class="{ 'is-invalid': invalid }" :aria-describedby="describedBy" />
-                                        </template>
-                                    </FormField>
-                                </div>
+                                <template v-if="row.courier_adapter === 'runcourier'">
+                                    <div class="col-12 col-md-6">
+                                        <FormField :id="`ca-client-${row.id}`" :error="form.errors[`courier_accounts.${idx}.client_code`]">
+                                            <template #label>
+                                                <span class="d-inline-flex align-items-center gap-2">
+                                                    <span>Run Courier — client code</span>
+                                                    <span v-if="row.has_client_code" class="badge bg-label-success">Configured</span>
+                                                    <span v-else class="badge bg-label-warning">Not set</span>
+                                                </span>
+                                            </template>
+                                            <template #default="{ invalid, describedBy }">
+                                                <input
+                                                    :id="`ca-client-${row.id}`"
+                                                    v-model="form.courier_accounts[idx].client_code"
+                                                    type="password"
+                                                    autocomplete="new-password"
+                                                    class="form-control"
+                                                    placeholder="Leave blank to keep unchanged"
+                                                    :class="{ 'is-invalid': invalid }"
+                                                    :aria-describedby="describedBy"
+                                                />
+                                            </template>
+                                        </FormField>
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <FormField :id="`ca-profile-${row.id}`" :error="form.errors[`courier_accounts.${idx}.profile_id`]">
+                                            <template #label>
+                                                <span class="d-inline-flex align-items-center gap-2">
+                                                    <span>Run Courier — profile id</span>
+                                                    <span v-if="row.has_profile_id" class="badge bg-label-success">Configured</span>
+                                                    <span v-else class="badge bg-label-warning">Not set</span>
+                                                </span>
+                                            </template>
+                                            <template #default="{ invalid, describedBy }">
+                                                <input
+                                                    :id="`ca-profile-${row.id}`"
+                                                    v-model="form.courier_accounts[idx].profile_id"
+                                                    type="password"
+                                                    autocomplete="new-password"
+                                                    class="form-control"
+                                                    placeholder="Leave blank to keep unchanged"
+                                                    :class="{ 'is-invalid': invalid }"
+                                                    :aria-describedby="describedBy"
+                                                />
+                                            </template>
+                                        </FormField>
+                                    </div>
+                                    <div class="col-12">
+                                        <FormField :id="`ca-vendor-${row.id}`" :error="form.errors[`courier_accounts.${idx}.api_vendor`]">
+                                            <template #label>
+                                                <span class="d-inline-flex align-items-center gap-2">
+                                                    <span>Run Courier — api vendor</span>
+                                                    <span v-if="row.has_api_vendor" class="badge bg-label-success">Configured</span>
+                                                    <span v-else class="badge bg-label-secondary">Auto</span>
+                                                </span>
+                                            </template>
+                                            <template #default="{ invalid, describedBy }">
+                                                <input
+                                                    :id="`ca-vendor-${row.id}`"
+                                                    v-model="form.courier_accounts[idx].api_vendor"
+                                                    type="password"
+                                                    autocomplete="new-password"
+                                                    class="form-control"
+                                                    placeholder="Leave blank to keep unchanged (empty = automatic routing)"
+                                                    :class="{ 'is-invalid': invalid }"
+                                                    :aria-describedby="describedBy"
+                                                />
+                                            </template>
+                                        </FormField>
+                                    </div>
+                                </template>
                                 <div class="col-12">
                                     <FormField :id="`ca-cities-${row.id}`" label="Allowed cities (comma-separated)" :error="form.errors[`courier_accounts.${idx}.city_restrictions_text`]">
                                         <template #default="{ invalid, describedBy }">

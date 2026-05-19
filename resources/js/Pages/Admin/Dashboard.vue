@@ -232,6 +232,45 @@ const logTabCounts = computed(() => {
 
         <div class="row g-3 mb-4">
             <div class="col-12 col-sm-6 col-xl-3">
+                <Link :href="route('admin.orders.index', { preset: 'today' })" class="card h-100 mb-0 text-decoration-none">
+                    <div class="card-body py-3">
+                        <div class="text-muted small mb-1">Orders today</div>
+                        <div class="h5 mb-0">{{ kpis.orders_today ?? 0 }}</div>
+                        <div class="text-muted mt-2 small">Created today (excl. cancelled)</div>
+                    </div>
+                </Link>
+            </div>
+            <div class="col-12 col-sm-6 col-xl-3">
+                <div class="card h-100 mb-0">
+                    <div class="card-body py-3">
+                        <div class="text-muted small mb-1">COD collected today</div>
+                        <div class="h5 mb-0 text-success">{{ money(kpis.cod_collected_today ?? 0) }}</div>
+                        <div class="text-muted mt-2 small">Delivered &amp; reconciled today</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-xl-3">
+                <div class="card h-100 mb-0">
+                    <div class="card-body py-3">
+                        <div class="text-muted small mb-1">COD pending today</div>
+                        <div class="h5 mb-0 text-warning">{{ money(kpis.cod_pending_today ?? 0) }}</div>
+                        <div class="text-muted mt-2 small">Delivered, payment not yet recorded</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-xl-3">
+                <Link :href="route('admin.orders.index', { preset: 'booking_failed' })" class="card h-100 mb-0 text-decoration-none">
+                    <div class="card-body py-3">
+                        <div class="text-muted small mb-1">Bookings failed today</div>
+                        <div class="h5 mb-0 text-danger">{{ kpis.bookings_failed_today ?? 0 }}</div>
+                        <div class="text-muted mt-2 small">Open the filtered Orders view</div>
+                    </div>
+                </Link>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-12 col-sm-6 col-xl-3">
                 <div class="card h-100 mb-0">
                     <div class="card-body py-3">
                         <div class="text-muted small mb-1">Stock units</div>
@@ -241,22 +280,22 @@ const logTabCounts = computed(() => {
                 </div>
             </div>
             <div class="col-12 col-sm-6 col-xl-3">
-                <div class="card h-100 mb-0">
+                <Link :href="route('admin.inventory.low-stock', { tab: 'low' })" class="card h-100 mb-0 text-decoration-none">
                     <div class="card-body py-3">
                         <div class="text-muted small mb-1">Low stock SKUs</div>
                         <div class="h5 mb-0 text-warning">{{ kpis.low_stock_variants }}</div>
                         <div class="text-muted mt-2 small">At or below threshold</div>
                     </div>
-                </div>
+                </Link>
             </div>
             <div class="col-12 col-sm-6 col-xl-3">
-                <div class="card h-100 mb-0">
+                <Link :href="route('admin.inventory.low-stock', { tab: 'out' })" class="card h-100 mb-0 text-decoration-none">
                     <div class="card-body py-3">
                         <div class="text-muted small mb-1">Out of stock</div>
                         <div class="h5 mb-0 text-danger">{{ kpis.out_of_stock_variants }}</div>
                         <div class="text-muted mt-2 small">Zero quantity</div>
                     </div>
-                </div>
+                </Link>
             </div>
             <div class="col-12 col-sm-6 col-xl-3">
                 <div class="card h-100 mb-0">

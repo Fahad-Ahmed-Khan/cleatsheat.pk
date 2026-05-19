@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Web\Admin;
 use App\Enums\FitGuidance;
 use App\Enums\Gender;
 use App\Enums\ShoeType;
+use App\Exports\ProductsFlatExport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreProductRequest;
 use App\Http\Requests\Admin\UpdateProductRequest;
@@ -12,115 +13,50 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Color;
 use App\Models\Product;
-use App\Models\ProductVariant;
-use App\Models\VariantSize;
 use App\Models\SizeChart;
+use App\Models\VariantSize;
+use App\Services\Catalog\ProductBulkImportService;
 use App\Services\Catalog\ProductManagementService;
+use App\Support\Admin\AdminProductListQuery;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use Maatwebsite\Excel\Excel as ExcelFormat;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ProductAdminController extends Controller
 {
     public function __construct(
         private readonly ProductManagementService $products,
+        private readonly ProductBulkImportService $bulkImport,
     ) {}
 
     public function index(): Response
     {
-        $search = trim((string) request('search', ''));
-        $brandId = request('brand_id');
-        $categoryId = request('category_id');
-        $status = request('status'); // active | inactive | null
-        $stock = request('stock'); // in | out | null
-        $colorId = request('color_id');
-        $sizeLabel = request('size'); // exact size_label
-        $priceMin = request('price_min');
-        $priceMax = request('price_max');
-        $perPage = (int) request('per_page', 20);
-        if ($perPage <= 0) {
-            $perPage = 20;
-        }
-        if ($perPage > 100) {
-            $perPage = 100;
-        }
+        $list = AdminProductListQuery::fromRequest(request());
+        $filters = $list->filtersForInertia();
 
-        $query = Product::query()
-            ->with(['brand:id,name', 'category:id,name'])
-            ->withCount(['variants as variants_count'])
-            ->withMin('variants as min_price', 'price')
-            ->withMax('variants as max_price', 'price')
-            ->addSelect([
-                'primary_sku' => ProductVariant::query()
-                    ->select('sku')
-                    ->whereColumn('product_id', 'products.id')
-                    ->orderBy('id')
-                    ->limit(1),
-                'sizes_count' => ProductVariant::query()
-                    ->selectRaw('COUNT(variant_sizes.id)')
-                    ->join('variant_sizes', 'variant_sizes.product_variant_id', '=', 'product_variants.id')
-                    ->whereColumn('product_variants.product_id', 'products.id'),
-                'stock_total' => ProductVariant::query()
-                    ->selectRaw('COALESCE(SUM(variant_sizes.stock_qty), 0)')
-                    ->join('variant_sizes', 'variant_sizes.product_variant_id', '=', 'product_variants.id')
-                    ->whereColumn('product_variants.product_id', 'products.id'),
-            ])
-            ->when($search !== '', function ($q) use ($search) {
-                $q->where(function ($qq) use ($search) {
-                    $qq->where('name', 'like', "%{$search}%")
-                        ->orWhere('slug', 'like', "%{$search}%")
-                        ->orWhereHas('variants', fn ($vq) => $vq->where('sku', 'like', "%{$search}%"))
-                        ->orWhereHas('category', fn ($cq) => $cq->where('name', 'like', "%{$search}%"));
-                });
-            })
-            ->when($brandId !== null && $brandId !== '', fn ($q) => $q->where('brand_id', $brandId))
-            ->when($categoryId !== null && $categoryId !== '', fn ($q) => $q->where('category_id', $categoryId))
-            ->when($status === 'active', fn ($q) => $q->where('is_active', true))
-            ->when($status === 'inactive', fn ($q) => $q->where('is_active', false))
-            ->when($colorId !== null && $colorId !== '', fn ($q) => $q->whereHas('variants', fn ($vq) => $vq->where('color_id', $colorId)))
-            ->when($sizeLabel !== null && $sizeLabel !== '', fn ($q) => $q->whereHas('variants.sizes', fn ($sq) => $sq->where('size_label', $sizeLabel)))
-            ->when($priceMin !== null && $priceMin !== '', fn ($q) => $q->whereHas('variants', fn ($vq) => $vq->where('price', '>=', $priceMin)))
-            ->when($priceMax !== null && $priceMax !== '', fn ($q) => $q->whereHas('variants', fn ($vq) => $vq->where('price', '<=', $priceMax)))
-            ->when($stock === 'in', function ($q) {
-                $q->whereExists(function ($sq) {
-                    $sq->selectRaw('1')
-                        ->from('product_variants')
-                        ->join('variant_sizes', 'variant_sizes.product_variant_id', '=', 'product_variants.id')
-                        ->whereColumn('product_variants.product_id', 'products.id')
-                        ->where('variant_sizes.stock_qty', '>', 0);
-                });
-            })
-            ->when($stock === 'out', function ($q) {
-                $q->whereNotExists(function ($sq) {
-                    $sq->selectRaw('1')
-                        ->from('product_variants')
-                        ->join('variant_sizes', 'variant_sizes.product_variant_id', '=', 'product_variants.id')
-                        ->whereColumn('product_variants.product_id', 'products.id')
-                        ->where('variant_sizes.stock_qty', '>', 0);
-                });
-            })
-            ->latest();
-
-        $products = $query
-            ->paginate($perPage)
+        $products = $list->forIndex()
+            ->paginate($filters['per_page'])
             ->withQueryString();
 
         return Inertia::render('Admin/Products/Index', [
             'products' => $products,
             'filters' => [
-                'search' => $search,
-                'brand_id' => $brandId === '' ? null : $brandId,
-                'category_id' => $categoryId === '' ? null : $categoryId,
-                'status' => $status,
-                'stock' => $stock,
-                'color_id' => $colorId === '' ? null : $colorId,
-                'size' => $sizeLabel,
-                'price_min' => $priceMin,
-                'price_max' => $priceMax,
-                'per_page' => $perPage,
+                'search' => $filters['search'],
+                'brand_id' => $filters['brand_id'],
+                'category_id' => $filters['category_id'],
+                'status' => $filters['status'],
+                'stock' => $filters['stock'],
+                'color_id' => $filters['color_id'],
+                'size' => $filters['size'],
+                'price_min' => $filters['price_min'],
+                'price_max' => $filters['price_max'],
+                'per_page' => $filters['per_page'],
             ],
             'stats' => [
                 'total' => Product::query()->count(),
@@ -292,6 +228,39 @@ class ProductAdminController extends Controller
                 'stock_total' => (int) $v->sizes->sum('stock_qty'),
             ])->values()->all(),
         ]);
+    }
+
+    public function export(Request $request): \Symfony\Component\HttpFoundation\Response
+    {
+        $format = strtolower((string) $request->query('format', 'xlsx'));
+        $list = AdminProductListQuery::fromRequest($request);
+        $export = new ProductsFlatExport($list->forExport());
+        $filename = 'products-export-'.now()->format('Y-m-d-His');
+
+        return match ($format) {
+            'csv' => Excel::download($export, $filename.'.csv', ExcelFormat::CSV),
+            default => Excel::download($export, $filename.'.xlsx', ExcelFormat::XLSX),
+        };
+    }
+
+    public function import(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:csv,txt,xlsx,xls', 'max:12288'],
+        ]);
+
+        /** @var UploadedFile $file */
+        $file = $request->file('file');
+        $result = $this->bulkImport->importFromSpreadsheet($file);
+
+        $summary = "Import finished: {$result['created']} created, {$result['updated']} updated.";
+        if ($result['errors'] !== []) {
+            $detail = collect($result['errors'])->take(8)->map(fn ($e) => "Line {$e['line']}: {$e['message']}")->implode(' ');
+
+            return back()->with('error', $summary.' '.$detail);
+        }
+
+        return back()->with('status', $summary);
     }
 
     /**

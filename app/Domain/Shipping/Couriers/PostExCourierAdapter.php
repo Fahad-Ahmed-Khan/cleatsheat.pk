@@ -6,6 +6,8 @@ use App\Domain\Shipping\AbstractCourierAdapter;
 use App\Domain\Shipping\CourierApiLogger;
 use App\Domain\Shipping\DTOs\BookingResult;
 use App\Domain\Shipping\DTOs\TrackingResult;
+use App\Domain\Shipping\PostEx\PostExApiClient;
+use App\Domain\Shipping\PostEx\PostExTokenResolver;
 use App\Enums\ShipmentStatus;
 use App\Models\Courier;
 use App\Models\CourierAccount;
@@ -47,7 +49,11 @@ class PostExCourierAdapter extends AbstractCourierAdapter
             );
         }
 
-        $token = (string) ($account?->credentials['api_token'] ?? '');
+        $token = PostExTokenResolver::forCourierAccount($account);
+        if ($token === '') {
+            return new BookingResult(false, raw: [], errorMessage: 'PostEx API token is missing. Save it under Admin → Shipping → PostEx account.');
+        }
+
         $settings = ShippingSetting::current();
         $recv = $shipment->receiver_snapshot ?? $order->shipping_address_snapshot ?? [];
 
@@ -71,7 +77,10 @@ class PostExCourierAdapter extends AbstractCourierAdapter
             }
         }
 
-        $url = $this->endpointBase('postex').'/services/integration/api/order/v3/create-order';
+        $url = PostExApiClient::resolvedBaseUrl().'/services/integration/api/order/v3/create-order';
+        $cityRaw = trim((string) ($recv['city'] ?? ''));
+        $cityName = $cityRaw !== '' ? mb_strtoupper($cityRaw, 'UTF-8') : '';
+
         $payload = [
             'orderRefNumber' => (string) $order->order_number,
             'invoicePayment' => (float) ($shipment->cod_amount ?? 0),
@@ -80,7 +89,7 @@ class PostExCourierAdapter extends AbstractCourierAdapter
             'customerPhone' => (string) ($recv['phone'] ?? ''),
             'deliveryAddress' => (string) ($recv['line1'] ?? ''),
             'transactionNotes' => (string) ($order->customer_notes ?? ''),
-            'cityName' => (string) ($recv['city'] ?? ''),
+            'cityName' => $cityName !== '' ? $cityName : null,
             'invoiceDivision' => 1,
             'items' => $totalQty,
             'pickupAddressCode' => $settings->postex_pickup_address_code ?: null,
@@ -90,7 +99,7 @@ class PostExCourierAdapter extends AbstractCourierAdapter
         $payload = array_filter($payload, fn ($v) => $v !== null);
 
         try {
-            $response = Http::retry(3, 250)
+            $response = Http::retry(3, 250, null, false)
                 ->timeout(45)
                 ->acceptJson()
                 ->asJson()
@@ -104,16 +113,31 @@ class PostExCourierAdapter extends AbstractCourierAdapter
                 return new BookingResult(false, raw: $body, errorMessage: (string) ($body['statusMessage'] ?? $body['message'] ?? 'PostEx HTTP error'));
             }
 
-            $statusCode = (string) ($body['statusCode'] ?? '');
-            if ($statusCode !== '' && $statusCode !== '200') {
+            $statusCode = $body['statusCode'] ?? null;
+            $statusOk = $statusCode === null
+                || $statusCode === ''
+                || $statusCode === '200'
+                || $statusCode === 200;
+            if (! $statusOk) {
                 return new BookingResult(false, raw: $body, errorMessage: (string) ($body['statusMessage'] ?? 'PostEx error'));
             }
 
             $dist = is_array($body['dist'] ?? null) ? $body['dist'] : [];
+            $trackingNumber = trim((string) ($dist['trackingNumber'] ?? ''));
+            if ($trackingNumber === '') {
+                $hint = trim((string) ($body['statusMessage'] ?? ''));
+                $suffix = $hint !== '' ? ' PostEx said: '.$hint : '';
+
+                return new BookingResult(
+                    false,
+                    raw: $body,
+                    errorMessage: 'PostEx returned no tracking number.'.$suffix.' Check city (must match PostEx operational city), phone, pickup address code, and courier logs.',
+                );
+            }
 
             return new BookingResult(
                 success: true,
-                trackingNumber: (string) ($dist['trackingNumber'] ?? ''),
+                trackingNumber: $trackingNumber,
                 bookingReference: (string) ($dist['orderDate'] ?? ''),
                 raw: $body,
             );
@@ -130,12 +154,12 @@ class PostExCourierAdapter extends AbstractCourierAdapter
             return new TrackingResult(status: ShipmentStatus::InTransit, raw: ['sandbox' => true]);
         }
 
-        $token = (string) ($account?->credentials['api_token'] ?? '');
+        $token = PostExTokenResolver::forCourierAccount($account);
         $tracking = (string) ($shipment->tracking_number ?? '');
-        $url = $this->endpointBase('postex').'/services/integration/api/order/v1/track-order/'.rawurlencode($tracking);
+        $url = PostExApiClient::resolvedBaseUrl().'/services/integration/api/order/v1/track-order/'.rawurlencode($tracking);
 
         try {
-            $response = Http::retry(3, 250)
+            $response = Http::retry(3, 250, null, false)
                 ->timeout(30)
                 ->acceptJson()
                 ->withHeaders(['token' => $token])

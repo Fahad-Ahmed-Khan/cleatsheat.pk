@@ -23,13 +23,26 @@ class ShipmentBookingService
 
         $courier = $shipment->courier;
         if ($courier === null) {
-            throw new \InvalidArgumentException('Assign a courier before booking.');
+            $this->recordBookingConfigurationFailure($shipment, 'Assign a courier before booking.');
+
+            return;
         }
 
-        $adapter = $this->registry->forCourier($courier);
+        try {
+            $adapter = $this->registry->forCourier($courier);
+        } catch (\InvalidArgumentException $e) {
+            $this->recordBookingConfigurationFailure($shipment, $e->getMessage());
+
+            return;
+        }
 
         if ($adapter->code() !== 'generic' && $shipment->courier_account_id === null) {
-            throw new \InvalidArgumentException('Configure an active API account for '.$courier->name.' before booking.');
+            $this->recordBookingConfigurationFailure(
+                $shipment,
+                'No active API account for '.$courier->name.'. For COD orders the courier account must allow COD — check Admin → Shipping settings.',
+            );
+
+            return;
         }
 
         $result = $adapter->book($shipment, $courier, $shipment->courierAccount);
@@ -73,6 +86,27 @@ class ShipmentBookingService
                 'status' => ShipmentStatus::Booked->value,
                 'description' => 'Shipment booked with '.$courier->name,
                 'raw_payload' => $result->raw,
+                'occurred_at' => now(),
+            ]);
+        });
+    }
+
+    private function recordBookingConfigurationFailure(Shipment $shipment, string $message): void
+    {
+        DB::transaction(function () use ($shipment, $message): void {
+            $shipment->last_booking_response = ['configuration_error' => true];
+            $shipment->status = ShipmentStatus::Failed;
+            $shipment->failed_at = now();
+            $shipment->meta = array_merge($shipment->meta ?? [], [
+                'booking_error' => $message,
+            ]);
+            $shipment->save();
+
+            ShipmentEvent::query()->create([
+                'shipment_id' => $shipment->id,
+                'status' => ShipmentStatus::Failed->value,
+                'description' => $message,
+                'raw_payload' => ['configuration_error' => true],
                 'occurred_at' => now(),
             ]);
         });

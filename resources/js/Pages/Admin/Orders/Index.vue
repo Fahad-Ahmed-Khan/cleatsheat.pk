@@ -7,6 +7,10 @@ import StatusBadge from '@/Components/Admin/StatusBadge.vue';
 import PaymentStatusText from '@/Components/Admin/PaymentStatusText.vue';
 import OrderStatusPill from '@/Components/Admin/OrderStatusPill.vue';
 import { router } from '@inertiajs/vue3';
+import { confirmDanger, toastError, toastFromInertiaError, toastSuccess } from '@/admin/swalToast';
+import { useFocusTrap } from '@/admin/useFocusTrap';
+
+const DESTRUCTIVE_PAYMENT_STATUSES = ['paid', 'refunded', 'canceled'];
 
 const props = defineProps({
     orders: {
@@ -14,6 +18,7 @@ const props = defineProps({
         required: true,
     },
     couriers: { type: Array, default: () => [] },
+    payment_gateways: { type: Array, default: () => [] },
     filters: { type: Object, default: () => ({}) },
     stats: { type: Object, default: () => ({ pending_payment: 0, completed: 0, refunded: 0, failed: 0 }) },
 });
@@ -22,10 +27,52 @@ const state = reactive({
     search: props.filters?.search ?? '',
     status: props.filters?.status ?? '',
     payment_status: props.filters?.payment_status ?? '',
+    payment_gateway: props.filters?.payment_gateway ?? '',
+    delivery_status: props.filters?.delivery_status ?? '',
+    courier_id: props.filters?.courier_id ?? '',
+    date_from: props.filters?.date_from ?? '',
+    date_to: props.filters?.date_to ?? '',
+    preset: props.filters?.preset ?? '',
     per_page: String(props.filters?.per_page ?? 25),
 });
 
-const hasAnyFilter = computed(() => Boolean(state.search || state.status || state.payment_status));
+const hasAnyFilter = computed(() => Boolean(
+    state.search
+        || state.status
+        || state.payment_status
+        || state.payment_gateway
+        || state.delivery_status
+        || state.courier_id
+        || state.date_from
+        || state.date_to
+        || state.preset,
+));
+
+const PRESETS = [
+    { key: 'today', label: 'Today' },
+    { key: 'today_unbooked', label: 'Today + not booked' },
+    { key: 'pending_payment_24h', label: 'Pending payment > 24h' },
+    { key: 'booking_failed', label: 'Booking failed' },
+];
+
+function togglePreset(key) {
+    state.preset = state.preset === key ? '' : key;
+}
+
+function currentFilterPayload() {
+    return {
+        search: state.search || undefined,
+        status: state.status || undefined,
+        payment_status: state.payment_status || undefined,
+        payment_gateway: state.payment_gateway || undefined,
+        delivery_status: state.delivery_status || undefined,
+        courier_id: state.courier_id || undefined,
+        date_from: state.date_from || undefined,
+        date_to: state.date_to || undefined,
+        preset: state.preset || undefined,
+        per_page: state.per_page || undefined,
+    };
+}
 
 const selectedIds = ref(new Set());
 const selectAllOnPage = computed({
@@ -49,12 +96,44 @@ const selectAllOnPage = computed({
 const selectedCount = computed(() => selectedIds.value.size);
 
 const bulkStatusModalOpen = ref(false);
+const bulkPaymentModalOpen = ref(false);
 const bulkBookingModalOpen = ref(false);
 const bulkLabelModalOpen = ref(false);
 
+const bulkStatusDialogRef = ref(null);
+const bulkPaymentDialogRef = ref(null);
+const bulkBookingDialogRef = ref(null);
+const bulkLabelDialogRef = ref(null);
+
+useFocusTrap(bulkStatusDialogRef, computed(() => bulkStatusModalOpen.value), () => { bulkStatusModalOpen.value = false; });
+useFocusTrap(bulkPaymentDialogRef, computed(() => bulkPaymentModalOpen.value), () => { bulkPaymentModalOpen.value = false; });
+useFocusTrap(bulkBookingDialogRef, computed(() => bulkBookingModalOpen.value), () => { bulkBookingModalOpen.value = false; });
+useFocusTrap(bulkLabelDialogRef, computed(() => bulkLabelModalOpen.value), () => { bulkLabelModalOpen.value = false; });
+
 const bulkStatusForm = reactive({
     status: '',
+});
+
+const bulkPaymentForm = reactive({
     payment_status: '',
+    override: false,
+    reason: '',
+});
+
+const bulkPaymentIsDestructive = computed(
+    () => DESTRUCTIVE_PAYMENT_STATUSES.includes(bulkPaymentForm.payment_status),
+);
+
+const bulkPaymentCanSubmit = computed(() => {
+    if (!bulkPaymentForm.payment_status) return false;
+    if (!bulkPaymentIsDestructive.value) return true;
+    return bulkPaymentForm.override && bulkPaymentForm.reason.trim().length > 0;
+});
+
+const selectedOrdersPreview = computed(() => {
+    const ids = selectedIdArray();
+    const lookup = new Map((props.orders?.data ?? []).map((o) => [o.id, o.order_number]));
+    return ids.slice(0, 5).map((id) => lookup.get(id) ?? `#${id}`);
 });
 
 const bulkBookingForm = reactive({
@@ -70,12 +149,7 @@ const bulkLabelForm = reactive({
 function applyFilters() {
     router.get(
         route('admin.orders.index'),
-        {
-            search: state.search || undefined,
-            status: state.status || undefined,
-            payment_status: state.payment_status || undefined,
-            per_page: state.per_page || undefined,
-        },
+        currentFilterPayload(),
         { preserveState: true, preserveScroll: true, replace: true },
     );
 }
@@ -90,7 +164,17 @@ watch(
 );
 
 watch(
-    () => [state.status, state.payment_status, state.per_page],
+    () => [
+        state.status,
+        state.payment_status,
+        state.payment_gateway,
+        state.delivery_status,
+        state.courier_id,
+        state.date_from,
+        state.date_to,
+        state.preset,
+        state.per_page,
+    ],
     () => applyFilters(),
 );
 
@@ -98,7 +182,19 @@ function clearFilters() {
     state.search = '';
     state.status = '';
     state.payment_status = '';
+    state.payment_gateway = '';
+    state.delivery_status = '';
+    state.courier_id = '';
+    state.date_from = '';
+    state.date_to = '';
+    state.preset = '';
     applyFilters();
+}
+
+function exportCsv() {
+    const params = currentFilterPayload();
+    Object.keys(params).forEach((k) => params[k] === undefined && delete params[k]);
+    window.location.href = route('admin.orders.export', params);
 }
 
 watch(
@@ -135,19 +231,66 @@ function bulkSyncTracking() {
 
 function bulkUpdateStatus() {
     if (!requireSelection()) return;
+    if (!bulkStatusForm.status) {
+        toastError('Choose an order status to apply.');
+        return;
+    }
+
     const payload = {
         order_ids: selectedIdArray(),
-        status: bulkStatusForm.status || undefined,
-        payment_status: bulkStatusForm.payment_status || undefined,
+        status: bulkStatusForm.status,
     };
     router.patch(route('admin.orders.bulk.update-status'), payload, {
         preserveScroll: true,
         onSuccess: () => {
             bulkStatusModalOpen.value = false;
             bulkStatusForm.status = '';
-            bulkStatusForm.payment_status = '';
+            toastSuccess('Order status update queued');
             router.reload({ preserveScroll: true });
         },
+        onError: (errors) => toastFromInertiaError(errors, 'Could not update order status'),
+    });
+}
+
+async function bulkUpdatePaymentStatus() {
+    if (!requireSelection()) return;
+    if (!bulkPaymentCanSubmit.value) {
+        if (bulkPaymentIsDestructive.value) {
+            toastError('Tick the override checkbox and provide a reason for destructive payment moves.');
+        } else {
+            toastError('Choose a payment status to apply.');
+        }
+        return;
+    }
+
+    if (bulkPaymentIsDestructive.value) {
+        const previewLine = selectedOrdersPreview.value.join(', ');
+        const ok = await confirmDanger({
+            title: `Set ${bulkPaymentForm.payment_status} on ${selectedCount.value} order(s)?`,
+            text: `This bypasses payment-gateway settlement. Affected: ${previewLine}${selectedCount.value > 5 ? '…' : ''}. Reason: "${bulkPaymentForm.reason.trim()}".`,
+            confirmText: `Yes, apply to ${selectedCount.value} order(s)`,
+        });
+        if (!ok) return;
+    }
+
+    const payload = {
+        order_ids: selectedIdArray(),
+        payment_status: bulkPaymentForm.payment_status,
+        override: bulkPaymentIsDestructive.value ? bulkPaymentForm.override : false,
+        reason: bulkPaymentForm.reason.trim(),
+    };
+
+    router.patch(route('admin.orders.bulk.update-payment-status'), payload, {
+        preserveScroll: true,
+        onSuccess: () => {
+            bulkPaymentModalOpen.value = false;
+            bulkPaymentForm.payment_status = '';
+            bulkPaymentForm.override = false;
+            bulkPaymentForm.reason = '';
+            toastSuccess('Payment status update queued');
+            router.reload({ preserveScroll: true });
+        },
+        onError: (errors) => toastFromInertiaError(errors, 'Could not update payment status'),
     });
 }
 
@@ -317,11 +460,26 @@ function paymentMethodMeta(gateway) {
         <DataTable :paginator="orders" empty-title="No orders yet" empty-description="Orders will appear here as customers check out.">
             <template #header>
                 <div class="p-4 border-bottom">
-                    <h5 class="card-title mb-3">Filter</h5>
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                        <h5 class="card-title mb-0">Filter</h5>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button
+                                v-for="preset in PRESETS"
+                                :key="preset.key"
+                                type="button"
+                                class="btn btn-sm"
+                                :class="state.preset === preset.key ? 'btn-primary' : 'btn-label-secondary'"
+                                @click="togglePreset(preset.key)"
+                            >
+                                {{ preset.label }}
+                            </button>
+                        </div>
+                    </div>
                     <div class="row g-3">
-                        <div class="col-12 col-md-4">
+                        <div class="col-12 col-md-3">
+                            <label class="form-label small text-muted">Order status</label>
                             <select v-model="state.status" class="form-select">
-                                <option value="">Order status</option>
+                                <option value="">All</option>
                                 <option value="pending">Pending</option>
                                 <option value="confirmed">Confirmed</option>
                                 <option value="processing">Processing</option>
@@ -330,9 +488,10 @@ function paymentMethodMeta(gateway) {
                                 <option value="cancelled">Cancelled</option>
                             </select>
                         </div>
-                        <div class="col-12 col-md-4">
+                        <div class="col-12 col-md-3">
+                            <label class="form-label small text-muted">Payment status</label>
                             <select v-model="state.payment_status" class="form-select">
-                                <option value="">Payment status</option>
+                                <option value="">All</option>
                                 <option value="pending">Pending</option>
                                 <option value="paid">Paid</option>
                                 <option value="failed">Failed</option>
@@ -340,7 +499,44 @@ function paymentMethodMeta(gateway) {
                                 <option value="refunded">Refunded</option>
                             </select>
                         </div>
-                        <div class="col-12 col-md-4 d-flex align-items-end justify-content-end">
+                        <div class="col-12 col-md-3">
+                            <label class="form-label small text-muted">Delivery status</label>
+                            <select v-model="state.delivery_status" class="form-select">
+                                <option value="">All</option>
+                                <option value="pending">Pending</option>
+                                <option value="booked">Booked</option>
+                                <option value="in_transit">In transit</option>
+                                <option value="delivered">Delivered</option>
+                                <option value="failed">Failed</option>
+                                <option value="canceled">Canceled</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <label class="form-label small text-muted">Courier</label>
+                            <select v-model="state.courier_id" class="form-select">
+                                <option value="">All</option>
+                                <option v-for="c in couriers" :key="c.id" :value="c.id">{{ c.name }}</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <label class="form-label small text-muted">Payment method</label>
+                            <select v-model="state.payment_gateway" class="form-select">
+                                <option value="">All</option>
+                                <option value="__cod__">COD (cash on delivery)</option>
+                                <option value="__prepaid__">Prepaid (card / wallet)</option>
+                                <option disabled>──────────</option>
+                                <option v-for="g in payment_gateways" :key="g" :value="g">{{ g }}</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <label class="form-label small text-muted">From</label>
+                            <input v-model="state.date_from" type="date" class="form-control" />
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <label class="form-label small text-muted">To</label>
+                            <input v-model="state.date_to" type="date" class="form-control" />
+                        </div>
+                        <div class="col-12 col-md-3 d-flex align-items-end justify-content-end">
                             <button v-if="hasAnyFilter" type="button" class="btn btn-label-secondary" @click="clearFilters">
                                 <i class="icon-base ti tabler-x icon-18px me-1"></i>
                                 Clear
@@ -387,7 +583,13 @@ function paymentMethodMeta(gateway) {
                                     <li>
                                         <button type="button" class="dropdown-item" @click="bulkStatusModalOpen = true">
                                             <i class="icon-base ti tabler-edit me-2"></i>
-                                            Bulk status update
+                                            Bulk order-status update
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button type="button" class="dropdown-item" @click="bulkPaymentModalOpen = true">
+                                            <i class="icon-base ti tabler-receipt-2 me-2"></i>
+                                            Bulk payment-status update
                                         </button>
                                     </li>
                                     <li>
@@ -410,7 +612,7 @@ function paymentMethodMeta(gateway) {
                                 <option value="50">50</option>
                                 <option value="100">100</option>
                             </select>
-                            <button type="button" class="btn btn-label-secondary" disabled>
+                            <button type="button" class="btn btn-label-secondary" title="Download a CSV of the current filtered view" @click="exportCsv">
                                 <i class="icon-base ti tabler-upload icon-xs me-1"></i>
                                 Export
                             </button>
@@ -499,18 +701,18 @@ function paymentMethodMeta(gateway) {
 
         <!-- Backdrop must be a sibling of .modal, not inside it — otherwise z-index stacks it above the dialog. -->
         <template v-if="bulkStatusModalOpen">
-            <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true">
+            <div ref="bulkStatusDialogRef" class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="bulkStatusModalTitle">
                 <div class="modal-dialog modal-dialog-centered" role="document">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">Bulk status update</h5>
+                            <h5 id="bulkStatusModalTitle" class="modal-title">Bulk order-status update</h5>
                             <button type="button" class="btn-close" aria-label="Close" @click="bulkStatusModalOpen = false"></button>
                         </div>
                         <div class="modal-body">
                             <div class="mb-3">
                                 <label class="form-label">Order status</label>
                                 <select v-model="bulkStatusForm.status" class="form-select">
-                                    <option value="">— keep unchanged —</option>
+                                    <option value="" disabled>— choose new status —</option>
                                     <option value="pending">Pending</option>
                                     <option value="confirmed">Confirmed</option>
                                     <option value="processing">Processing</option>
@@ -519,10 +721,33 @@ function paymentMethodMeta(gateway) {
                                     <option value="cancelled">Cancelled</option>
                                 </select>
                             </div>
-                            <div class="mb-2">
+                            <div class="text-muted small">
+                                Applies to {{ selectedCount }} selected order(s). Payment status is unaffected — use the dedicated payment action.
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-label-secondary" @click="bulkStatusModalOpen = false">Cancel</button>
+                            <button type="button" class="btn btn-primary" :disabled="!bulkStatusForm.status" @click="bulkUpdateStatus">Update</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-backdrop fade show"></div>
+        </template>
+
+        <template v-if="bulkPaymentModalOpen">
+            <div ref="bulkPaymentDialogRef" class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="bulkPaymentModalTitle">
+                <div class="modal-dialog modal-dialog-centered" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 id="bulkPaymentModalTitle" class="modal-title">Bulk payment-status update</h5>
+                            <button type="button" class="btn-close" aria-label="Close" @click="bulkPaymentModalOpen = false"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
                                 <label class="form-label">Payment status</label>
-                                <select v-model="bulkStatusForm.payment_status" class="form-select">
-                                    <option value="">— keep unchanged —</option>
+                                <select v-model="bulkPaymentForm.payment_status" class="form-select">
+                                    <option value="" disabled>— choose new payment status —</option>
                                     <option value="pending">Pending</option>
                                     <option value="paid">Paid</option>
                                     <option value="failed">Failed</option>
@@ -530,11 +755,66 @@ function paymentMethodMeta(gateway) {
                                     <option value="refunded">Refunded</option>
                                 </select>
                             </div>
+
+                            <div
+                                v-if="bulkPaymentIsDestructive"
+                                class="alert alert-warning small mb-3"
+                                role="alert"
+                            >
+                                <div class="fw-semibold mb-1">
+                                    <i class="icon-base ti tabler-alert-triangle me-1"></i>
+                                    Destructive transition
+                                </div>
+                                <div>
+                                    Setting <code>{{ bulkPaymentForm.payment_status }}</code> on {{ selectedCount }} order(s)
+                                    bypasses PSP settlement and is forced into the payment history. Override + reason are required.
+                                </div>
+                                <div v-if="selectedOrdersPreview.length" class="mt-2 text-body-secondary">
+                                    Affected: {{ selectedOrdersPreview.join(', ') }}<span v-if="selectedCount > 5">…</span>
+                                </div>
+                            </div>
+
+                            <div v-if="bulkPaymentIsDestructive" class="form-check mb-3">
+                                <input
+                                    id="bulkPaymentOverride"
+                                    v-model="bulkPaymentForm.override"
+                                    type="checkbox"
+                                    class="form-check-input"
+                                />
+                                <label for="bulkPaymentOverride" class="form-check-label">
+                                    I understand this overrides the gateway payment state.
+                                </label>
+                            </div>
+
+                            <div class="mb-2">
+                                <label class="form-label">
+                                    Reason
+                                    <span v-if="bulkPaymentIsDestructive" class="text-danger">*</span>
+                                </label>
+                                <textarea
+                                    v-model="bulkPaymentForm.reason"
+                                    rows="2"
+                                    maxlength="200"
+                                    class="form-control"
+                                    :placeholder="bulkPaymentIsDestructive
+                                        ? 'Required — e.g. COD remittance reconciled with courier load sheet #1234'
+                                        : 'Optional context for the audit log'"
+                                ></textarea>
+                                <div class="text-muted small mt-1">{{ bulkPaymentForm.reason.length }}/200</div>
+                            </div>
                             <div class="text-muted small">Applies to {{ selectedCount }} selected order(s).</div>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-label-secondary" @click="bulkStatusModalOpen = false">Cancel</button>
-                            <button type="button" class="btn btn-primary" @click="bulkUpdateStatus">Update</button>
+                            <button type="button" class="btn btn-label-secondary" @click="bulkPaymentModalOpen = false">Cancel</button>
+                            <button
+                                type="button"
+                                class="btn"
+                                :class="bulkPaymentIsDestructive ? 'btn-danger' : 'btn-primary'"
+                                :disabled="!bulkPaymentCanSubmit"
+                                @click="bulkUpdatePaymentStatus"
+                            >
+                                {{ bulkPaymentIsDestructive ? 'Override payment state' : 'Update payment status' }}
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -543,11 +823,11 @@ function paymentMethodMeta(gateway) {
         </template>
 
         <template v-if="bulkBookingModalOpen">
-            <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true">
+            <div ref="bulkBookingDialogRef" class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="bulkBookingModalTitle">
                 <div class="modal-dialog modal-dialog-centered" role="document">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">Bulk book shipments</h5>
+                            <h5 id="bulkBookingModalTitle" class="modal-title">Bulk book shipments</h5>
                             <button type="button" class="btn-close" aria-label="Close" @click="bulkBookingModalOpen = false"></button>
                         </div>
                         <div class="modal-body">
@@ -578,11 +858,11 @@ function paymentMethodMeta(gateway) {
         </template>
 
         <template v-if="bulkLabelModalOpen">
-            <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true">
+            <div ref="bulkLabelDialogRef" class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="bulkLabelModalTitle">
                 <div class="modal-dialog modal-dialog-centered" role="document">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">Print shipping labels</h5>
+                            <h5 id="bulkLabelModalTitle" class="modal-title">Print shipping labels</h5>
                             <button type="button" class="btn-close" aria-label="Close" @click="bulkLabelModalOpen = false"></button>
                         </div>
                         <div class="modal-body">

@@ -8,6 +8,9 @@ return [
     ),
     'hero_badge' => env('STORE_HERO_BADGE', 'New season'),
 
+    /** Optional full-width hero background image URL (home page). */
+    'hero_image_url' => env('STORE_HERO_IMAGE_URL'),
+
     'shipping_flat' => env('STORE_SHIPPING_FLAT', 200),
     'cod_fee' => env('STORE_COD_FEE', 0),
 

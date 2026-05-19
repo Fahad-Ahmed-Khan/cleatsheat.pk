@@ -5,6 +5,8 @@ import { toastError, toastSuccess } from './swalToast';
 export function useFlash() {
     const page = usePage();
     const toasts = ref([]);
+    const bulkSummary = ref(null);
+    let lastSummarySignature = '';
 
     function pushToast({ message, variant = 'info' }) {
         if (!message) return;
@@ -23,6 +25,20 @@ export function useFlash() {
 
         // Existing app already shares this key (used for checkout); keep compatible.
         if (page.props.flashPaymentError) toastError(page.props.flashPaymentError);
+
+        // Surface structured bulk operation results (e.g. order bulk booking skips).
+        const summary = flash.bulk_summary;
+        if (summary && typeof summary === 'object') {
+            const signature = JSON.stringify(summary);
+            if (signature !== lastSummarySignature) {
+                lastSummarySignature = signature;
+                bulkSummary.value = summary;
+            }
+        }
+    }
+
+    function clearBulkSummary() {
+        bulkSummary.value = null;
     }
 
     onMounted(() => {
@@ -39,6 +55,5 @@ export function useFlash() {
         toasts.value = toasts.value.filter((t) => t.id !== id);
     }
 
-    return { toasts, dismiss, pushToast };
+    return { toasts, dismiss, pushToast, bulkSummary, clearBulkSummary };
 }
-

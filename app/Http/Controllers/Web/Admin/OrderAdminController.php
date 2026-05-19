@@ -3,6 +3,10 @@
 namespace App\Http\Controllers\Web\Admin;
 
 use App\Domain\Shipping\CourierDispatchService;
+use App\Domain\Shipping\PostEx\PostExApiClient;
+use App\Domain\Shipping\PostEx\PostExHttpDiagnostics;
+use App\Domain\Shipping\PostEx\PostExShipmentInspector;
+use App\Domain\Shipping\PostEx\PostExTokenResolver;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\ShipmentStatus;
@@ -14,11 +18,13 @@ use App\Models\Courier;
 use App\Models\Order;
 use App\Models\Shipment;
 use App\Models\ShipmentEvent;
+use App\Models\ShippingSetting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Http;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -28,16 +34,170 @@ class OrderAdminController extends Controller
         private readonly CourierDispatchService $dispatch,
     ) {}
 
-    public function index(): Response
+    public function index(Request $request): Response
     {
-        $search = trim((string) request('search', ''));
-        $status = request('status'); // order status
-        $paymentStatus = request('payment_status');
-        $perPage = (int) request('per_page', 25);
-        if ($perPage <= 0) $perPage = 25;
-        if ($perPage > 100) $perPage = 100;
+        $filters = $this->parseOrderFilters($request);
+        $perPage = $this->resolvePerPage($request);
 
-        $orders = Order::query()
+        $orders = $this->buildOrderQuery($filters)
+            ->paginate($perPage)
+            ->withQueryString();
+
+        $orders->through(function (Order $o) {
+            $o->created_at_human = $o->created_at?->format('M j, Y H:i');
+            $ship = is_array($o->shipping_address_snapshot) ? $o->shipping_address_snapshot : [];
+            $o->customer_name = (string) ($o->user?->name ?? $ship['full_name'] ?? 'Guest');
+            $o->customer_phone = (string) ($ship['phone'] ?? '');
+
+            return $o;
+        });
+
+        $couriers = Courier::query()->active()->orderBy('sort_order')->orderBy('name')->get([
+            'id', 'code', 'name', 'adapter',
+        ]);
+
+        $paymentGateways = Order::query()
+            ->whereNotNull('payment_gateway')
+            ->where('payment_gateway', '!=', '')
+            ->distinct()
+            ->pluck('payment_gateway')
+            ->filter()
+            ->values()
+            ->all();
+
+        return Inertia::render('Admin/Orders/Index', [
+            'orders' => $orders,
+            'couriers' => $couriers,
+            'payment_gateways' => $paymentGateways,
+            'filters' => array_merge($filters, ['per_page' => $perPage]),
+            'stats' => [
+                'pending_payment' => Order::query()->where('payment_status', PaymentStatus::Pending)->count(),
+                'completed' => Order::query()->where('status', OrderStatus::Delivered)->count(),
+                'refunded' => Order::query()->where('payment_status', PaymentStatus::Refunded)->count(),
+                'failed' => Order::query()->where('payment_status', PaymentStatus::Failed)->count(),
+            ],
+        ]);
+    }
+
+    /**
+     * Stream a CSV of the filtered orders. Reuses the same query builder as index()
+     * so the file always matches what the admin currently sees in the table.
+     */
+    public function export(Request $request): StreamedResponse
+    {
+        $filters = $this->parseOrderFilters($request);
+
+        $filename = 'orders-'.now()->format('Ymd-His').'.csv';
+
+        return response()->streamDownload(function () use ($filters): void {
+            $out = fopen('php://output', 'wb');
+            fputcsv($out, [
+                'Order #',
+                'Created at',
+                'Customer name',
+                'Customer email',
+                'Customer phone',
+                'Order status',
+                'Payment status',
+                'Payment gateway',
+                'Delivery status',
+                'Subtotal',
+                'Discount',
+                'Shipping',
+                'COD fee',
+                'Grand total',
+                'City',
+            ]);
+
+            $this->buildOrderQuery($filters)
+                ->with('user:id,email,name')
+                ->chunk(500, function ($orders) use ($out): void {
+                    foreach ($orders as $order) {
+                        $ship = is_array($order->shipping_address_snapshot) ? $order->shipping_address_snapshot : [];
+                        fputcsv($out, [
+                            $order->order_number,
+                            $order->created_at?->format('Y-m-d H:i:s'),
+                            (string) ($order->user?->name ?? $ship['full_name'] ?? 'Guest'),
+                            (string) ($order->user?->email ?? $order->guest_email ?? ''),
+                            (string) ($ship['phone'] ?? ''),
+                            $order->status->value,
+                            $order->payment_status->value,
+                            (string) ($order->payment_gateway ?? ''),
+                            (string) ($order->delivery_status ?? ''),
+                            (string) $order->subtotal,
+                            (string) $order->discount_total,
+                            (string) $order->shipping_total,
+                            (string) $order->cod_fee,
+                            (string) $order->grand_total,
+                            (string) ($ship['city'] ?? ''),
+                        ]);
+                    }
+                });
+
+            fclose($out);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
+    /**
+     * Normalize the query parameters used by both the index and export endpoints.
+     *
+     * @return array<string, mixed>
+     */
+    private function parseOrderFilters(Request $request): array
+    {
+        $courierId = $request->input('courier_id');
+        if ($courierId !== null && $courierId !== '') {
+            $courierId = (int) $courierId;
+        } else {
+            $courierId = null;
+        }
+
+        return [
+            'search' => trim((string) $request->input('search', '')),
+            'status' => $request->input('status') ?: null,
+            'payment_status' => $request->input('payment_status') ?: null,
+            'payment_gateway' => $request->input('payment_gateway') ?: null,
+            'delivery_status' => $request->input('delivery_status') ?: null,
+            'courier_id' => $courierId,
+            'date_from' => $request->input('date_from') ?: null,
+            'date_to' => $request->input('date_to') ?: null,
+            'preset' => $request->input('preset') ?: null,
+        ];
+    }
+
+    private function resolvePerPage(Request $request): int
+    {
+        $perPage = (int) $request->input('per_page', 25);
+        if ($perPage <= 0) {
+            $perPage = 25;
+        }
+        if ($perPage > 100) {
+            $perPage = 100;
+        }
+
+        return $perPage;
+    }
+
+    /**
+     * Shared query builder used by index() and export().
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    private function buildOrderQuery(array $filters)
+    {
+        $search = (string) ($filters['search'] ?? '');
+        $status = $filters['status'] ?? null;
+        $paymentStatus = $filters['payment_status'] ?? null;
+        $paymentGateway = $filters['payment_gateway'] ?? null;
+        $deliveryStatus = $filters['delivery_status'] ?? null;
+        $courierId = $filters['courier_id'] ?? null;
+        $dateFrom = $filters['date_from'] ?? null;
+        $dateTo = $filters['date_to'] ?? null;
+        $preset = $filters['preset'] ?? null;
+
+        $query = Order::query()
             ->with('user:id,email,name')
             ->addSelect([
                 'delivery_status' => Shipment::query()
@@ -53,40 +213,67 @@ class OrderAdminController extends Controller
                         ->orWhereHas('user', fn ($uq) => $uq->where('email', 'like', "%{$search}%"));
                 });
             })
-            ->when($status !== null && $status !== '', fn ($q) => $q->where('status', $status))
-            ->when($paymentStatus !== null && $paymentStatus !== '', fn ($q) => $q->where('payment_status', $paymentStatus))
-            ->latest()
-            ->paginate($perPage)
-            ->withQueryString();
+            ->when($status, fn ($q) => $q->where('status', $status))
+            ->when($paymentStatus, fn ($q) => $q->where('payment_status', $paymentStatus))
+            ->when($paymentGateway, function ($q) use ($paymentGateway) {
+                if ($paymentGateway === '__cod__') {
+                    // COD-like gateways are stored as variants such as `cod`, `cash_on_delivery`.
+                    $q->where(function ($qq) {
+                        $qq->where('payment_gateway', 'like', '%cod%')
+                            ->orWhere('payment_gateway', 'like', '%cash%');
+                    });
+                } elseif ($paymentGateway === '__prepaid__') {
+                    $q->whereNotNull('payment_gateway')
+                        ->where('payment_gateway', '!=', '')
+                        ->where('payment_gateway', 'not like', '%cod%')
+                        ->where('payment_gateway', 'not like', '%cash%');
+                } else {
+                    $q->where('payment_gateway', $paymentGateway);
+                }
+            })
+            ->when($courierId, function ($q) use ($courierId) {
+                $q->whereHas('shipments', fn ($sq) => $sq->where('courier_id', $courierId));
+            })
+            ->when($deliveryStatus, function ($q) use ($deliveryStatus) {
+                $q->whereHas('shipments', fn ($sq) => $sq->where('status', $deliveryStatus));
+            })
+            ->when($dateFrom, function ($q) use ($dateFrom) {
+                try {
+                    $q->where('created_at', '>=', \Carbon\Carbon::parse($dateFrom)->startOfDay());
+                } catch (\Throwable) {
+                    // ignore malformed date
+                }
+            })
+            ->when($dateTo, function ($q) use ($dateTo) {
+                try {
+                    $q->where('created_at', '<=', \Carbon\Carbon::parse($dateTo)->endOfDay());
+                } catch (\Throwable) {
+                    // ignore malformed date
+                }
+            });
 
-        $orders->through(function (Order $o) {
-            $o->created_at_human = $o->created_at?->format('M j, Y H:i');
-            $ship = is_array($o->shipping_address_snapshot) ? $o->shipping_address_snapshot : [];
-            $o->customer_name = (string) ($o->user?->name ?? $ship['full_name'] ?? 'Guest');
-            $o->customer_phone = (string) ($ship['phone'] ?? '');
-            return $o;
-        });
+        match ($preset) {
+            'today' => $query->whereDate('created_at', now()->toDateString()),
+            'today_unbooked' => $query
+                ->whereDate('created_at', now()->toDateString())
+                ->where(function ($q) {
+                    $q->whereDoesntHave('shipments')
+                        ->orWhereDoesntHave('shipments', fn ($sq) => $sq->whereNotIn('status', [
+                            ShipmentStatus::Pending->value,
+                            ShipmentStatus::Failed->value,
+                        ]));
+                }),
+            'pending_payment_24h' => $query
+                ->where('payment_status', PaymentStatus::Pending)
+                ->where('created_at', '<=', now()->subDay()),
+            'booking_failed' => $query->whereHas(
+                'shipments',
+                fn ($sq) => $sq->where('status', ShipmentStatus::Failed->value),
+            ),
+            default => null,
+        };
 
-        $couriers = Courier::query()->active()->orderBy('sort_order')->orderBy('name')->get([
-            'id', 'code', 'name', 'adapter',
-        ]);
-
-        return Inertia::render('Admin/Orders/Index', [
-            'orders' => $orders,
-            'couriers' => $couriers,
-            'filters' => [
-                'search' => $search,
-                'status' => $status,
-                'payment_status' => $paymentStatus,
-                'per_page' => $perPage,
-            ],
-            'stats' => [
-                'pending_payment' => Order::query()->where('payment_status', PaymentStatus::Pending)->count(),
-                'completed' => Order::query()->where('status', OrderStatus::Delivered)->count(),
-                'refunded' => Order::query()->where('payment_status', PaymentStatus::Refunded)->count(),
-                'failed' => Order::query()->where('payment_status', PaymentStatus::Failed)->count(),
-            ],
-        ]);
+        return $query->latest();
     }
 
     public function show(Order $order): Response
@@ -155,7 +342,19 @@ class OrderAdminController extends Controller
                         'image_alt' => $img?->alt,
                     ];
                 })->values()->all(),
-                'payments' => $order->payments,
+                'payments' => $order->payments
+                    ->sortByDesc('created_at')
+                    ->values()
+                    ->map(fn ($p) => [
+                        'id' => $p->id,
+                        'gateway' => $p->gateway,
+                        'status' => $p->status?->value,
+                        'amount' => (float) $p->amount,
+                        'external_id' => $p->external_id,
+                        'paid_at' => $p->paid_at?->toIso8601String(),
+                        'created_at' => $p->created_at?->toIso8601String(),
+                        'meta' => $p->meta,
+                    ])->all(),
                 'admin_discount' => $order->adjustments
                     ->whereNull('voided_at')
                     ->sortByDesc('id')
@@ -241,6 +440,13 @@ class OrderAdminController extends Controller
 
         $shipment = $this->dispatch->ensurePendingShipmentWithCourier($order, $courier);
 
+        $shipment->load('courier');
+        if ($courier->adapter !== 'generic' && $courier->adapter !== '' && $shipment->courier_account_id === null) {
+            return redirect()
+                ->route('admin.orders.show', $order)
+                ->with('error', 'No courier API account is available for '.$courier->name.' on this order (COD orders need an account with COD enabled). Fix Admin → Shipping settings, then book again.');
+        }
+
         BookShipmentJob::dispatch($shipment->id);
 
         return redirect()
@@ -289,19 +495,23 @@ class OrderAdminController extends Controller
         abort_unless($shipment->courier?->adapter === 'postex', 404);
         abort_unless((string) $shipment->tracking_number !== '', 400);
 
-        $token = (string) ($shipment->courierAccount?->credentials['api_token'] ?? '');
-        abort_if($token === '', 422, 'PostEx token is missing for this shipment’s courier account.');
+        $token = PostExTokenResolver::forCourierAccount($shipment->courierAccount);
+        abort_if($token === '', 422, 'PostEx API token is not configured. Add it under Admin → Shipping settings for the PostEx courier account.');
 
-        $base = rtrim((string) config('shipping.endpoints.postex'), '/');
+        if (PostExShipmentInspector::isAppSandboxBooking($shipment)) {
+            abort(422, 'This shipment uses a local sandbox tracking number (no order exists in PostEx). Set SHIPPING_SANDBOX=false in .env, run php artisan config:clear, then book again (or create the shipment in PostEx manually).');
+        }
+
+        $base = PostExApiClient::resolvedBaseUrl();
         $url = $base.'/services/integration/api/order/v1/getinvoice';
         $tracking = (string) $shipment->tracking_number;
 
-        $res = Http::retry(3, 250)
+        $res = Http::retry(3, 250, null, false)
             ->timeout(45)
             ->withHeaders(['token' => $token])
             ->get($url, ['trackingNumbers' => $tracking]);
 
-        abort_unless($res->successful(), 502, 'PostEx invoice PDF request failed.');
+        abort_unless($res->successful(), 502, 'PostEx invoice PDF request failed. '.PostExHttpDiagnostics::summarizeFailedResponse($res));
 
         return response($res->body(), 200, [
             'Content-Type' => 'application/pdf',
@@ -320,28 +530,40 @@ class OrderAdminController extends Controller
 
         abort_if($shipments->isEmpty(), 422, 'No PostEx shipments with tracking numbers found on this order.');
 
+        foreach ($shipments as $s) {
+            if (PostExShipmentInspector::isAppSandboxBooking($s)) {
+                abort(422, 'This order includes a local sandbox PostEx shipment (no orders in PostEx). Set SHIPPING_SANDBOX=false, clear config, then book again before using the load sheet.');
+            }
+        }
+
         /** @var Shipment $first */
         $first = $shipments->first();
-        $token = (string) ($first->courierAccount?->credentials['api_token'] ?? '');
-        abort_if($token === '', 422, 'PostEx token is missing for this order’s PostEx courier account.');
+        $token = PostExTokenResolver::forCourierAccount($first->courierAccount);
+        abort_if($token === '', 422, 'PostEx API token is not configured. Add it under Admin → Shipping settings for the PostEx courier account.');
 
-        $trackingNumbers = $shipments->pluck('tracking_number')->take(50)->values()->all();
+        $settings = ShippingSetting::current();
+        $pickup = trim((string) ($settings->postex_pickup_address_code ?? ''));
+        if ($pickup === '') {
+            abort(422, 'PostEx load sheet requires a pickup address. Set “Pickup address code” under Admin → Shipping → PostEx defaults (same value used when booking).');
+        }
 
-        $base = rtrim((string) config('shipping.endpoints.postex'), '/');
+        $trackingNumbers = $shipments->pluck('tracking_number')->filter()->unique()->values()->take(10)->all();
+
+        $base = PostExApiClient::resolvedBaseUrl();
         $url = $base.'/services/integration/api/order/v2/generate-load-sheet';
         $payload = [
-            'pickupAddress' => null,
+            'pickupAddress' => $pickup,
             'trackingNumbers' => $trackingNumbers,
         ];
 
-        $res = Http::retry(3, 250)
+        $res = Http::retry(3, 250, null, false)
             ->timeout(45)
             ->withHeaders(['token' => $token])
             ->accept('application/pdf')
             ->asJson()
             ->post($url, $payload);
 
-        abort_unless($res->successful(), 502, 'PostEx load sheet PDF request failed.');
+        abort_unless($res->successful(), 502, 'PostEx load sheet PDF request failed. '.PostExHttpDiagnostics::summarizeFailedResponse($res));
 
         return response($res->body(), 200, [
             'Content-Type' => 'application/pdf',
@@ -364,16 +586,20 @@ class OrderAdminController extends Controller
             return redirect()->route('admin.orders.show', $order)->with('status', 'Shipment is already canceled.');
         }
 
-        $token = (string) ($shipment->courierAccount?->credentials['api_token'] ?? '');
-        if ($token === '') {
-            return redirect()->route('admin.orders.show', $order)->with('error', 'PostEx token is missing for this shipment’s courier account.');
+        if (PostExShipmentInspector::isAppSandboxBooking($shipment)) {
+            return redirect()->route('admin.orders.show', $order)->with('error', 'This shipment uses a local sandbox tracking number (nothing to cancel in PostEx). Set SHIPPING_SANDBOX=false, clear config, then book again.');
         }
 
-        $base = rtrim((string) config('shipping.endpoints.postex'), '/');
+        $token = PostExTokenResolver::forCourierAccount($shipment->courierAccount);
+        if ($token === '') {
+            return redirect()->route('admin.orders.show', $order)->with('error', 'PostEx API token is not configured. Add it under Admin → Shipping settings for the PostEx courier account.');
+        }
+
+        $base = PostExApiClient::resolvedBaseUrl();
         $url = $base.'/services/integration/api/order/v1/cancel-order';
         $payload = ['trackingNumber' => (string) $shipment->tracking_number];
 
-        $res = Http::retry(3, 250)
+        $res = Http::retry(3, 250, null, false)
             ->timeout(30)
             ->acceptJson()
             ->asJson()
@@ -384,7 +610,7 @@ class OrderAdminController extends Controller
         if (! $res->successful()) {
             return redirect()
                 ->route('admin.orders.show', $order)
-                ->with('error', (string) ($body['statusMessage'] ?? 'PostEx cancel request failed.'));
+                ->with('error', 'PostEx cancel failed. '.PostExHttpDiagnostics::summarizeFailedResponse($res));
         }
 
         $shipment->status = ShipmentStatus::Canceled;

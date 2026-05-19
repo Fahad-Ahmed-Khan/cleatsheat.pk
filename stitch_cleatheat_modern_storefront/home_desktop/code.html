@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CleatSheat.pk - Home</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;700;800&amp;family=Inter:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "tertiary-container": "#f0f0f0",
+                    "inverse-surface": "#2f3131",
+                    "primary-fixed": "#d2f000",
+                    "error": "#ba1a1a",
+                    "inverse-on-surface": "#f1f1f1",
+                    "background": "#f9f9f9",
+                    "primary-container": "#dfff00",
+                    "on-tertiary": "#ffffff",
+                    "on-secondary-fixed": "#1c1b1b",
+                    "on-secondary": "#ffffff",
+                    "secondary-fixed": "#e5e2e1",
+                    "on-primary-fixed-variant": "#414c00",
+                    "surface": "#f9f9f9",
+                    "on-surface": "#1a1c1c",
+                    "on-background": "#1a1c1c",
+                    "surface-bright": "#f9f9f9",
+                    "surface-variant": "#e2e2e2",
+                    "on-primary-fixed": "#191e00",
+                    "on-secondary-fixed-variant": "#474746",
+                    "tertiary-fixed": "#e2e2e2",
+                    "outline-variant": "#c6c9ab",
+                    "on-tertiary-fixed-variant": "#454747",
+                    "on-error-container": "#93000a",
+                    "on-tertiary-container": "#6c6d6d",
+                    "tertiary": "#5d5f5f",
+                    "surface-tint": "#576500",
+                    "secondary-fixed-dim": "#c8c6c5",
+                    "on-error": "#ffffff",
+                    "inverse-primary": "#b8d300",
+                    "on-primary-container": "#647400",
+                    "surface-container-low": "#f3f3f3",
+                    "secondary": "#5f5e5e",
+                    "surface-container-high": "#e8e8e8",
+                    "surface-container": "#eeeeee",
+                    "surface-container-lowest": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "on-surface-variant": "#454932",
+                    "on-secondary-container": "#636262",
+                    "outline": "#767960",
+                    "surface-dim": "#dadada",
+                    "on-tertiary-fixed": "#1a1c1c",
+                    "tertiary-fixed-dim": "#c6c6c6",
+                    "surface-container-highest": "#e2e2e2",
+                    "primary": "#576500",
+                    "primary-fixed-dim": "#b8d300",
+                    "secondary-container": "#e2dfde"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "container-margin": "24px",
+                    "base": "8px",
+                    "section-padding": "80px",
+                    "gutter": "16px"
+            },
+            "fontFamily": {
+                    "body-md": [
+                            "Inter"
+                    ],
+                    "display-lg": [
+                            "Sora"
+                    ],
+                    "body-lg": [
+                            "Inter"
+                    ],
+                    "display-lg-mobile": [
+                            "Sora"
+                    ],
+                    "label-bold": [
+                            "Sora"
+                    ],
+                    "headline-md": [
+                            "Sora"
+                    ],
+                    "headline-lg": [
+                            "Sora"
+                    ],
+                    "caption": [
+                            "Inter"
+                    ]
+            },
+            "fontSize": {
+                    "body-md": [
+                            "16px",
+                            {
+                                    "lineHeight": "1.6",
+                                    "letterSpacing": "0",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "display-lg": [
+                            "64px",
+                            {
+                                    "lineHeight": "1.1",
+                                    "letterSpacing": "-0.04em",
+                                    "fontWeight": "800"
+                            }
+                    ],
+                    "body-lg": [
+                            "18px",
+                            {
+                                    "lineHeight": "1.6",
+                                    "letterSpacing": "-0.01em",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "display-lg-mobile": [
+                            "40px",
+                            {
+                                    "lineHeight": "1.1",
+                                    "letterSpacing": "-0.03em",
+                                    "fontWeight": "800"
+                            }
+                    ],
+                    "label-bold": [
+                            "14px",
+                            {
+                                    "lineHeight": "1",
+                                    "letterSpacing": "0.05em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "headline-md": [
+                            "24px",
+                            {
+                                    "lineHeight": "1.2",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "headline-lg": [
+                            "32px",
+                            {
+                                    "lineHeight": "1.2",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "caption": [
+                            "12px",
+                            {
+                                    "lineHeight": "1.4",
+                                    "letterSpacing": "0",
+                                    "fontWeight": "500"
+                            }
+                    ]
+            }
+    },
+        },
+      }
+    </script>
+<style>
+        .ambient-shadow {
+            box-shadow: 0 10px 30px -10px rgba(26, 28, 28, 0.08);
+        }
+        .text-shadow-hero {
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md text-body-md antialiased min-h-screen flex flex-col selection:bg-primary-container selection:text-on-background">
+<!-- TopAppBar (Shared Component Logic) -->
+<header class="sticky top-0 w-full z-50 bg-surface/95 backdrop-blur-md shadow-sm">
+<div class="flex justify-between items-center w-full px-container-margin py-base max-w-[1200px] mx-auto">
+<!-- Brand -->
+<div class="flex items-center gap-4">
+<a class="font-display-lg text-headline-lg font-extrabold tracking-tighter text-on-surface flex items-center gap-2" href="#">
+<span class="material-symbols-outlined text-primary-container" style="font-variation-settings: 'FILL' 1;">sports_soccer</span>
+                    CLEATSHEAT
+                </a>
+</div>
+<!-- Desktop Navigation Links -->
+<nav class="hidden md:flex items-center gap-8">
+<a class="font-label-bold text-label-bold text-on-surface hover:text-primary transition-colors" href="#">FG</a>
+<a class="font-label-bold text-label-bold text-on-surface hover:text-primary transition-colors" href="#">SG</a>
+<a class="font-label-bold text-label-bold text-on-surface hover:text-primary transition-colors" href="#">AG</a>
+<a class="font-label-bold text-label-bold text-on-surface hover:text-primary transition-colors" href="#">Turf</a>
+<a class="font-label-bold text-label-bold text-primary font-bold hover:opacity-80 transition-opacity" href="#">Sale</a>
+</nav>
+<!-- Actions -->
+<div class="flex items-center gap-4 text-on-surface-variant">
+<button class="hover:opacity-80 transition-opacity active:scale-95 transition-transform duration-200">
+<span class="material-symbols-outlined">search</span>
+</button>
+<button class="hover:opacity-80 transition-opacity active:scale-95 transition-transform duration-200 relative">
+<span class="material-symbols-outlined">shopping_bag</span>
+<span class="absolute -top-1 -right-1 bg-primary-container text-on-background text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">2</span>
+</button>
+<button class="md:hidden hover:opacity-80 transition-opacity active:scale-95 transition-transform duration-200">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</div>
+</div>
+</header>
+<main class="flex-grow">
+<!-- Hero Section -->
+<section class="relative w-full h-[600px] md:h-[700px] bg-surface-container-high flex items-center justify-center overflow-hidden">
+<div class="absolute inset-0 z-0">
+<img alt="Hero Background" class="w-full h-full object-cover opacity-90" data-alt="A dramatic, high-contrast, low-angle shot of a premium neon green and black football boot resting on perfectly manicured green turf under bright stadium floodlights. The lighting creates deep shadows and striking highlights on the boot's textured synthetic surface, emphasizing speed and technology. The overall aesthetic is intense, athletic, and modern, fitting the Stadium Energy style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCIuzGHFlrFzYJ_rW02YZhWobCJWeccJB8D8Vna1Qx32dgghEpmccF9fSSnGkjLUiKiaVHYa1azmnZN4wIz_HgAI1M_j5kHGm8eYt6SKMSy-5k9Y53-2oPnX6ISTLCcJhyPMwhh5l46VxYeUgzX76gerV2YSWc55P_jbUHowCKQ6lI-FbERP5IsLtgCKQ0fnLRlBxJNSuKY68n1L3onA-3aTNy-Lnyoc-bBmGH4LiHIHMuK2bC5U-0sN9d3szjHm-RhGJniQ31GCQI"/>
+<div class="absolute inset-0 bg-gradient-to-t from-on-background/80 via-on-background/40 to-transparent"></div>
+</div>
+<div class="relative z-10 text-center px-container-margin max-w-[1200px] mx-auto w-full flex flex-col items-center">
+<span class="inline-block px-3 py-1 mb-6 bg-primary-container text-on-background font-label-bold text-label-bold rounded-full uppercase tracking-wider">New Arrival Elite Pack</span>
+<h1 class="font-display-lg text-display-lg-mobile md:text-display-lg text-white mb-4 max-w-4xl leading-tight text-shadow-hero">DOMINATE EVERY SQUARE INCH</h1>
+<p class="font-body-lg text-body-lg text-white/90 mb-10 max-w-2xl text-shadow-hero">Experience explosive speed and pinpoint precision with the latest generation of engineered micro-texture uppers.</p>
+<a class="inline-flex items-center justify-center bg-primary-container text-on-background font-label-bold text-label-bold px-8 py-4 rounded-[16px] hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200 active:scale-95 gap-2 uppercase" href="#">
+                    Shop FG Boots
+                    <span class="material-symbols-outlined text-[20px]">arrow_forward</span>
+</a>
+</div>
+</section>
+<!-- Pitch Surface Shortcuts -->
+<section class="py-section-padding px-container-margin max-w-[1200px] mx-auto">
+<div class="flex items-center justify-between mb-8">
+<h2 class="font-headline-lg text-headline-lg text-on-background">Choose Your Surface</h2>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-gutter">
+<!-- FG Card -->
+<a class="group relative bg-surface rounded-[24px] overflow-hidden aspect-[4/5] md:aspect-square ambient-shadow hover:-translate-y-1 transition-all duration-300 border border-transparent hover:border-outline-variant" href="#">
+<div class="absolute inset-0 bg-surface-container-low p-6 flex flex-col justify-between z-10">
+<div class="w-12 h-12 rounded-full bg-on-background text-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">terrain</span>
+</div>
+<div>
+<h3 class="font-headline-md text-headline-md text-on-background mb-1">Firm Ground</h3>
+<p class="font-body-md text-body-md text-on-surface-variant group-hover:text-primary transition-colors">Natural dry grass</p>
+</div>
+</div>
+<img alt="FG Boots" class="absolute right-[-20%] bottom-[-10%] w-[80%] object-contain drop-shadow-2xl opacity-80 group-hover:scale-110 transition-transform duration-500 z-0" data-alt="A clean, isolated product shot of a sleek, white firm ground (FG) football boot with sharp, angular moulded studs. The boot is angled dynamically against a minimal light grey background, casting a soft, ambient drop shadow. The aesthetic is crisp, technical, and premium." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDUfvtKmfFVQx5Vun7Wn-bPc-gOSD3xuha4AIaQ2596gGOrJ-xVFcGuGnXaOHjrva6qHQKcHE9CB3aWrAnhbABvfwFJuSsxN0ZTSjPPqpvHEzcnDC8lO20J8K6atsGnwFjAeJ3cGaq_gED6vdCA0ZktSrRbY0vKX8csJkqZG_hqGUlWficed4LU82qEdreA2xyTOikVXvELeYeGqV-mNsSR7lyGh85D5--l5p7w1pjdlbNn6HubY5MIjo0DhzusnY8OXk57kroBQ9Q"/>
+</a>
+<!-- SG Card -->
+<a class="group relative bg-surface rounded-[24px] overflow-hidden aspect-[4/5] md:aspect-square ambient-shadow hover:-translate-y-1 transition-all duration-300 border border-transparent hover:border-outline-variant" href="#">
+<div class="absolute inset-0 bg-surface-container-low p-6 flex flex-col justify-between z-10">
+<div class="w-12 h-12 rounded-full bg-on-background text-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">water_drop</span>
+</div>
+<div>
+<h3 class="font-headline-md text-headline-md text-on-background mb-1">Soft Ground</h3>
+<p class="font-body-md text-body-md text-on-surface-variant group-hover:text-primary transition-colors">Wet, muddy grass</p>
+</div>
+</div>
+</a>
+<!-- AG Card -->
+<a class="group relative bg-surface rounded-[24px] overflow-hidden aspect-[4/5] md:aspect-square ambient-shadow hover:-translate-y-1 transition-all duration-300 border border-transparent hover:border-outline-variant" href="#">
+<div class="absolute inset-0 bg-surface-container-low p-6 flex flex-col justify-between z-10">
+<div class="w-12 h-12 rounded-full bg-on-background text-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">grid_on</span>
+</div>
+<div>
+<h3 class="font-headline-md text-headline-md text-on-background mb-1">Artificial Grass</h3>
+<p class="font-body-md text-body-md text-on-surface-variant group-hover:text-primary transition-colors">Modern 3G/4G turf</p>
+</div>
+</div>
+</a>
+<!-- Turf Card -->
+<a class="group relative bg-surface rounded-[24px] overflow-hidden aspect-[4/5] md:aspect-square ambient-shadow hover:-translate-y-1 transition-all duration-300 border border-transparent hover:border-outline-variant" href="#">
+<div class="absolute inset-0 bg-surface-container-low p-6 flex flex-col justify-between z-10">
+<div class="w-12 h-12 rounded-full bg-on-background text-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">sports_score</span>
+</div>
+<div>
+<h3 class="font-headline-md text-headline-md text-on-background mb-1">Turf / Indoor</h3>
+<p class="font-body-md text-body-md text-on-surface-variant group-hover:text-primary transition-colors">Astro &amp; courts</p>
+</div>
+</div>
+</a>
+</div>
+</section>
+<!-- Trending Section -->
+<section class="py-section-padding bg-surface-container-lowest border-t border-outline-variant/20">
+<div class="px-container-margin max-w-[1200px] mx-auto">
+<div class="flex items-center justify-between mb-12">
+<h2 class="font-headline-lg text-headline-lg text-on-background">Trending on Pitch</h2>
+<a class="font-label-bold text-label-bold text-on-surface hover:text-primary transition-colors flex items-center gap-1" href="#">
+                        View All <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</a>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+<!-- Product Card 1 -->
+<div class="group relative bg-surface rounded-[24px] p-4 ambient-shadow flex flex-col">
+<div class="absolute top-6 left-6 z-10 flex flex-col gap-2">
+<span class="bg-on-background text-primary-container font-label-bold text-[10px] px-2 py-1 rounded-sm uppercase tracking-wider w-fit">Elite</span>
+<span class="bg-surface-variant text-on-background font-caption text-caption px-2 py-1 rounded-sm w-fit border border-outline-variant/30">FG</span>
+</div>
+<button class="absolute top-6 right-6 z-10 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">favorite</span>
+</button>
+<div class="relative w-full aspect-square bg-surface-container-low rounded-xl mb-4 overflow-hidden flex items-center justify-center">
+<img alt="SpeedX Elite FG" class="w-4/5 h-auto object-contain drop-shadow-xl group-hover:scale-105 transition-transform duration-300" data-alt="A professional studio product photograph of a bright neon yellow and black elite level football boot. The boot is presented against a pristine white background with a subtle, realistic soft drop shadow grounding it. The lighting highlights the advanced synthetic texture and laceless design. High contrast, sharp focus, premium athletic aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBOD-CFl5-UDA_i48nn71rWw73SXCTEyRaykeYGi9fauqR-qwiyS-cJKK--XEYp9Qnq6mt6G9xqlttd-9VvZRiLOlOiHQgfCk0KlmgJgPP2iKOeUoGT18Z_AHJsbuWLBE12RX5aTfgb4Lq7d70kZDakEufYnoqMirFmjDrcbc3IK0J_Y8v5IS9BC5EujewuK0ugHFQgThV2pBFQWA70KJSqS_kllL-ulC7Z9nI2rVGDjCOlVQXCI0_RpXESDsGZW9ZJlj0rpGoKgzA"/>
+<!-- Quick Add Hover Overlay -->
+<div class="absolute inset-x-0 bottom-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 opacity-0 group-hover:opacity-100 flex justify-center bg-gradient-to-t from-black/20 to-transparent">
+<button class="bg-primary-container text-on-background font-label-bold text-label-bold px-6 py-2 rounded-full w-full hover:bg-inverse-primary shadow-md">Quick Add</button>
+</div>
+</div>
+<div class="flex-grow flex flex-col">
+<h3 class="font-label-bold text-label-bold text-on-background mb-1">SpeedX Elite FG</h3>
+<p class="font-body-md text-body-md text-on-surface-variant mb-3 flex-grow">Lightweight precision</p>
+<p class="font-headline-md text-[20px] font-bold text-on-background">₨ 45,000</p>
+</div>
+</div>
+<!-- Product Card 2 -->
+<div class="group relative bg-surface rounded-[24px] p-4 ambient-shadow flex flex-col">
+<div class="absolute top-6 left-6 z-10 flex flex-col gap-2">
+<span class="bg-on-background text-primary-container font-label-bold text-[10px] px-2 py-1 rounded-sm uppercase tracking-wider w-fit">New</span>
+<span class="bg-surface-variant text-on-background font-caption text-caption px-2 py-1 rounded-sm w-fit border border-outline-variant/30">AG</span>
+</div>
+<button class="absolute top-6 right-6 z-10 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">favorite</span>
+</button>
+<div class="relative w-full aspect-square bg-surface-container-low rounded-xl mb-4 overflow-hidden flex items-center justify-center">
+<img alt="Control Pro AG" class="w-4/5 h-auto object-contain drop-shadow-xl group-hover:scale-105 transition-transform duration-300" data-alt="A professional studio product photograph of a sleek black football boot with subtle red accents, designed for artificial grass (AG). The boot is presented against a pristine white background with a subtle, realistic soft drop shadow grounding it. The lighting emphasizes the textured strike zones on the upper. High contrast, sharp focus, premium athletic aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCINCykc6iTooMM09-sqiWVaj07XVMgloCYiKbY-Hg5Y1JbFKJ9epBndGy_vygRB6IBy5Dcre_xnoTMIzeO1cy2SuwYSRVmZbtgnCL1wusxt_3yKUJgG4HI0sDZNBI0O8AWyl2DSUfoCYX8DzyZmsRvEjVtrGTUMd7GSZzScSX_sFWIV72a7eYo-1fVKVXsL-qhzbvzeuZvY2d3Cqx2IqjykTI1puPhbXiKV5NKXgXZ6JWQIlxNmpJNKlrIu___7AdwKiM3koi-r9M"/>
+<div class="absolute inset-x-0 bottom-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 opacity-0 group-hover:opacity-100 flex justify-center bg-gradient-to-t from-black/20 to-transparent">
+<button class="bg-primary-container text-on-background font-label-bold text-label-bold px-6 py-2 rounded-full w-full hover:bg-inverse-primary shadow-md">Quick Add</button>
+</div>
+</div>
+<div class="flex-grow flex flex-col">
+<h3 class="font-label-bold text-label-bold text-on-background mb-1">Control Pro AG</h3>
+<p class="font-body-md text-body-md text-on-surface-variant mb-3 flex-grow">Masterful touch</p>
+<p class="font-headline-md text-[20px] font-bold text-on-background">₨ 38,500</p>
+</div>
+</div>
+<!-- Product Card 3 -->
+<div class="group relative bg-surface rounded-[24px] p-4 ambient-shadow flex flex-col">
+<div class="absolute top-6 left-6 z-10 flex flex-col gap-2">
+<span class="bg-surface-variant text-on-background font-caption text-caption px-2 py-1 rounded-sm w-fit border border-outline-variant/30">SG</span>
+</div>
+<button class="absolute top-6 right-6 z-10 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">favorite</span>
+</button>
+<div class="relative w-full aspect-square bg-surface-container-low rounded-xl mb-4 overflow-hidden flex items-center justify-center">
+<img alt="Power Strike SG" class="w-4/5 h-auto object-contain drop-shadow-xl group-hover:scale-105 transition-transform duration-300" data-alt="A professional studio product photograph of a classic white and gold soft ground (SG) football boot with visible metal studs. The boot is presented against a pristine white background with a subtle, realistic soft drop shadow grounding it. The lighting highlights the premium leather upper. High contrast, sharp focus, premium athletic aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDHSxrCF2fHxz6-akVyvusF0Zte3HjA8WCvD424uYGnNZONNFMwrIjzRniesUL12Yhg6_VyZHmoJYWtAsSk21XOvX6eh-PEXZ4dbkKzL7kHwMt5DJM1drMsGQnHhE65xNII-GILrM5iyWWP6McuB-bDPQLj9_DiRY8CGxJy-kQLiymun3HvgPfu9TtAugMJk52FsQTFlbvfN0T9DKgk3U2DALJaIiy873Y7lQ-DCKWuX_8Y9phD0_nVCPNJDMbvBuFqWDBzrwXtEm0"/>
+<div class="absolute inset-x-0 bottom-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 opacity-0 group-hover:opacity-100 flex justify-center bg-gradient-to-t from-black/20 to-transparent">
+<button class="bg-primary-container text-on-background font-label-bold text-label-bold px-6 py-2 rounded-full w-full hover:bg-inverse-primary shadow-md">Quick Add</button>
+</div>
+</div>
+<div class="flex-grow flex flex-col">
+<h3 class="font-label-bold text-label-bold text-on-background mb-1">Power Strike SG</h3>
+<p class="font-body-md text-body-md text-on-surface-variant mb-3 flex-grow">Unrelenting force</p>
+<p class="font-headline-md text-[20px] font-bold text-on-background">₨ 42,000</p>
+</div>
+</div>
+<!-- Product Card 4 -->
+<div class="group relative bg-surface rounded-[24px] p-4 ambient-shadow flex flex-col">
+<div class="absolute top-6 left-6 z-10 flex flex-col gap-2">
+<span class="bg-[#1A1A1A] text-white font-label-bold text-[10px] px-2 py-1 rounded-sm uppercase tracking-wider w-fit">-20% Sale</span>
+<span class="bg-surface-variant text-on-background font-caption text-caption px-2 py-1 rounded-sm w-fit border border-outline-variant/30">Turf</span>
+</div>
+<button class="absolute top-6 right-6 z-10 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">favorite</span>
+</button>
+<div class="relative w-full aspect-square bg-surface-container-low rounded-xl mb-4 overflow-hidden flex items-center justify-center">
+<img alt="Agility TF" class="w-4/5 h-auto object-contain drop-shadow-xl group-hover:scale-105 transition-transform duration-300" data-alt="A professional studio product photograph of a vibrant blue and white turf (TF) football trainer. The shoe is presented against a pristine white background with a subtle, realistic soft drop shadow grounding it. The lighting emphasizes the low-profile rubber studded outsole. High contrast, sharp focus, premium athletic aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC04Czp4NyR5LCuRsCX95kBZ_oUP6Ikrdv9kIPAOFXj7983iDB1_RJVCLWkEs2jKzR9O-30JMnH2EVA0o4dsuVjXkdBHj8c7eEAnLOYDZxErTGDuOz-qKOiOcn7TgysmwO25kZKR0F5iPZesVsimjloGywhKxU5pU71DN50-14saowARBo6hCeY-DM0YdWbqgD3xv0bCj6-ZNf9vQqeapVFwMnE0d3c_1UkMnqWewSYef_gvfEOAnkUZniIaBL-UdQ_X26RJKr-8u0"/>
+<div class="absolute inset-x-0 bottom-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 opacity-0 group-hover:opacity-100 flex justify-center bg-gradient-to-t from-black/20 to-transparent">
+<button class="bg-primary-container text-on-background font-label-bold text-label-bold px-6 py-2 rounded-full w-full hover:bg-inverse-primary shadow-md">Quick Add</button>
+</div>
+</div>
+<div class="flex-grow flex flex-col">
+<h3 class="font-label-bold text-label-bold text-on-background mb-1">Agility TF</h3>
+<p class="font-body-md text-body-md text-on-surface-variant mb-3 flex-grow">Small-sided control</p>
+<div class="flex items-baseline gap-2">
+<p class="font-headline-md text-[20px] font-bold text-error">₨ 24,000</p>
+<p class="font-body-md text-sm text-on-surface-variant line-through">₨ 30,000</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-inverse-surface text-inverse-on-surface py-12 px-container-margin border-t-4 border-primary-container">
+<div class="max-w-[1200px] mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
+<!-- Brand Col -->
+<div>
+<a class="font-display-lg-mobile text-[24px] font-extrabold tracking-tighter text-white flex items-center gap-2 mb-6" href="#">
+<span class="material-symbols-outlined text-primary-container" style="font-variation-settings: 'FILL' 1;">sports_soccer</span>
+                    CLEATSHEAT
+                </a>
+<p class="font-body-md text-body-md text-secondary-fixed-dim mb-6">Equipping Pakistan's footballers with authentic, premium gear. Dominate the pitch with the right boots.</p>
+<div class="flex gap-4">
+<!-- Placeholder social icons -->
+<a class="w-10 h-10 rounded-full bg-on-secondary-fixed-variant flex items-center justify-center hover:bg-primary-container hover:text-on-background transition-colors text-white" href="#">
+<span class="material-symbols-outlined">public</span>
+</a>
+<a class="w-10 h-10 rounded-full bg-on-secondary-fixed-variant flex items-center justify-center hover:bg-primary-container hover:text-on-background transition-colors text-white" href="#">
+<span class="material-symbols-outlined">mail</span>
+</a>
+</div>
+</div>
+<!-- Links -->
+<div>
+<h4 class="font-label-bold text-label-bold text-white mb-6 uppercase tracking-wider">Shop</h4>
+<ul class="space-y-4 font-body-md text-body-md text-secondary-fixed-dim">
+<li><a class="hover:text-primary-container transition-colors" href="#">Firm Ground (FG)</a></li>
+<li><a class="hover:text-primary-container transition-colors" href="#">Soft Ground (SG)</a></li>
+<li><a class="hover:text-primary-container transition-colors" href="#">Artificial Grass (AG)</a></li>
+<li><a class="hover:text-primary-container transition-colors" href="#">Turf &amp; Indoor</a></li>
+<li><a class="hover:text-primary-container transition-colors" href="#">New Arrivals</a></li>
+</ul>
+</div>
+<!-- Support -->
+<div>
+<h4 class="font-label-bold text-label-bold text-white mb-6 uppercase tracking-wider">Support</h4>
+<ul class="space-y-4 font-body-md text-body-md text-secondary-fixed-dim">
+<li><a class="hover:text-primary-container transition-colors" href="#">Contact Us</a></li>
+<li><a class="hover:text-primary-container transition-colors" href="#">FAQs</a></li>
+<li><a class="hover:text-primary-container transition-colors" href="#">Shipping &amp; Returns</a></li>
+<li><a class="hover:text-primary-container transition-colors" href="#">Size Guide</a></li>
+<li><a class="hover:text-primary-container transition-colors" href="#">Track Order</a></li>
+</ul>
+</div>
+<!-- Newsletter -->
+<div>
+<h4 class="font-label-bold text-label-bold text-white mb-6 uppercase tracking-wider">Join the Squad</h4>
+<p class="font-body-md text-body-md text-secondary-fixed-dim mb-4">Subscribe for exclusive drops, early sale access, and expert pitch advice.</p>
+<form class="flex flex-col gap-2">
+<input class="bg-on-secondary-fixed-variant border border-transparent text-white placeholder:text-secondary-fixed-dim px-4 py-3 rounded-lg focus:outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container transition-all" placeholder="Your email address" type="email"/>
+<button class="bg-primary-container text-on-background font-label-bold text-label-bold px-4 py-3 rounded-lg hover:bg-inverse-primary transition-colors uppercase" type="submit">Subscribe</button>
+</form>
+</div>
+</div>
+<div class="max-w-[1200px] mx-auto mt-12 pt-8 border-t border-on-secondary-fixed-variant flex flex-col md:flex-row justify-between items-center gap-4">
+<p class="font-caption text-caption text-secondary-fixed-dim">© 2024 CleatSheat.pk. All rights reserved.</p>
+<div class="flex gap-4 font-caption text-caption text-secondary-fixed-dim">
+<a class="hover:text-white transition-colors" href="#">Privacy Policy</a>
+<a class="hover:text-white transition-colors" href="#">Terms of Service</a>
+</div>
+</div>
+</footer>
+</body></html>

@@ -130,8 +130,8 @@ const genderLabels = {
 <template>
     <StoreSeoHead :seo="seo" />
     <StoreLayout>
-        <div class="mx-auto max-w-6xl pb-28 lg:pb-12">
-            <div class="border-b border-stone-100 bg-white px-4 py-6 sm:px-6">
+        <div class="mx-auto max-w-content pb-28 lg:pb-12">
+            <div class="border-b border-stadium-outline-soft/25 bg-stadium-white px-4 py-6 sm:px-6">
                 <StoreSectionHeader :title="category.name" :subtitle="`${pagination.total} styles`" />
                 <div
                     v-if="category.intro_html"
@@ -143,13 +143,13 @@ const genderLabels = {
             <div class="lg:grid lg:grid-cols-[minmax(0,240px)_1fr] lg:gap-10 lg:px-6 lg:pt-8">
                 <!-- Desktop filters -->
                 <aside class="hidden lg:block">
-                    <div class="sticky top-24 space-y-6 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-stone-200/80">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">
+                    <div class="sticky top-24 space-y-6 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-stadium-outline-soft/80">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-stadium-secondary">
                             Filters
                         </p>
 
                         <div>
-                            <p class="text-xs font-medium text-stone-700">
+                            <p class="text-xs font-medium text-stadium-ink">
                                 Brand
                             </p>
                             <div class="mt-2 flex flex-wrap gap-2">
@@ -160,8 +160,8 @@ const genderLabels = {
                                     class="min-h-10 rounded-full px-3 py-2 text-xs font-medium transition"
                                     :class="
                                         local.brand_ids.includes(b.id)
-                                            ? 'bg-stone-900 text-white'
-                                            : 'bg-stone-50 text-stone-700 ring-1 ring-stone-200 hover:bg-stone-100'
+                                            ? 'bg-stadium-ink text-white'
+                                            : 'bg-stadium-muted text-stadium-ink ring-1 ring-stadium-outline-soft hover:bg-stadium-container-high'
                                     "
                                     @click="toggleBrand(b.id)"
                                 >
@@ -171,7 +171,7 @@ const genderLabels = {
                         </div>
 
                         <div>
-                            <p class="text-xs font-medium text-stone-700">
+                            <p class="text-xs font-medium text-stadium-ink">
                                 Colour
                             </p>
                             <div class="mt-2 flex flex-wrap gap-2">
@@ -182,8 +182,8 @@ const genderLabels = {
                                     class="flex min-h-10 items-center gap-2 rounded-full py-1.5 pl-1.5 pr-3 text-xs font-medium transition"
                                     :class="
                                         local.color_ids.includes(c.id)
-                                            ? 'bg-stone-900 text-white'
-                                            : 'bg-stone-50 text-stone-700 ring-1 ring-stone-200'
+                                            ? 'bg-stadium-ink text-white'
+                                            : 'bg-stadium-muted text-stadium-ink ring-1 ring-stadium-outline-soft'
                                     "
                                     @click="toggleColor(c.id)"
                                 >
@@ -194,12 +194,12 @@ const genderLabels = {
                         </div>
 
                         <div>
-                            <p class="text-xs font-medium text-stone-700">
+                            <p class="text-xs font-medium text-stadium-ink">
                                 Gender
                             </p>
                             <select
                                 v-model="local.gender"
-                                class="mt-2 w-full min-h-11 rounded-xl border border-stone-200 bg-white px-3 text-sm"
+                                class="mt-2 w-full min-h-11 rounded-xl border border-stadium-outline-soft bg-white px-3 text-sm"
                             >
                                 <option value="">
                                     Any
@@ -211,7 +211,7 @@ const genderLabels = {
                         </div>
 
                         <div>
-                            <p class="text-xs font-medium text-stone-700">
+                            <p class="text-xs font-medium text-stadium-ink">
                                 Price (PKR)
                             </p>
                             <div class="mt-2 grid grid-cols-2 gap-2">
@@ -219,25 +219,25 @@ const genderLabels = {
                                     v-model.number="local.price_min"
                                     type="number"
                                     placeholder="Min"
-                                    class="min-h-11 rounded-xl border border-stone-200 px-2 text-sm"
+                                    class="min-h-11 rounded-xl border border-stadium-outline-soft px-2 text-sm"
                                 >
                                 <input
                                     v-model.number="local.price_max"
                                     type="number"
                                     placeholder="Max"
-                                    class="min-h-11 rounded-xl border border-stone-200 px-2 text-sm"
+                                    class="min-h-11 rounded-xl border border-stadium-outline-soft px-2 text-sm"
                                 >
                             </div>
-                            <p class="mt-1 text-[11px] text-stone-400">
+                            <p class="mt-1 text-[11px] text-stadium-outline">
                                 Range {{ Math.round(filterOptions.price_min) }} – {{ Math.round(filterOptions.price_max) }}
                             </p>
                         </div>
 
                         <div>
-                            <p class="text-xs font-medium text-stone-700">
+                            <p class="text-xs font-medium text-stadium-ink">
                                 Size label
                             </p>
-                            <select v-model="local.size" class="mt-2 w-full min-h-11 rounded-xl border border-stone-200 px-3 text-sm">
+                            <select v-model="local.size" class="mt-2 w-full min-h-11 rounded-xl border border-stadium-outline-soft px-3 text-sm">
                                 <option value="">
                                     Any
                                 </option>
@@ -248,12 +248,12 @@ const genderLabels = {
                         </div>
 
                         <div>
-                            <p class="text-xs font-medium text-stone-700">
+                            <p class="text-xs font-medium text-stadium-ink">
                                 Availability
                             </p>
                             <select
                                 v-model="local.availability"
-                                class="mt-2 w-full min-h-11 rounded-xl border border-stone-200 px-3 text-sm"
+                                class="mt-2 w-full min-h-11 rounded-xl border border-stadium-outline-soft px-3 text-sm"
                             >
                                 <option value="">
                                     All
@@ -267,12 +267,12 @@ const genderLabels = {
                         <div class="flex flex-col gap-2">
                             <button
                                 type="button"
-                                class="min-h-11 rounded-xl bg-stone-900 text-sm font-semibold text-white transition active:scale-[0.99]"
+                                class="min-h-11 rounded-xl bg-stadium-lime text-sm font-bold text-stadium-ink transition hover:-translate-y-px active:scale-[0.99]"
                                 @click="applyFilters"
                             >
                                 Apply
                             </button>
-                            <button type="button" class="text-xs font-medium text-stone-500 underline" @click="clearFilters">
+                            <button type="button" class="text-xs font-medium text-stadium-secondary underline" @click="clearFilters">
                                 Clear all
                             </button>
                         </div>
@@ -281,9 +281,9 @@ const genderLabels = {
 
                 <!-- Grid -->
                 <div class="px-4 pt-6 sm:px-0">
-                    <div v-if="!products.length" class="rounded-2xl bg-stone-50 py-16 text-center text-sm text-stone-600">
+                    <div v-if="!products.length" class="rounded-2xl bg-stadium-muted py-16 text-center text-sm text-stadium-secondary">
                         No shoes match these filters.
-                        <button type="button" class="mt-2 block w-full font-semibold text-stone-900 underline sm:inline" @click="clearFilters">
+                        <button type="button" class="mt-2 block w-full font-semibold text-stadium-ink underline sm:inline" @click="clearFilters">
                             Reset filters
                         </button>
                     </div>
@@ -299,18 +299,18 @@ const genderLabels = {
                             v-if="pagination.current_page > 1"
                             :href="categoryHref({ page: pagination.current_page - 1 })"
                             preserve-scroll
-                            class="min-h-11 rounded-full bg-white px-5 py-2.5 text-sm font-semibold shadow-sm ring-1 ring-stone-200 transition hover:ring-stone-300"
+                            class="min-h-11 rounded-full bg-white px-5 py-2.5 text-sm font-semibold shadow-sm ring-1 ring-stadium-outline-soft transition hover:ring-stadium-outline"
                         >
                             Previous
                         </Link>
-                        <span class="text-sm tabular-nums text-stone-500">
+                        <span class="text-sm tabular-nums text-stadium-secondary">
                             {{ pagination.current_page }} / {{ pagination.last_page }}
                         </span>
                         <Link
                             v-if="pagination.current_page < pagination.last_page"
                             :href="categoryHref({ page: pagination.current_page + 1 })"
                             preserve-scroll
-                            class="min-h-11 rounded-full bg-stone-900 px-5 py-2.5 text-sm font-semibold text-white shadow-md"
+                            class="min-h-11 rounded-full bg-stadium-lime px-5 py-2.5 text-sm font-bold text-stadium-ink shadow-md"
                         >
                             Next
                         </Link>
@@ -323,13 +323,13 @@ const genderLabels = {
         <div class="fixed bottom-24 left-4 z-40 lg:hidden">
             <button
                 type="button"
-                class="flex min-h-12 items-center gap-2 rounded-full bg-stone-900 pl-5 pr-5 text-sm font-semibold text-white shadow-lg ring-2 ring-white/90 transition active:scale-[0.98]"
+                class="flex min-h-12 items-center gap-2 rounded-full bg-stadium-ink pl-5 pr-5 text-sm font-semibold text-white shadow-lg ring-2 ring-stadium-white/90 transition active:scale-[0.98]"
                 @click="filterOpen = true"
             >
                 Filters
                 <span
                     v-if="activeFilterCount"
-                    class="flex h-6 min-w-6 items-center justify-center rounded-full bg-emerald-500 px-1.5 text-[11px] font-bold"
+                    class="flex h-6 min-w-6 items-center justify-center rounded-full bg-stadium-lime px-1.5 text-[11px] font-bold text-stadium-ink"
                 >{{ activeFilterCount }}</span>
             </button>
         </div>
@@ -337,7 +337,7 @@ const genderLabels = {
         <StoreBottomSheet :open="filterOpen" title="Filters" @close="filterOpen = false">
             <div class="mt-4 space-y-6">
                 <div>
-                    <p class="text-xs font-semibold uppercase text-stone-500">
+                    <p class="text-xs font-semibold uppercase text-stadium-secondary">
                         Brand
                     </p>
                     <div class="mt-2 flex flex-wrap gap-2">
@@ -348,8 +348,8 @@ const genderLabels = {
                             class="min-h-11 rounded-full px-4 py-2 text-sm font-medium"
                             :class="
                                 local.brand_ids.includes(b.id)
-                                    ? 'bg-stone-900 text-white'
-                                    : 'bg-stone-50 text-stone-800 ring-1 ring-stone-200'
+                                    ? 'bg-stadium-ink text-white'
+                                    : 'bg-stadium-muted text-stadium-ink ring-1 ring-stadium-outline-soft'
                             "
                             @click="toggleBrand(b.id)"
                         >
@@ -358,7 +358,7 @@ const genderLabels = {
                     </div>
                 </div>
                 <div>
-                    <p class="text-xs font-semibold uppercase text-stone-500">
+                    <p class="text-xs font-semibold uppercase text-stadium-secondary">
                         Colour
                     </p>
                     <div class="mt-2 flex flex-wrap gap-2">
@@ -369,8 +369,8 @@ const genderLabels = {
                             class="flex min-h-11 items-center gap-2 rounded-full py-1.5 pl-2 pr-4 text-sm"
                             :class="
                                 local.color_ids.includes(c.id)
-                                    ? 'bg-stone-900 text-white'
-                                    : 'bg-stone-50 ring-1 ring-stone-200'
+                                    ? 'bg-stadium-ink text-white'
+                                    : 'bg-stadium-muted ring-1 ring-stadium-outline-soft'
                             "
                             @click="toggleColor(c.id)"
                         >
@@ -381,8 +381,8 @@ const genderLabels = {
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="text-xs font-medium text-stone-600">Gender</label>
-                        <select v-model="local.gender" class="mt-1 w-full min-h-12 rounded-xl border border-stone-200 px-2 text-sm">
+                        <label class="text-xs font-medium text-stadium-secondary">Gender</label>
+                        <select v-model="local.gender" class="mt-1 w-full min-h-12 rounded-xl border border-stadium-outline-soft px-2 text-sm">
                             <option value="">
                                 Any
                             </option>
@@ -392,8 +392,8 @@ const genderLabels = {
                         </select>
                     </div>
                     <div>
-                        <label class="text-xs font-medium text-stone-600">Availability</label>
-                        <select v-model="local.availability" class="mt-1 w-full min-h-12 rounded-xl border border-stone-200 px-2 text-sm">
+                        <label class="text-xs font-medium text-stadium-secondary">Availability</label>
+                        <select v-model="local.availability" class="mt-1 w-full min-h-12 rounded-xl border border-stadium-outline-soft px-2 text-sm">
                             <option value="">
                                 All
                             </option>
@@ -404,8 +404,8 @@ const genderLabels = {
                     </div>
                 </div>
                 <div>
-                    <label class="text-xs font-medium text-stone-600">Size</label>
-                    <select v-model="local.size" class="mt-1 w-full min-h-12 rounded-xl border border-stone-200 px-2 text-sm">
+                    <label class="text-xs font-medium text-stadium-secondary">Size</label>
+                    <select v-model="local.size" class="mt-1 w-full min-h-12 rounded-xl border border-stadium-outline-soft px-2 text-sm">
                         <option value="">
                             Any
                         </option>
@@ -416,23 +416,23 @@ const genderLabels = {
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="text-xs font-medium text-stone-600">Min price</label>
-                        <input v-model.number="local.price_min" type="number" class="mt-1 w-full min-h-12 rounded-xl border border-stone-200 px-3 text-sm">
+                        <label class="text-xs font-medium text-stadium-secondary">Min price</label>
+                        <input v-model.number="local.price_min" type="number" class="mt-1 w-full min-h-12 rounded-xl border border-stadium-outline-soft px-3 text-sm">
                     </div>
                     <div>
-                        <label class="text-xs font-medium text-stone-600">Max price</label>
-                        <input v-model.number="local.price_max" type="number" class="mt-1 w-full min-h-12 rounded-xl border border-stone-200 px-3 text-sm">
+                        <label class="text-xs font-medium text-stadium-secondary">Max price</label>
+                        <input v-model.number="local.price_max" type="number" class="mt-1 w-full min-h-12 rounded-xl border border-stadium-outline-soft px-3 text-sm">
                     </div>
                 </div>
                 <div class="flex gap-3 pt-2">
                     <button
                         type="button"
-                        class="min-h-12 flex-1 rounded-2xl bg-stone-900 text-sm font-semibold text-white"
+                        class="min-h-12 flex-1 rounded-2xl bg-stadium-lime text-sm font-bold text-stadium-ink"
                         @click="applyFilters"
                     >
                         Show results
                     </button>
-                    <button type="button" class="min-h-12 rounded-2xl px-4 text-sm font-medium text-stone-600 ring-1 ring-stone-200" @click="clearFilters">
+                    <button type="button" class="min-h-12 rounded-2xl px-4 text-sm font-medium text-stadium-secondary ring-1 ring-stadium-outline-soft" @click="clearFilters">
                         Clear
                     </button>
                 </div>

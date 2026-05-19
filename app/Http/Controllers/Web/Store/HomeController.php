@@ -47,6 +47,7 @@ class HomeController extends Controller
                 'title' => config('store.hero_title'),
                 'subtitle' => config('store.hero_subtitle'),
                 'badge' => config('store.hero_badge'),
+                'image_url' => config('store.hero_image_url'),
             ],
             'seo' => $seoPayload,
         ]);

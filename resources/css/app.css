@@ -1,3 +1,53 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Stadium Energy — light (default) */
+:root {
+    --stadium-bg: 249 249 249;
+    --stadium-dim: 218 218 218;
+    --stadium-muted: 243 243 243;
+    --stadium-container: 238 238 238;
+    --stadium-container-high: 232 232 232;
+    --stadium-white: 255 255 255;
+    --stadium-ink: 26 28 28;
+    --stadium-ink-variant: 69 73 50;
+    --stadium-outline: 118 121 96;
+    --stadium-outline-soft: 198 201 171;
+    --stadium-inverse: 47 49 49;
+    --stadium-inverse-text: 241 241 241;
+    --stadium-secondary: 95 94 94;
+}
+
+/* Stadium Energy — dark */
+html.dark {
+    --stadium-bg: 18 20 20;
+    --stadium-dim: 30 32 32;
+    --stadium-muted: 30 34 34;
+    --stadium-container: 38 40 40;
+    --stadium-container-high: 48 50 50;
+    --stadium-white: 28 31 31;
+    --stadium-ink: 241 241 241;
+    --stadium-ink-variant: 198 201 171;
+    --stadium-outline: 140 143 130;
+    --stadium-outline-soft: 58 62 58;
+    --stadium-inverse: 10 11 11;
+    --stadium-inverse-text: 230 230 230;
+    --stadium-secondary: 168 170 168;
+}
+
+@layer utilities {
+    .stadium-ambient-shadow {
+        box-shadow: 0 10px 30px -10px rgba(26, 28, 28, 0.08);
+    }
+
+    /** Fixed bars sit above the mobile bottom nav (4.25rem + safe area). */
+    .store-sticky-above-nav {
+        bottom: calc(4.25rem + env(safe-area-inset-bottom, 0px));
+    }
+
+    /** Floating widgets on PDP sit above nav + purchase bar. */
+    .store-fab-above-purchase {
+        bottom: calc(10.5rem + env(safe-area-inset-bottom, 0px));
+    }
+}

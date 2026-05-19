@@ -60,6 +60,7 @@ class ProductController extends Controller
             'name' => $p->name,
             'slug' => $p->slug,
             'brand' => $p->brand ? ['name' => $p->brand->name, 'slug' => $p->brand->slug] : null,
+            'category' => $p->category ? ['name' => $p->category->name, 'slug' => $p->category->slug] : null,
             'images' => $p->images->map(fn ($img) => [
                 'path' => $img->path,
                 'alt' => $img->alt,

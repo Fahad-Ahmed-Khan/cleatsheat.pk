@@ -52,7 +52,7 @@ function remove(line) {
 <template>
     <StoreSeoHead :seo="seo" />
     <StoreLayout>
-        <div class="mx-auto max-w-lg pb-36 px-4 pt-8 sm:max-w-3xl sm:pb-12 lg:px-6">
+        <div class="mx-auto max-w-lg px-4 pb-44 pt-8 sm:max-w-3xl sm:pb-12 lg:px-6">
             <h1 class="text-2xl font-semibold tracking-tight text-stone-900">
                 Bag
             </h1>
@@ -152,7 +152,7 @@ function remove(line) {
         <!-- Mobile sticky checkout -->
         <div
             v-if="lines.length"
-            class="fixed inset-x-0 bottom-0 z-40 border-t border-stone-200/90 bg-white/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-md sm:hidden"
+            class="store-sticky-above-nav fixed inset-x-0 z-[45] border-t border-stadium-outline-soft bg-stadium-white px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] sm:hidden"
         >
             <div class="mx-auto flex max-w-lg items-center justify-between gap-4">
                 <div>

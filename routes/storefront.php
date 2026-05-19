@@ -7,6 +7,7 @@ use App\Http\Controllers\Web\Store\HomeController;
 use App\Http\Controllers\Web\Store\JournalController;
 use App\Http\Controllers\Web\Store\OrderController;
 use App\Http\Controllers\Web\Store\OrderTrackingController;
+use App\Http\Controllers\Web\Store\PageController;
 use App\Http\Controllers\Web\Store\ProductController;
 use App\Http\Controllers\Web\Store\ShopController;
 use Illuminate\Support\Facades\Route;
@@ -23,6 +24,10 @@ Route::get('/checkout/thank-you', [CheckoutController::class, 'thankYou'])->name
 
 Route::get('/track-order', [OrderTrackingController::class, 'show'])->name('store.order-tracking');
 Route::post('/track-order', [OrderTrackingController::class, 'lookup'])->name('store.order-tracking.lookup');
+
+Route::get('/privacy-policy', [PageController::class, 'privacyPolicy'])->name('store.pages.privacy');
+Route::get('/terms-and-conditions', [PageController::class, 'termsAndConditions'])->name('store.pages.terms');
+Route::get('/return-policy', [PageController::class, 'returnPolicy'])->name('store.pages.returns');
 
 Route::get('/c/{slug}', CategoryController::class)->name('store.category');
 Route::get('/p/{slug}', ProductController::class)->name('store.product');
