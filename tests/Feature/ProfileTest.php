@@ -10,15 +10,13 @@ class ProfileTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_profile_page_is_displayed(): void
+    public function test_profile_page_redirects_to_account_profile(): void
     {
         $user = User::factory()->create();
 
-        $response = $this
-            ->actingAs($user)
-            ->get('/profile');
-
-        $response->assertOk();
+        $this->actingAs($user)
+            ->get('/profile')
+            ->assertRedirect('/account/profile');
     }
 
     public function test_profile_information_can_be_updated(): void
@@ -27,14 +25,15 @@ class ProfileTest extends TestCase
 
         $response = $this
             ->actingAs($user)
-            ->patch('/profile', [
+            ->patch(route('store.account.profile.update'), [
                 'name' => 'Test User',
                 'email' => 'test@example.com',
+                'phone' => '+923001234567',
             ]);
 
         $response
             ->assertSessionHasNoErrors()
-            ->assertRedirect('/profile');
+            ->assertRedirect(route('store.account.profile'));
 
         $user->refresh();
 
@@ -49,14 +48,15 @@ class ProfileTest extends TestCase
 
         $response = $this
             ->actingAs($user)
-            ->patch('/profile', [
+            ->patch(route('store.account.profile.update'), [
                 'name' => 'Test User',
                 'email' => $user->email,
+                'phone' => null,
             ]);
 
         $response
             ->assertSessionHasNoErrors()
-            ->assertRedirect('/profile');
+            ->assertRedirect(route('store.account.profile'));
 
         $this->assertNotNull($user->refresh()->email_verified_at);
     }
@@ -67,7 +67,7 @@ class ProfileTest extends TestCase
 
         $response = $this
             ->actingAs($user)
-            ->delete('/profile', [
+            ->delete(route('store.account.profile.destroy'), [
                 'password' => 'password',
             ]);
 
@@ -85,14 +85,14 @@ class ProfileTest extends TestCase
 
         $response = $this
             ->actingAs($user)
-            ->from('/profile')
-            ->delete('/profile', [
+            ->from(route('store.account.profile'))
+            ->delete(route('store.account.profile.destroy'), [
                 'password' => 'wrong-password',
             ]);
 
         $response
             ->assertSessionHasErrors('password')
-            ->assertRedirect('/profile');
+            ->assertRedirect(route('store.account.profile'));
 
         $this->assertNotNull($user->fresh());
     }

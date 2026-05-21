@@ -2,11 +2,15 @@
 
 namespace App\Providers;
 
+use App\Listeners\MergeGuestCartOnLogin;
+use App\Listeners\MergeGuestWishlistOnLogin;
 use App\Models\Order;
 use App\Observers\OrderObserver;
+use Illuminate\Auth\Events\Login;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
@@ -31,6 +35,9 @@ class AppServiceProvider extends ServiceProvider
         Vite::prefetch(concurrency: 3);
 
         Order::observe(OrderObserver::class);
+
+        Event::listen(Login::class, MergeGuestCartOnLogin::class);
+        Event::listen(Login::class, MergeGuestWishlistOnLogin::class);
 
         RateLimiter::for('api', function (Request $request) {
             return Limit::perMinute(120)->by($request->user()?->id ?: $request->ip());

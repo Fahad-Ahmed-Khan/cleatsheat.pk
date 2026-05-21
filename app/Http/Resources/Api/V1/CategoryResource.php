@@ -23,7 +23,10 @@ class CategoryResource extends JsonResource
             'og_image_url' => $this->og_image_url,
             'sort_order' => $this->sort_order,
             'is_active' => (bool) $this->is_active,
-            'children' => CategoryResource::collection($this->whenLoaded('children')),
+            'children' => $this->when(
+                $this->relationLoaded('children'),
+                fn () => CategoryResource::collection($this->children)->resolve(),
+            ),
         ];
     }
 }

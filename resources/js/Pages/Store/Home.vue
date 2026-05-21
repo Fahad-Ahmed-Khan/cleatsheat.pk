@@ -2,7 +2,7 @@
 
 import StoreHomeBuyingGuides from '@/Components/Store/Home/StoreHomeBuyingGuides.vue';
 
-import StoreHomeCategoryChips from '@/Components/Store/Home/StoreHomeCategoryChips.vue';
+import StoreHomeBrandsCarousel from '@/Components/Store/Home/StoreHomeBrandsCarousel.vue';
 
 import StoreHomeHero from '@/Components/Store/Home/StoreHomeHero.vue';
 
@@ -12,7 +12,7 @@ import StoreHomeSeoContent from '@/Components/Store/Home/StoreHomeSeoContent.vue
 
 import StoreHomeSocialProof from '@/Components/Store/Home/StoreHomeSocialProof.vue';
 
-import StoreHomeSurfaceSelector from '@/Components/Store/Home/StoreHomeSurfaceSelector.vue';
+import StoreHomeCategoryBrowser from '@/Components/Store/Home/StoreHomeCategoryBrowser.vue';
 
 import StoreHomeTestimonials from '@/Components/Store/Home/StoreHomeTestimonials.vue';
 
@@ -30,11 +30,9 @@ import { useStoreQuickAdd } from '@/composables/useStoreQuickAdd';
 
 import { Link } from '@inertiajs/vue3';
 
-import { onUnmounted, provide } from 'vue';
+import { computed, onUnmounted, provide } from 'vue';
 
-
-
-defineProps({
+const props = defineProps({
 
     featured: { type: Array, default: () => [] },
 
@@ -46,8 +44,6 @@ defineProps({
 
     categories: { type: Array, default: () => [] },
 
-    surfaceCategories: { type: Array, default: () => [] },
-
     hero: { type: Object, required: true },
 
     promoBanner: { type: Object, default: () => ({}) },
@@ -58,6 +54,17 @@ defineProps({
 
     seo: { type: Object, required: true },
 
+    shopProductCount: { type: Number, default: 0 },
+
+    brands: { type: Array, default: () => [] },
+
+});
+
+const viewAllCleatsLabel = computed(() => {
+    const n = Number(props.shopProductCount ?? 0);
+    if (n >= 50) return `View all ${n}+ cleats`;
+    if (n > 0) return `View all ${n} cleats`;
+    return 'View all cleats';
 });
 
 
@@ -94,16 +101,9 @@ function onSheetSelect({ variantId, sizeLabel }) {
             :hero="hero"
             :promo-banner="promoBanner"
             :categories="categories"
-            :surface-categories="surfaceCategories"
         />
 
-
-
-        <StoreHomeSurfaceSelector :surface-categories="surfaceCategories" />
-
-
-
-        <StoreHomeCategoryChips :categories="categories" />
+        <StoreHomeCategoryBrowser :categories="categories" />
 
 
 
@@ -121,6 +121,8 @@ function onSheetSelect({ variantId, sizeLabel }) {
 
             scroll-mobile
 
+            :view-all-label="viewAllCleatsLabel"
+
         />
 
 
@@ -137,6 +139,8 @@ function onSheetSelect({ variantId, sizeLabel }) {
 
             bg-class="bg-stadium-white"
 
+            :view-all-label="viewAllCleatsLabel"
+
         />
 
 
@@ -150,6 +154,8 @@ function onSheetSelect({ variantId, sizeLabel }) {
             :products="newArrivals"
 
             bg-class="bg-stadium-container-low"
+
+            :view-all-label="viewAllCleatsLabel"
 
         />
 
@@ -166,6 +172,8 @@ function onSheetSelect({ variantId, sizeLabel }) {
             :products="trending"
 
             bg-class="bg-stadium-white"
+
+            :view-all-label="viewAllCleatsLabel"
 
         >
 
@@ -200,6 +208,10 @@ function onSheetSelect({ variantId, sizeLabel }) {
 
 
         <StoreHomeBuyingGuides :journal-posts="journalPosts" />
+
+
+
+        <StoreHomeBrandsCarousel :brands="brands" />
 
 
 

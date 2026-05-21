@@ -60,6 +60,8 @@ class ProductResource extends JsonResource
             ),
             'card_surface_label' => $card['card_surface_label'],
             'card_condition_label' => $card['card_condition_label'],
+            'card_condition_kind' => $card['card_condition_kind'],
+            'card_condition_badge' => $card['card_condition_badge'],
             'card_authenticity_label' => $card['card_authenticity_label'],
             'quick_add' => $card['quick_add'],
         ];

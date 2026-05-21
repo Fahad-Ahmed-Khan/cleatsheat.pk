@@ -10,7 +10,7 @@ import { useStoreAnalytics } from '@/composables/useStoreAnalytics';
 
 import { useForm, usePage } from '@inertiajs/vue3';
 
-import { onMounted } from 'vue';
+import { onMounted, ref } from 'vue';
 
 
 
@@ -44,6 +44,14 @@ const props = defineProps({
 
     },
 
+    savedAddresses: {
+
+        type: Array,
+
+        default: () => [],
+
+    },
+
 });
 
 
@@ -52,21 +60,11 @@ const analytics = useStoreAnalytics();
 
 
 
-onMounted(() => {
-
-    if (props.analytics_checkout?.items?.length) {
-
-        analytics.trackBeginCheckout(props.analytics_checkout);
-
-    }
-
-});
-
-
-
 const defaultGateway = props.gateways[0]?.code ?? 'cod';
 
 
+
+const selectedAddressId = ref('');
 
 const form = useForm({
 
@@ -90,7 +88,53 @@ const form = useForm({
 
 });
 
+onMounted(() => {
 
+    if (props.analytics_checkout?.items?.length) {
+
+        analytics.trackBeginCheckout(props.analytics_checkout);
+
+    }
+
+    const defaultAddr = props.savedAddresses.find((a) => a.is_default) ?? props.savedAddresses[0];
+
+    if (defaultAddr) {
+
+        applyAddress(defaultAddr.id);
+
+    } else if (page.props.auth?.user) {
+
+        const u = page.props.auth.user;
+
+        if (!form.full_name && u.name) form.full_name = u.name;
+
+        if (!form.phone && u.phone) form.phone = u.phone;
+
+    }
+
+});
+
+function applyAddress(id) {
+
+    const addr = props.savedAddresses.find((a) => String(a.id) === String(id));
+
+    if (!addr) return;
+
+    selectedAddressId.value = String(addr.id);
+
+    form.full_name = addr.full_name;
+
+    form.phone = addr.phone;
+
+    form.line1 = addr.line1;
+
+    form.city = addr.city;
+
+    form.area = addr.area ?? '';
+
+    form.postal_code = addr.postal_code ?? '';
+
+}
 
 function submit() {
 
@@ -162,6 +206,32 @@ const inputClass =
 
             <form class="mt-10 space-y-5" @submit.prevent="submit">
 
+                <div v-if="savedAddresses.length">
+
+                    <label :class="labelClass">Saved address</label>
+
+                    <select
+
+                        v-model="selectedAddressId"
+
+                        :class="inputClass"
+
+                        @change="applyAddress(selectedAddressId)"
+
+                    >
+
+                        <option value="">Enter details manually</option>
+
+                        <option v-for="addr in savedAddresses" :key="addr.id" :value="String(addr.id)">
+
+                            {{ addr.full_name }} — {{ addr.city }}{{ addr.is_default ? ' (default)' : '' }}
+
+                        </option>
+
+                    </select>
+
+                </div>
+
                 <div>
 
                     <label :class="labelClass">Full name</label>
@@ -205,6 +275,14 @@ const inputClass =
                 </div>
 
                 <div v-if="!$page.props.auth.user">
+
+                    <p class="mb-4 text-sm text-stadium-secondary">
+                        Have an account?
+                        <a :href="route('login')" class="font-semibold text-store-primary underline">Sign in</a>
+                        or
+                        <a :href="route('register')" class="font-semibold text-store-primary underline">register</a>
+                        for saved addresses and order history.
+                    </p>
 
                     <label :class="labelClass">Email</label>
 

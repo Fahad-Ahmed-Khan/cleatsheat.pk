@@ -2,10 +2,13 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Http\Requests\Admin\Concerns\ValidatesCategoryParent;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreCategoryRequest extends FormRequest
 {
+    use ValidatesCategoryParent;
+
     public function authorize(): bool
     {
         return $this->user()?->isAdmin() ?? false;
@@ -17,7 +20,7 @@ class StoreCategoryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'parent_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'parent_id' => ['nullable', 'integer', 'exists:categories,id', $this->rootParentIdRule()],
             'name' => ['required', 'string', 'max:255'],
             'slug' => ['required', 'string', 'max:255', 'regex:/^[a-z0-9\-]+$/', 'unique:categories,slug'],
             'meta_title' => ['nullable', 'string', 'max:255'],

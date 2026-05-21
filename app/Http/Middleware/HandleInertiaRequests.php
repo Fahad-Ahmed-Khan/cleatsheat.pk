@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Domain\Wishlist\WishlistService;
 use App\Models\CartItem;
 use App\Models\Category;
 use App\Models\MarketingSetting;
@@ -131,6 +132,9 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            'wishlistProductIds' => $request->user() && Schema::hasTable('wishlist_items')
+                ? app(WishlistService::class)->productIdsForUser($request->user())
+                : [],
             'cartCount' => $this->resolveCartCount($request),
             'locale' => $request->user()?->locale ?? config('app.locale', 'en'),
             'storefront' => [
@@ -141,13 +145,40 @@ class HandleInertiaRequests extends Middleware
                 'return_policy_summary' => config('store.return_policy_summary'),
                 'surface_parent_slug' => config('store.surface_parent_slug'),
             ],
-            'navCategories' => Schema::hasTable('categories')
-                ? Category::query()
-                    ->active()
-                    ->whereNull('parent_id')
-                    ->orderBy('sort_order')
-                    ->get(['id', 'name', 'slug'])
-                : [],
+            'navCategories' => $this->navCategoryTree(),
         ];
+    }
+
+    /**
+     * @return list<array{id: int, name: string, slug: string, sort_order: int, children: list<array{id: int, name: string, slug: string, sort_order: int}>}>
+     */
+    private function navCategoryTree(): array
+    {
+        if (! Schema::hasTable('categories')) {
+            return [];
+        }
+
+        return Category::query()
+            ->active()
+            ->whereNull('parent_id')
+            ->orderBy('sort_order')
+            ->with([
+                'children' => fn ($q) => $q->active()->orderBy('sort_order'),
+            ])
+            ->get(['id', 'name', 'slug', 'sort_order'])
+            ->map(fn (Category $parent) => [
+                'id' => $parent->id,
+                'name' => $parent->name,
+                'slug' => $parent->slug,
+                'sort_order' => (int) $parent->sort_order,
+                'children' => $parent->children->map(fn (Category $child) => [
+                    'id' => $child->id,
+                    'name' => $child->name,
+                    'slug' => $child->slug,
+                    'sort_order' => (int) $child->sort_order,
+                ])->values()->all(),
+            ])
+            ->values()
+            ->all();
     }
 }

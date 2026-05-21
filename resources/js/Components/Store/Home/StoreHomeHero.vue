@@ -1,34 +1,39 @@
 <script setup>
-import { SURFACE_TILES, useStoreCategoryHref } from '@/composables/useStoreCategoryHref';
 import { useReducedMotion } from '@/composables/useReducedMotion';
 import { Link, usePage } from '@inertiajs/vue3';
 import { motion } from 'motion-v';
-import { computed, toRef } from 'vue';
+import { computed } from 'vue';
 
 const props = defineProps({
     hero: { type: Object, required: true },
     promoBanner: { type: Object, default: () => ({}) },
     categories: { type: Array, default: () => [] },
-    surfaceCategories: { type: Array, default: () => [] },
 });
 
 const page = usePage();
 const storefront = computed(() => page.props.storefront ?? {});
-const { categoryHref } = useStoreCategoryHref(toRef(props, 'categories'));
 const { prefersReducedMotion } = useReducedMotion();
+
+const firstCategory = computed(() => {
+    const list = (props.categories ?? []).filter((c) => c?.slug && c.is_active !== false);
+    return list.slice().sort((a, b) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0))[0] ?? null;
+});
 
 const primaryHref = computed(() => {
     if (props.hero.cta_url) return props.hero.cta_url;
-    const first = props.surfaceCategories?.[0];
-    if (first?.slug) {
-        return route('store.category', first.slug);
+    if (firstCategory.value?.slug) {
+        return route('store.category', firstCategory.value.slug);
     }
-    return categoryHref(SURFACE_TILES[0].fragments);
+    return route('store.shop');
 });
 
-const primaryLabel = computed(
-    () => props.hero.cta_label || 'Shop firm ground boots',
-);
+const primaryLabel = computed(() => {
+    if (props.hero.cta_label) return props.hero.cta_label;
+    if (firstCategory.value?.name) {
+        return `Shop ${firstCategory.value.name}`;
+    }
+    return 'Shop all boots';
+});
 
 const heroStyle = computed(() => {
     const url = props.hero?.image_url;
@@ -43,9 +48,9 @@ const heroStyle = computed(() => {
 function stagger(i) {
     if (prefersReducedMotion.value) return {};
     return {
-        initial: { opacity: 0, y: 12 },
+        initial: { opacity: 1, y: 10 },
         animate: { opacity: 1, y: 0 },
-        transition: { delay: i * 0.08, duration: 0.45 },
+        transition: { delay: i * 0.06, duration: 0.4 },
     };
 }
 </script>
@@ -61,6 +66,11 @@ function stagger(i) {
                 class="absolute inset-0 bg-[linear-gradient(135deg,#0a0b0b_0%,#1a1c1c_45%,#414c00_100%)]"
             />
             <div class="absolute inset-0 bg-gradient-to-t from-stadium-inverse via-stadium-inverse/70 to-stadium-inverse/30" />
+            <div
+                v-if="hero.image_url"
+                class="pointer-events-none absolute inset-0 bg-black/25 dark:bg-transparent"
+                aria-hidden="true"
+            />
         </div>
 
         <div class="store-container relative z-10 py-14 md:py-24 lg:py-28">
@@ -75,14 +85,14 @@ function stagger(i) {
 
                 <motion.h1
                     v-bind="stagger(1)"
-                    class="text-display-xl text-stadium-inverse-text"
+                    class="text-display-xl text-stadium-inverse-text drop-shadow-[0_2px_16px_rgba(0,0,0,0.55)]"
                 >
                     {{ hero.title }}
                 </motion.h1>
 
                 <motion.p
                     v-bind="stagger(2)"
-                    class="mt-4 max-w-xl text-body-lg text-stadium-inverse-text/85"
+                    class="mt-4 max-w-xl text-body-lg text-stadium-inverse-text/85 drop-shadow-[0_1px_12px_rgba(0,0,0,0.45)]"
                 >
                     {{ hero.subtitle }}
                 </motion.p>
@@ -99,10 +109,10 @@ function stagger(i) {
                         <span aria-hidden="true">→</span>
                     </Link>
                     <Link
-                        href="#trending"
+                        href="#shop-by-category"
                         class="inline-flex min-h-12 items-center justify-center rounded-2xl border-2 border-stadium-inverse-text/30 px-8 py-4 text-label text-stadium-inverse-text transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stadium-lime"
                     >
-                        See trending boots
+                        Browse categories
                     </Link>
                 </motion.div>
 

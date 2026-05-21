@@ -82,7 +82,7 @@ onUnmounted(() => {
         </p>
         <StoreMobileMenu :open="menuOpen" :categories="navCategories" @close="menuOpen = false" />
         <header
-            class="sticky top-0 z-40 border-b border-stadium-outline-soft bg-stadium-white/95 shadow-sm backdrop-blur-md transition-transform duration-300"
+            class="sticky top-0 z-40 border-b border-stadium-outline-soft bg-stadium-white/95 shadow-sm backdrop-blur-md transition-transform duration-300 dark:border-white/10 dark:bg-stadium-inverse/95"
             :class="headerHidden ? '-translate-y-full md:translate-y-0' : 'translate-y-0'"
         >
             <div
@@ -170,7 +170,7 @@ onUnmounted(() => {
                     </Link>
                     <Link
                         v-else
-                        :href="route('dashboard')"
+                        :href="route('store.account.dashboard')"
                         class="hidden text-sm font-medium text-stadium-secondary transition hover:text-stadium-ink sm:inline"
                     >
                         Account
@@ -268,7 +268,7 @@ onUnmounted(() => {
                             <Link v-if="!$page.props.auth.user" :href="route('login')" class="hover:text-stadium-lime">
                                 Log in
                             </Link>
-                            <Link v-else :href="route('dashboard')" class="hover:text-stadium-lime">Account</Link>
+                            <Link v-else :href="route('store.account.dashboard')" class="hover:text-stadium-lime">Account</Link>
                         </li>
                     </ul>
                 </div>

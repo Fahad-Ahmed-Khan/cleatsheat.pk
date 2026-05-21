@@ -52,8 +52,30 @@ class CheckoutController extends Controller
             'robots' => 'noindex, nofollow',
         ], $m?->default_og_image_url, $m?->twitter_site);
 
+        $savedAddresses = [];
+        if ($request->user()) {
+            $savedAddresses = $request->user()
+                ->addresses()
+                ->orderByDesc('is_default')
+                ->orderByDesc('id')
+                ->get(['id', 'full_name', 'phone', 'line1', 'city', 'area', 'postal_code', 'is_default'])
+                ->map(fn ($a) => [
+                    'id' => $a->id,
+                    'full_name' => $a->full_name,
+                    'phone' => $a->phone,
+                    'line1' => $a->line1,
+                    'city' => $a->city,
+                    'area' => $a->area,
+                    'postal_code' => $a->postal_code,
+                    'is_default' => (bool) $a->is_default,
+                ])
+                ->values()
+                ->all();
+        }
+
         return Inertia::render('Store/Checkout', [
             'seo' => $seoPayload,
+            'savedAddresses' => $savedAddresses,
             'analytics_checkout' => [
                 'value' => $value,
                 'currency' => 'PKR',

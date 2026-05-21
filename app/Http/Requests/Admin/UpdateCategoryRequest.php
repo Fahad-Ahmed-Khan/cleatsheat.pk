@@ -2,11 +2,14 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Http\Requests\Admin\Concerns\ValidatesCategoryParent;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class UpdateCategoryRequest extends FormRequest
 {
+    use ValidatesCategoryParent;
+
     public function authorize(): bool
     {
         return $this->user()?->isAdmin() ?? false;
@@ -20,7 +23,18 @@ class UpdateCategoryRequest extends FormRequest
         $category = $this->route('category');
 
         return [
-            'parent_id' => ['nullable', 'integer', 'exists:categories,id', Rule::notIn([$category->id])],
+            'parent_id' => [
+                'nullable',
+                'integer',
+                'exists:categories,id',
+                Rule::notIn([$category->id]),
+                $this->rootParentIdRule(),
+                function (string $attribute, mixed $value, \Closure $fail) use ($category): void {
+                    if ($value !== null && $category->children()->exists()) {
+                        $fail('Parent categories with subcategories cannot be moved under another parent.');
+                    }
+                },
+            ],
             'name' => ['required', 'string', 'max:255'],
             'slug' => [
                 'required', 'string', 'max:255', 'regex:/^[a-z0-9\-]+$/',

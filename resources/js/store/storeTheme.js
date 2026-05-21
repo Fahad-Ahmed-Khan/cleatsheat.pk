@@ -1,10 +1,16 @@
 const STORAGE_KEY = 'store.theme';
 
+/** @returns {'dark'|'light'} */
 export function getStoreTheme() {
     if (typeof window === 'undefined') {
+        return 'dark';
+    }
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    if (stored === 'light') {
         return 'light';
     }
-    return window.localStorage.getItem(STORAGE_KEY) === 'dark' ? 'dark' : 'light';
+
+    return 'dark';
 }
 
 export function applyStoreTheme(theme) {

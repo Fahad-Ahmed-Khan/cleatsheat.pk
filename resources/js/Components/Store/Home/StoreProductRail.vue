@@ -1,6 +1,7 @@
 <script setup>
 import StoreProductCard from '@/Components/Store/StoreProductCard.vue';
 import StoreProductCardSkeleton from '@/Components/Store/StoreProductCardSkeleton.vue';
+import StoreProductRailCta from '@/Components/Store/Home/StoreProductRailCta.vue';
 import StoreSectionHeader from '@/Components/Store/StoreSectionHeader.vue';
 import { motion } from 'motion-v';
 import { computed } from 'vue';
@@ -14,9 +15,16 @@ const props = defineProps({
     loading: { type: Boolean, default: false },
     bgClass: { type: String, default: 'bg-stadium' },
     scrollMobile: { type: Boolean, default: false },
+    viewAllHref: { type: String, default: '' },
+    viewAllLabel: { type: String, default: '' },
+    showViewAllCta: { type: Boolean, default: true },
 });
 
 const { prefersReducedMotion } = useReducedMotion();
+
+const shopHref = computed(() => props.viewAllHref || route('store.shop'));
+const ctaLabel = computed(() => props.viewAllLabel || 'View all cleats');
+const showCta = computed(() => props.showViewAllCta && props.products.length > 0 && !props.loading);
 
 const motionProps = computed(() =>
     prefersReducedMotion.value
@@ -61,6 +69,12 @@ const motionProps = computed(() =>
                     >
                         <StoreProductCard :product="p" :index="i" />
                     </div>
+                    <div
+                        v-if="showCta"
+                        class="order-last w-[min(72vw,280px)] shrink-0 snap-start md:order-last md:w-auto"
+                    >
+                        <StoreProductRailCta :href="shopHref" :label="ctaLabel" />
+                    </div>
                 </div>
                 <div v-else class="store-product-grid">
                     <StoreProductCard
@@ -68,6 +82,12 @@ const motionProps = computed(() =>
                         :key="p.id"
                         :product="p"
                         :index="i"
+                    />
+                    <StoreProductRailCta
+                        v-if="showCta"
+                        class="order-last"
+                        :href="shopHref"
+                        :label="ctaLabel"
                     />
                 </div>
             </motion.div>

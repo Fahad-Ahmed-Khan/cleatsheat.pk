@@ -2,7 +2,7 @@
 import { toggleStoreTheme, getStoreTheme } from '@/store/storeTheme';
 import { onMounted, ref } from 'vue';
 
-const theme = ref('light');
+const theme = ref('dark');
 
 onMounted(() => {
     theme.value = getStoreTheme();

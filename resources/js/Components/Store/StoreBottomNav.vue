@@ -26,7 +26,7 @@ function isActive(predicate) {
     return path === predicate;
 }
 
-const accountHref = computed(() => (isLoggedIn.value ? route('dashboard') : route('login')));
+const accountHref = computed(() => (isLoggedIn.value ? route('store.account.dashboard') : route('login')));
 
 const items = computed(() => [
     {
@@ -62,7 +62,7 @@ const items = computed(() => [
         key: 'account',
         label: 'Account',
         href: accountHref.value,
-        active: isActive((p) => p.startsWith('/dashboard') || p.startsWith('/login') || p.startsWith('/orders')),
+        active: isActive((p) => p.startsWith('/account') || p.startsWith('/login')),
         icon: 'user',
     },
 ]);

@@ -7,43 +7,47 @@ const storefront = computed(() => page.props.storefront ?? {});
 
 const items = computed(() => [
     {
-        title: 'Fast delivery',
-        body: `Nationwide ${storefront.value.delivery_days_min}–${storefront.value.delivery_days_max} day shipping across Pakistan.`,
-        icon: 'truck',
-    },
-    {
-        title: 'Verified originals',
-        body: 'Every pair is inspected, cleaned, and listed with honest condition notes.',
+        title: '100% Original Brands Only',
+        body: 'No replicas — authentic Nike, Adidas, Puma & more.',
         icon: 'shield',
     },
     {
-        title: 'COD & wallets',
-        body: 'Cash on delivery, JazzCash, and Easypaisa — pay how you play.',
+        title: 'Detailed Condition Ratings',
+        body: 'Every pre-loved pair graded before listing (e.g. 9/10).',
+        icon: 'star',
+    },
+    {
+        title: 'COD Nationwide',
+        body: 'Cash on delivery available across Pakistan.',
         icon: 'card',
     },
     {
-        title: 'WhatsApp sizing',
-        body: 'UK / EU fit help before you checkout — message us your usual boot.',
-        icon: 'chat',
+        title: 'Fast delivery',
+        body: `Nationwide ${storefront.value.delivery_days_min}–${storefront.value.delivery_days_max} day shipping across Pakistan.`,
+        icon: 'truck',
     },
 ]);
 </script>
 
 <template>
-    <section class="store-section border-t border-stadium-outline-soft/30 bg-stadium-muted/50" aria-labelledby="trust-heading">
+    <section
+        class="store-section border-t border-stadium-outline-soft/30 bg-stadium-white dark:border-stadium-outline-soft/20 dark:bg-stadium-container"
+        aria-labelledby="trust-heading"
+    >
         <div class="store-container">
+            <p class="text-label text-stadium-olive dark:text-stadium-lime">Why shop with us</p>
             <h2 id="trust-heading" class="text-display-md text-stadium-ink">Why CleatSheat.pk</h2>
             <p class="mt-2 max-w-xl text-base text-stadium-secondary">
-                Premium used football boots — built for Pakistani pitches and budgets.
+                New and pre-loved football boots — inspected, authentic, and built for Pakistani players.
             </p>
-            <div class="mt-8 grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
+            <div class="mt-8 grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-5">
                 <div
                     v-for="item in items"
                     :key="item.title"
-                    class="rounded-2xl border border-stadium-outline-soft/40 bg-stadium-white p-5 stadium-ambient-shadow transition hover:-translate-y-0.5 hover:shadow-stadium-lg"
+                    class="rounded-2xl border border-stadium-outline-soft/40 bg-stadium-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-store-primary/40 hover:shadow-stadium dark:bg-stadium-muted dark:hover:border-store-primary/50"
                 >
                     <div
-                        class="flex h-11 w-11 items-center justify-center rounded-full bg-stadium-lime/20 text-stadium-olive"
+                        class="flex h-12 w-12 items-center justify-center rounded-full bg-store-primary text-store-primary-fg shadow-md ring-2 ring-store-primary/25 dark:ring-store-primary/40"
                     >
                         <svg
                             v-if="item.icon === 'truck'"
@@ -70,6 +74,20 @@ const items = computed(() => [
                         >
                             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                             <path d="M9 12l2 2 4-4" stroke-linecap="round" />
+                        </svg>
+                        <svg
+                            v-else-if="item.icon === 'star'"
+                            class="h-6 w-6"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            aria-hidden="true"
+                        >
+                            <path
+                                d="M12 2l2.4 7.4H22l-6 4.6 2.3 7-6.3-4.6L5.7 21l2.3-7-6-4.6h7.6L12 2z"
+                                stroke-linejoin="round"
+                            />
                         </svg>
                         <svg
                             v-else-if="item.icon === 'card'"

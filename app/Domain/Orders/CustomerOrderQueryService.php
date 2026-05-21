@@ -26,6 +26,26 @@ final class CustomerOrderQueryService
             ->paginate($perPage);
     }
 
+    public function countForUser(User $user): int
+    {
+        return Order::query()->where('user_id', $user->id)->count();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function toOrderListPayload(Order $order): array
+    {
+        return [
+            'order_number' => $order->order_number,
+            'status' => $order->status->value,
+            'payment_status' => $order->payment_status->value,
+            'grand_total' => (float) $order->grand_total,
+            'placed_at' => $order->created_at?->toIso8601String(),
+            'item_count' => $order->relationLoaded('items') ? $order->items->count() : null,
+        ];
+    }
+
     public function findOwnedByUser(User $user, string $orderNumber): ?Order
     {
         return Order::query()
@@ -263,10 +283,30 @@ final class CustomerOrderQueryService
             'order_number' => $order->order_number,
             'status' => $order->status->value,
             'payment_status' => $order->payment_status->value,
+            'placed_at' => $order->created_at?->toIso8601String(),
             'grand_total' => (float) $order->grand_total,
             'payment_gateway' => $order->payment_gateway,
+            'payment' => [
+                'gateway' => $order->payment_gateway,
+                'gateway_label' => $this->gatewayLabel($order->payment_gateway),
+                'status' => $order->payment_status->value,
+            ],
+            'totals' => [
+                'subtotal' => (float) $order->subtotal,
+                'discount_total' => (float) $order->discount_total,
+                'shipping_total' => (float) $order->shipping_total,
+                'cod_fee' => (float) $order->cod_fee,
+                'grand_total' => (float) $order->grand_total,
+            ],
             'shipping_address_snapshot' => $order->shipping_address_snapshot,
             'items' => $order->items->map(fn ($i) => $this->serializeOrderItem($i))->values()->all(),
+            'payments' => $order->relationLoaded('payments')
+                ? $order->payments
+                    ->sortByDesc('id')
+                    ->map(fn ($p) => $this->serializePayment($p))
+                    ->values()
+                    ->all()
+                : [],
             'shipments' => $order->shipments->map(fn ($s) => $this->serializeShipment($s))->values()->all(),
         ];
     }

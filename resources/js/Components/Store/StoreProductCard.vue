@@ -135,7 +135,11 @@ const primarySizeTag = computed(() => (primarySize.value ? formatCardSizeLine(pr
 const primarySizeDetail = computed(() => (primarySize.value ? formatPriceSizeDetail(primarySize.value) : ''));
 const extraSizeCount = computed(() => Math.max(0, availableSizes.value.length - 1));
 
-
+const conditionKind = computed(() => props.product.card_condition_kind ?? 'used');
+const conditionBadge = computed(
+    () => props.product.card_condition_badge || (conditionKind.value === 'new' ? 'Brand New' : 'Pre-Loved'),
+);
+const isBrandNew = computed(() => conditionKind.value === 'new');
 
 const cardMotion = computed(() =>
 
@@ -257,7 +261,18 @@ function onQuickAdd(e) {
 
 
 
-            <div class="pointer-events-none absolute left-3 top-3 z-10 flex max-w-[calc(100%-3.5rem)] flex-wrap items-center gap-1.5">
+            <div class="pointer-events-none absolute left-3 top-3 z-10 flex max-w-[calc(100%-3.5rem)] flex-col items-start gap-1.5">
+                <span
+                    class="rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider shadow-sm"
+                    :class="
+                        isBrandNew
+                            ? 'bg-stadium-lime text-stadium-lime-ink ring-1 ring-stadium-lime/80'
+                            : 'bg-stadium-container-high text-stadium-ink ring-1 ring-stadium-outline-soft/50 dark:bg-stadium-dim dark:text-stadium-inverse-text'
+                    "
+                >
+                    {{ conditionBadge }}
+                </span>
+                <div class="flex flex-wrap items-center gap-1.5">
                 <span
                     v-if="product.card_surface_label"
                     class="rounded-md bg-stadium-inverse px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-stadium-inverse-text"
@@ -282,6 +297,7 @@ function onQuickAdd(e) {
                 >
                     Sale
                 </span>
+                </div>
             </div>
 
             <span
@@ -331,19 +347,19 @@ function onQuickAdd(e) {
 
         <Link :href="route('store.product', product.slug)" class="flex flex-1 flex-col p-3 md:p-4">
 
-            <h3 class="line-clamp-2 font-display text-sm font-bold leading-snug text-stadium-ink">
+            <h3 class="line-clamp-2 font-display text-sm font-bold leading-snug text-stadium-ink dark:text-white">
 
                 {{ product.name }}
 
             </h3>
 
             <div class="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                <p v-if="product.variants?.length" class="font-display text-lg font-bold tabular-nums text-stadium-ink">
+                <p v-if="product.variants?.length" class="font-display text-lg font-bold tabular-nums text-stadium-ink dark:text-white">
                     {{ formatPKR(product.variants[0].price) }}
                 </p>
                 <p
                     v-if="hasSale"
-                    class="text-xs tabular-nums text-stadium-secondary line-through"
+                    class="text-xs tabular-nums text-stadium-secondary line-through dark:text-stadium-inverse-text/70"
                 >
                     {{ formatPKR(variant0.compare_at_price) }}
                 </p>

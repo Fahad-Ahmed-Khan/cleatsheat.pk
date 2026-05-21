@@ -6,11 +6,14 @@ use App\Domain\Catalog\CatalogQueryService;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\CategoryResource;
 use App\Http\Resources\Api\V1\ProductResource;
+use App\Models\Brand;
 use App\Models\ContentPost;
 use App\Models\MarketingSetting;
+use App\Models\Product;
 use App\Models\StorefrontSetting;
 use App\Support\Seo\SeoPresenter;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -23,7 +26,6 @@ class HomeController extends Controller
         $newArrivals = ProductResource::collection($catalog->newArrivals(8))->resolve();
         $trending = ProductResource::collection($catalog->trendingProducts(8))->resolve();
         $categories = CategoryResource::collection($catalog->rootCategories())->resolve();
-        $surfaceCategories = CategoryResource::collection($catalog->surfaceCategories())->resolve();
 
         $storefront = Schema::hasTable('storefront_settings')
             ? StorefrontSetting::query()->first()
@@ -111,13 +113,29 @@ class HomeController extends Controller
                 ->all();
         }
 
+        $shopProductCount = Product::query()->where('is_active', true)->count();
+
+        $brands = Brand::query()
+            ->whereHas('products', fn ($q) => $q->where('is_active', true))
+            ->orderBy('name')
+            ->get(['id', 'name', 'slug', 'logo_path'])
+            ->map(fn (Brand $b) => [
+                'id' => $b->id,
+                'name' => $b->name,
+                'slug' => $b->slug,
+                'logo_url' => $b->logo_path ? Storage::url($b->logo_path) : null,
+            ])
+            ->values()
+            ->all();
+
         return Inertia::render('Store/Home', [
             'featured' => $featured,
             'bestSellers' => $bestSellers,
             'newArrivals' => $newArrivals,
             'trending' => $trending,
             'categories' => $categories,
-            'surfaceCategories' => $surfaceCategories,
+            'shopProductCount' => $shopProductCount,
+            'brands' => $brands,
             'hero' => $hero,
             'promoBanner' => $promoBanner,
             'homeContent' => $homeContent,

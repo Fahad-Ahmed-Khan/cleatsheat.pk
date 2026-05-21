@@ -21,7 +21,7 @@
         <script>
             (function () {
                 try {
-                    if (localStorage.getItem('store.theme') === 'dark') {
+                    if (localStorage.getItem('store.theme') !== 'light') {
                         document.documentElement.classList.add('dark');
                     }
                 } catch (e) {}
