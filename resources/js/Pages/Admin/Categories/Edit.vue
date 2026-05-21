@@ -19,6 +19,7 @@ const form = useForm({
     og_image_url: props.category.og_image_url ?? '',
     intro_html: props.category.intro_html ?? '',
     sort_order: props.category.sort_order ?? 0,
+    is_active: props.category.is_active !== false,
 });
 
 function submit() {
@@ -92,6 +93,14 @@ function submit() {
                     </template>
                 </FormField>
 
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input id="cat_active" v-model="form.is_active" class="form-check-input" type="checkbox" />
+                        <label class="form-check-label" for="cat_active">Active (visible on storefront)</label>
+                    </div>
+                    <div v-if="form.errors.is_active" class="invalid-feedback d-block">{{ form.errors.is_active }}</div>
+                </div>
+
                 <FormField id="cat_meta_title" label="Meta title" :error="form.errors.meta_title">
                     <template #default="{ invalid, describedBy }">
                         <input
@@ -117,13 +126,19 @@ function submit() {
                     </template>
                 </FormField>
 
-                <FormField id="cat_og" label="OG image URL" :error="form.errors.og_image_url">
+                <FormField
+                    id="cat_og"
+                    label="Category image URL"
+                    hint="Shown on the home surface tiles and used as the social (OG) preview image."
+                    :error="form.errors.og_image_url"
+                >
                     <template #default="{ invalid, describedBy }">
                         <input
                             id="cat_og"
                             v-model="form.og_image_url"
                             type="text"
                             class="form-control"
+                            placeholder="https://..."
                             :class="{ 'is-invalid': invalid }"
                             :aria-describedby="describedBy"
                         />

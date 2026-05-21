@@ -7,9 +7,13 @@ import PaymentStatusText from '@/Components/Admin/PaymentStatusText.vue';
 import OrderStatusPill from '@/Components/Admin/OrderStatusPill.vue';
 import { confirmDanger, toastFromInertiaError, toastSuccess, toastError } from '@/admin/swalToast';
 import { useFocusTrap } from '@/admin/useFocusTrap';
+import WhatsAppSendPanel from '@/Components/Admin/WhatsAppSendPanel.vue';
 
 const props = defineProps({
     order: { type: Object, required: true },
+    whatsapp_templates: { type: Array, default: () => [] },
+    whatsapp_send_route: { type: String, default: '' },
+    whatsapp_confirmation: { type: Object, default: null },
     order_statuses: { type: Array, required: true },
     payment_statuses: { type: Array, required: true },
     couriers: { type: Array, default: () => [] },
@@ -666,6 +670,15 @@ function printPackingSlip() {
                                 </div>
                             </div>
                         </div>
+
+                        <WhatsAppSendPanel
+                            v-if="whatsapp_send_route"
+                            :send-route="whatsapp_send_route"
+                            :templates="whatsapp_templates"
+                            recipient-label="Customer phone"
+                            :recipient-phone="order.customer_phone"
+                            :confirmation="whatsapp_confirmation"
+                        />
 
                         <div class="card mb-3">
                             <div class="card-header py-2">

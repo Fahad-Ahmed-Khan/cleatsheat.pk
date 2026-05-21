@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web\Admin;
 
+use App\Domain\Notifications\WhatsApp\ManualMessageService;
 use App\Enums\OrderStatus;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
@@ -96,6 +97,38 @@ class CustomerAdminController extends Controller
             ],
             'stats' => $stats,
             'vip_threshold' => self::VIP_SPEND_THRESHOLD,
+        ]);
+    }
+
+    public function show(User $customer, ManualMessageService $manual): Response
+    {
+        abort_unless($customer->role === UserRole::Customer, 404);
+
+        $orders = Order::query()
+            ->where('user_id', $customer->id)
+            ->latest()
+            ->limit(15)
+            ->get(['id', 'order_number', 'status', 'grand_total', 'created_at']);
+
+        return Inertia::render('Admin/Customers/Show', [
+            'customer' => [
+                'id' => $customer->id,
+                'name' => $customer->name,
+                'email' => $customer->email,
+                'phone' => $customer->phone,
+                'whatsapp_opted_out' => (bool) $customer->whatsapp_opted_out,
+                'whatsapp_opted_out_at' => $customer->whatsapp_opted_out_at?->toIso8601String(),
+                'created_at' => $customer->created_at?->format('M j, Y'),
+            ],
+            'orders' => $orders->map(fn (Order $o) => [
+                'id' => $o->id,
+                'order_number' => $o->order_number,
+                'status' => $o->status->value,
+                'grand_total' => (float) $o->grand_total,
+                'created_at' => $o->created_at?->format('M j, Y'),
+            ]),
+            'whatsapp_templates' => $manual->customerTemplateOptions(),
+            'whatsapp_send_route' => route('admin.customers.whatsapp.send', $customer),
         ]);
     }
 }

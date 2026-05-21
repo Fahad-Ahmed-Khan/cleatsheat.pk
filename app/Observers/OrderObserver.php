@@ -24,6 +24,16 @@ class OrderObserver
             /** @var string|null $fromRaw */
             $fromRaw = $order->getOriginal('status');
             $from = is_string($fromRaw) ? OrderStatus::from($fromRaw) : null;
+
+            // COD orders that just transitioned to Confirmed should book immediately
+            // (the auto-book listener intentionally skipped them at checkout when
+            // WhatsApp confirmation was enabled). Order_confirmed WA is fired by
+            // OrderConfirmationService, not here, to keep manual-confirmation flows
+            // consistent.
+            if ($order->status === OrderStatus::Confirmed && $from !== OrderStatus::Confirmed) {
+                $this->maybeAutoBookCodShipment($order);
+            }
+
             $templateKey = WhatsAppTemplates::keyForStatusTransition($from, $order->status);
             if ($templateKey !== null) {
                 SendWhatsAppNotificationJob::dispatch($order->id, $templateKey, 'customer');
@@ -35,6 +45,29 @@ class OrderObserver
     {
         $settings = ShippingSetting::current();
         if (! $settings->auto_book_on_payment_confirmed) {
+            return;
+        }
+
+        $shipment = $order->shipments()->first();
+        if ($shipment === null || $shipment->courier_id === null) {
+            return;
+        }
+
+        if ($shipment->status !== ShipmentStatus::Pending) {
+            return;
+        }
+
+        BookShipmentJob::dispatch($shipment->id);
+    }
+
+    private function maybeAutoBookCodShipment(Order $order): void
+    {
+        if (! is_string($order->payment_gateway) || ! str_contains(strtolower($order->payment_gateway), 'cod')) {
+            return;
+        }
+
+        $settings = ShippingSetting::current();
+        if (! $settings->auto_book_cod_orders) {
             return;
         }
 

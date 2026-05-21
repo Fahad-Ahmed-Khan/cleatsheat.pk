@@ -12,45 +12,59 @@ defineProps({
 <template>
     <StoreSeoHead :seo="seo" />
     <StoreLayout>
-        <div class="mx-auto max-w-3xl px-4 py-12 sm:px-6">
-            <h1 class="text-3xl font-semibold tracking-tight text-stone-900">
-                Journal
-            </h1>
-            <p class="mt-3 text-sm leading-relaxed text-stone-600">
-                Fit guides, sizing explainers, and style notes for shopping shoes online in Pakistan.
+        <div class="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-14">
+            <h1 class="text-display-md text-stadium-ink">Journal</h1>
+            <p class="mt-3 text-body-lg text-stadium-secondary">
+                Fit guides, sizing explainers, and style notes for shopping football boots online in Pakistan.
             </p>
 
-            <ul class="mt-12 space-y-8">
-                <li v-for="p in posts.data" :key="p.slug" class="border-b border-stone-200 pb-8">
-                    <p v-if="p.pillar_keyword" class="text-[11px] font-semibold uppercase tracking-widest text-emerald-700">
+            <ul class="mt-12 space-y-6">
+                <li
+                    v-for="p in posts.data"
+                    :key="p.slug"
+                    class="rounded-2xl border border-stadium-outline-soft/40 bg-stadium-white p-6 shadow-stadium ring-1 ring-stadium-outline-soft/30 transition hover:border-store-primary/30 hover:shadow-stadium-lg"
+                >
+                    <p
+                        v-if="p.pillar_keyword"
+                        class="text-label text-stadium-olive"
+                    >
                         {{ p.pillar_keyword }}
                     </p>
                     <Link
                         :href="route('store.journal.show', p.slug)"
-                        class="mt-2 block text-xl font-semibold text-stone-900 hover:underline"
+                        class="mt-2 block font-display text-xl font-bold leading-snug text-stadium-ink hover:text-stadium-olive"
                     >
                         {{ p.title }}
                     </Link>
-                    <p v-if="p.excerpt" class="mt-2 text-sm leading-relaxed text-stone-600">
+                    <p v-if="p.excerpt" class="mt-3 text-sm leading-relaxed text-stadium-secondary">
                         {{ p.excerpt }}
                     </p>
+                    <Link
+                        :href="route('store.journal.show', p.slug)"
+                        class="mt-4 inline-flex text-sm font-bold text-stadium-olive hover:underline"
+                    >
+                        Read article →
+                    </Link>
                 </li>
             </ul>
 
-            <div v-if="posts.last_page > 1" class="mt-10 flex justify-center gap-4 text-sm font-medium">
+            <div
+                v-if="posts.last_page > 1"
+                class="mt-10 flex items-center justify-center gap-4 rounded-2xl bg-stadium-muted px-4 py-3 text-sm font-semibold"
+            >
                 <Link
                     v-if="posts.prev_page_url"
                     :href="posts.prev_page_url"
-                    class="text-stone-700 underline-offset-2 hover:underline"
+                    class="text-stadium-ink hover:text-stadium-olive hover:underline"
                     preserve-scroll
                 >
                     Newer
                 </Link>
-                <span class="text-stone-400">{{ posts.current_page }} / {{ posts.last_page }}</span>
+                <span class="tabular-nums text-stadium-secondary">{{ posts.current_page }} / {{ posts.last_page }}</span>
                 <Link
                     v-if="posts.next_page_url"
                     :href="posts.next_page_url"
-                    class="text-stone-700 underline-offset-2 hover:underline"
+                    class="text-stadium-ink hover:text-stadium-olive hover:underline"
                     preserve-scroll
                 >
                     Older

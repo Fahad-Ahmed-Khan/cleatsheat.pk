@@ -2,10 +2,12 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Models\Product;
+use App\Support\Store\ProductCardMeta;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin \App\Models\Product */
+/** @mixin Product */
 class ProductResource extends JsonResource
 {
     /**
@@ -13,6 +15,8 @@ class ProductResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $card = ProductCardMeta::forProduct($this->resource);
+
         return [
             'id' => $this->id,
             'name' => $this->name,
@@ -48,10 +52,16 @@ class ProductResource extends JsonResource
                 ->all()),
             'variants' => $this->whenLoaded(
                 'variants',
-                fn () => collect(ProductVariantResource::collection($this->variants)->resolve($request))
+                fn () => collect(ProductVariantResource::collection(
+                    $this->variants->where('is_active', true)->values()
+                )->resolve($request))
                     ->values()
                     ->all(),
             ),
+            'card_surface_label' => $card['card_surface_label'],
+            'card_condition_label' => $card['card_condition_label'],
+            'card_authenticity_label' => $card['card_authenticity_label'],
+            'quick_add' => $card['quick_add'],
         ];
     }
 }

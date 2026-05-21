@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="Shoe size guide Pakistan">
+  <rect width="1200" height="630" fill="#1a2433"/>
+  <rect x="80" y="80" width="1040" height="470" rx="24" fill="#263545"/>
+  <text x="600" y="280" text-anchor="middle" fill="#bbdefb" font-family="system-ui,sans-serif" font-size="42" font-weight="700">Shoe Size Guide</text>
+  <text x="600" y="340" text-anchor="middle" fill="#64b5f6" font-family="system-ui,sans-serif" font-size="28">UK � EU � US  replace with your photo</text>
+  <text x="600" y="480" text-anchor="middle" fill="#90caf9" font-family="system-ui,sans-serif" font-size="20">/images/journal/shoe-size-guide-pakistan.jpg</text>
+</svg>

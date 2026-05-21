@@ -1,15 +1,21 @@
 <?php
 
 return [
-    'hero_title' => env('STORE_HERO_TITLE', 'Walk with confidence'),
+    'hero_title' => env('STORE_HERO_TITLE', 'Original used football boots — match-ready in Pakistan'),
     'hero_subtitle' => env(
         'STORE_HERO_SUBTITLE',
-        'Premium footwear sized for Pakistan — UK, EU & PK guides, fast delivery, effortless checkout.'
+        'Surface-matched FG, SG, AG & Turf cleats with UK/EU sizing, WhatsApp fit help, and nationwide COD delivery.'
     ),
-    'hero_badge' => env('STORE_HERO_BADGE', 'New season'),
+    'hero_badge' => env('STORE_HERO_BADGE', 'Inspected · Authentic · Ready to ship'),
 
     /** Optional full-width hero background image URL (home page). */
     'hero_image_url' => env('STORE_HERO_IMAGE_URL'),
+
+    /**
+     * Parent category slug whose children power the home "Choose your surface" tiles.
+     * Demo/default: football-shoes (FG, SG, AG, Turf children).
+     */
+    'surface_parent_slug' => env('STORE_SURFACE_PARENT_SLUG', 'football-shoes'),
 
     'shipping_flat' => env('STORE_SHIPPING_FLAT', 200),
     'cod_fee' => env('STORE_COD_FEE', 0),

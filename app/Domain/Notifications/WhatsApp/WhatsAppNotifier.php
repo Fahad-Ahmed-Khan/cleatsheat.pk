@@ -11,6 +11,7 @@ class WhatsAppNotifier
 {
     public function __construct(
         private readonly WhatsAppClient $client,
+        private readonly TemplateRepository $templates,
     ) {}
 
     public function send(Order $order, string $templateKey, string $audience = 'customer', ?string $overrideRecipient = null): void
@@ -37,21 +38,31 @@ class WhatsAppNotifier
             return;
         }
 
-        $rendered = $audience === 'admin' && $templateKey === 'admin_new_order'
-            ? ['short' => 'New order', 'body' => WhatsAppTemplates::adminNewOrder($order)]
-            : WhatsAppTemplates::render($templateKey, $order);
+        $template = $audience === 'admin' && $templateKey === 'admin_new_order'
+            ? $this->resolveAdminTemplate($order)
+            : $this->templates->resolve($templateKey, $order);
 
-        $payload = $this->buildPayload($normalized, $rendered['body'], $templateKey, $order, $rendered['short']);
+        $payload = $this->buildPayload($normalized, $template, $order);
 
         try {
             $response = $this->dispatchHttp($payload);
+
+            $waMessageId = $this->extractMessageId($response);
+
+            if ($templateKey === 'order_placed_cod_confirm') {
+                $order->confirmation_sent_at = now();
+                $order->awaiting_confirmation = true;
+                $order->save();
+            }
 
             NotificationLog::query()->create([
                 'channel' => 'whatsapp',
                 'recipient' => $normalized,
                 'template_key' => $templateKey,
+                'wa_message_id' => $waMessageId,
                 'payload' => [
                     'audience' => $audience,
+                    'order_id' => $order->id,
                     'request' => $payload,
                     'response' => $response,
                 ],
@@ -61,6 +72,7 @@ class WhatsAppNotifier
         } catch (\Throwable $e) {
             $this->logFailure($templateKey, $normalized, $audience, $e->getMessage(), [
                 'audience' => $audience,
+                'order_id' => $order->id,
                 'request' => $payload,
             ]);
 
@@ -75,11 +87,78 @@ class WhatsAppNotifier
         }
     }
 
+    /**
+     * Send a free-form message to an arbitrary recipient (used for manual sends,
+     * pickup notices, and campaigns). Pass an order if you want placeholders
+     * substituted; otherwise the body is sent as-is.
+     */
+    public function sendArbitrary(string $recipient, string $body, string $templateKey = 'manual', string $audience = 'customer', ?Order $order = null, ?int $campaignId = null): bool
+    {
+        $normalized = $this->normalizePakE164($recipient);
+        if ($normalized === null) {
+            $this->logFailure($templateKey, $recipient, $audience, 'Invalid phone number format.', []);
+
+            return false;
+        }
+
+        $renderedBody = $order !== null ? $this->templates->renderPlaceholders($body, $order) : $body;
+
+        $payload = $this->buildTextPayload($normalized, $renderedBody, $templateKey, $order);
+
+        try {
+            $response = $this->dispatchHttp($payload);
+
+            NotificationLog::query()->create([
+                'channel' => 'whatsapp',
+                'recipient' => $normalized,
+                'template_key' => $templateKey,
+                'wa_message_id' => $this->extractMessageId($response),
+                'campaign_id' => $campaignId,
+                'payload' => [
+                    'audience' => $audience,
+                    'order_id' => $order?->id,
+                    'request' => $payload,
+                    'response' => $response,
+                ],
+                'status' => 'sent',
+            ]);
+
+            return true;
+        } catch (\Throwable $e) {
+            $this->logFailure($templateKey, $normalized, $audience, $e->getMessage(), [
+                'audience' => $audience,
+                'order_id' => $order?->id,
+                'campaign_id' => $campaignId,
+                'request' => $payload,
+            ]);
+
+            return false;
+        }
+    }
+
     private function resolveCustomerRecipient(Order $order): ?string
     {
         $phone = $order->shipping_address_snapshot['phone'] ?? null;
 
         return is_string($phone) && $phone !== '' ? $phone : null;
+    }
+
+    /**
+     * @return array{short:string, body:string, has_buttons:bool, button_payloads:array, cloud_template_name:?string, cloud_template_language:string, key:string}
+     */
+    private function resolveAdminTemplate(Order $order): array
+    {
+        $body = WhatsAppTemplates::adminNewOrder($order);
+
+        return [
+            'short' => 'New order',
+            'body' => $body,
+            'has_buttons' => false,
+            'button_payloads' => [],
+            'cloud_template_name' => null,
+            'cloud_template_language' => 'en_US',
+            'key' => 'admin_new_order',
+        ];
     }
 
     private function normalizePakE164(string $raw): ?string
@@ -124,61 +203,38 @@ class WhatsAppNotifier
     }
 
     /**
+     * @param  array<string, mixed>  $template
      * @return array<string, mixed>
      */
-    private function buildPayload(string $toE164, string $bodyText, string $templateKey, Order $order, string $shortStatus): array
+    private function buildPayload(string $toE164, array $template, Order $order): array
+    {
+        $cloudEnabled = (bool) config('whatsapp.cloud.enabled', false);
+
+        if ($cloudEnabled && $template['has_buttons'] && $template['button_payloads'] !== []) {
+            return InteractiveMessageBuilder::buttonPayload($toE164, $template['body'], $template['button_payloads']);
+        }
+
+        if ($cloudEnabled && (string) $template['cloud_template_name'] !== '') {
+            return InteractiveMessageBuilder::cloudTemplatePayload(
+                $toE164,
+                $template['cloud_template_name'],
+                $template['cloud_template_language'],
+                $order,
+                $template['short'],
+            );
+        }
+
+        return $this->buildTextPayload($toE164, $template['body'], $template['key'], $order);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildTextPayload(string $toE164, string $bodyText, string $templateKey, ?Order $order): array
     {
         $cloudEnabled = (bool) config('whatsapp.cloud.enabled', false);
 
         if ($cloudEnabled) {
-            // Admin alerts are usually longer than a 4-parameter utility template; use a Cloud text message.
-            if ($templateKey === 'admin_new_order') {
-                return [
-                    'messaging_product' => 'whatsapp',
-                    'recipient_type' => 'individual',
-                    'to' => ltrim($toE164, '+'),
-                    'type' => 'text',
-                    'text' => [
-                        'preview_url' => false,
-                        'body' => $bodyText,
-                    ],
-                ];
-            }
-
-            $tpl = (array) (config('whatsapp.cloud.templates.'.$templateKey) ?? []);
-            $name = (string) ($tpl['name'] ?? '');
-
-            if ($name !== '') {
-                $lang = (string) ($tpl['language'] ?? 'en_US');
-
-                $nameVal = (string) ($order->shipping_address_snapshot['full_name'] ?? 'Customer');
-                $orderNo = (string) $order->order_number;
-                $total = (string) $order->grand_total;
-
-                return [
-                    'messaging_product' => 'whatsapp',
-                    'recipient_type' => 'individual',
-                    'to' => ltrim($toE164, '+'),
-                    'type' => 'template',
-                    'template' => [
-                        'name' => $name,
-                        'language' => ['code' => $lang],
-                        'components' => [
-                            [
-                                'type' => 'body',
-                                'parameters' => [
-                                    ['type' => 'text', 'text' => $nameVal],
-                                    ['type' => 'text', 'text' => $orderNo],
-                                    ['type' => 'text', 'text' => $total],
-                                    ['type' => 'text', 'text' => $shortStatus],
-                                ],
-                            ],
-                        ],
-                    ],
-                ];
-            }
-
-            // Cloud API without configured template names: use a text message (best-effort).
             return [
                 'messaging_product' => 'whatsapp',
                 'recipient_type' => 'individual',
@@ -195,10 +251,29 @@ class WhatsAppNotifier
             'to' => $toE164,
             'body' => $bodyText,
             'template_key' => $templateKey,
-            'order_id' => $order->id,
-            'order_number' => $order->order_number,
+            'order_id' => $order?->id,
+            'order_number' => $order?->order_number,
             'from' => config('whatsapp.bridge.from_number'),
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $response
+     */
+    private function extractMessageId(array $response): ?string
+    {
+        if (isset($response['messages']) && is_array($response['messages'])) {
+            $first = $response['messages'][0] ?? null;
+            if (is_array($first) && isset($first['id'])) {
+                return (string) $first['id'];
+            }
+        }
+
+        if (isset($response['id']) && is_string($response['id'])) {
+            return $response['id'];
+        }
+
+        return null;
     }
 
     /**

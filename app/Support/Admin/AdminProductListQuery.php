@@ -3,6 +3,7 @@
 namespace App\Support\Admin;
 
 use App\Models\Product;
+use App\Models\ProductImage;
 use App\Models\ProductVariant;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -75,6 +76,12 @@ final class AdminProductListQuery
                     ->selectRaw('COALESCE(SUM(variant_sizes.stock_qty), 0)')
                     ->join('variant_sizes', 'variant_sizes.product_variant_id', '=', 'product_variants.id')
                     ->whereColumn('product_variants.product_id', 'products.id'),
+                'thumbnail_path' => ProductImage::query()
+                    ->select('path')
+                    ->whereColumn('product_id', 'products.id')
+                    ->orderBy('sort_order')
+                    ->orderBy('id')
+                    ->limit(1),
             ]);
     }
 

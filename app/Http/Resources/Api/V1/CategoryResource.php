@@ -2,10 +2,11 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin \App\Models\Category */
+/** @mixin Category */
 class CategoryResource extends JsonResource
 {
     /**
@@ -19,6 +20,9 @@ class CategoryResource extends JsonResource
             'slug' => $this->slug,
             'meta_title' => $this->meta_title,
             'meta_description' => $this->meta_description,
+            'og_image_url' => $this->og_image_url,
+            'sort_order' => $this->sort_order,
+            'is_active' => (bool) $this->is_active,
             'children' => CategoryResource::collection($this->whenLoaded('children')),
         ];
     }

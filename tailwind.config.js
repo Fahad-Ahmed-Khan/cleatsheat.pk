@@ -32,6 +32,9 @@ export default {
                 'stadium-inverse': 'rgb(var(--stadium-inverse) / <alpha-value>)',
                 'stadium-inverse-text': 'rgb(var(--stadium-inverse-text) / <alpha-value>)',
                 'stadium-secondary': 'rgb(var(--stadium-secondary) / <alpha-value>)',
+                'store-primary': 'rgb(var(--store-primary) / <alpha-value>)',
+                'store-secondary': 'rgb(var(--store-secondary) / <alpha-value>)',
+                'store-primary-fg': 'rgb(var(--store-primary-fg) / <alpha-value>)',
             },
             fontFamily: {
                 sans: ['Figtree', ...defaultTheme.fontFamily.sans],
@@ -44,7 +47,18 @@ export default {
                 'stadium-nav': '0 -4px 20px 0 rgba(0, 0, 0, 0.05)',
             },
             maxWidth: {
-                content: '1200px',
+                /** Store shell — full viewport width; sections use px-* for gutters only */
+                content: 'none',
+            },
+            fontSize: {
+                'display-xl': ['2.25rem', { lineHeight: '1.1', letterSpacing: '-0.04em', fontWeight: '800' }],
+                'display-md': ['1.75rem', { lineHeight: '1.2', letterSpacing: '-0.02em', fontWeight: '700' }],
+                label: ['0.75rem', { lineHeight: '1', letterSpacing: '0.05em', fontWeight: '700' }],
+                'body-lg': ['1.125rem', { lineHeight: '1.6', letterSpacing: '-0.01em' }],
+            },
+            spacing: {
+                'section-y': '3rem',
+                'section-y-md': '5rem',
             },
         },
     },

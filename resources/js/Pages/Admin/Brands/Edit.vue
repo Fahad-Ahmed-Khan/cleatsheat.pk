@@ -34,7 +34,15 @@ onBeforeUnmount(() => {
 });
 
 function submit() {
-    form.post(route('admin.brands.update', props.brand.id), { forceFormData: true, preserveScroll: true, _method: 'put' });
+    form
+        .transform((data) => ({
+            ...data,
+            _method: 'put',
+        }))
+        .post(route('admin.brands.update', props.brand.id), {
+            forceFormData: true,
+            preserveScroll: true,
+        });
 }
 </script>
 

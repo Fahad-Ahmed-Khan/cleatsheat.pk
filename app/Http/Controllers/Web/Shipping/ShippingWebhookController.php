@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers\Web\Shipping;
 
-use App\Http\Controllers\Controller;
+use App\Domain\Notifications\WhatsApp\ShipmentStatusCustomerAlertService;
 use App\Enums\ShipmentStatus;
+use App\Http\Controllers\Controller;
 use App\Jobs\SyncShipmentTrackingJob;
 use App\Models\CourierApiLog;
 use App\Models\Shipment;
@@ -17,6 +18,10 @@ use Illuminate\Support\Arr;
  */
 class ShippingWebhookController extends Controller
 {
+    public function __construct(
+        private readonly ShipmentStatusCustomerAlertService $customerAlerts,
+    ) {}
+
     public function handle(Request $request, string $courier): Response
     {
         $courier = strtolower($courier);
@@ -58,6 +63,7 @@ class ShippingWebhookController extends Controller
             $shipment = Shipment::query()->where('tracking_number', $tracking)->first();
             if ($shipment !== null) {
                 if ($courier === 'postex') {
+                    $previous = $shipment->status;
                     $maybe = $this->inferPostExStatus($payload);
                     if ($maybe !== null && $maybe !== $shipment->status) {
                         $shipment->status = $maybe;
@@ -80,6 +86,12 @@ class ShippingWebhookController extends Controller
                             'raw_payload' => $payload,
                             'occurred_at' => now(),
                         ]);
+
+                        $this->customerAlerts->notifyStatusTransition($shipment, $previous, $maybe);
+                    }
+
+                    if ($this->payloadSuggestsOutForDelivery($payload)) {
+                        $this->customerAlerts->notifyOutForDeliveryIfApplicable($shipment);
                     }
                 }
 
@@ -124,6 +136,22 @@ class ShippingWebhookController extends Controller
         }
 
         return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function payloadSuggestsOutForDelivery(array $payload): bool
+    {
+        $text = strtolower((string) (Arr::get($payload, 'transactionStatus')
+            ?? Arr::get($payload, 'dist.transactionStatus')
+            ?? Arr::get($payload, 'status')
+            ?? Arr::get($payload, 'trackStatus')
+            ?? ''));
+
+        return str_contains($text, 'out for delivery')
+            || str_contains($text, 'out-for-delivery')
+            || str_contains($text, 'out_for_delivery');
     }
 
     /**

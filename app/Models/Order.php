@@ -17,6 +17,7 @@ class Order extends Model
         'subtotal', 'discount_total', 'shipping_total', 'cod_fee', 'grand_total',
         'shipping_address_snapshot', 'billing_address_snapshot', 'customer_notes',
         'preferred_courier_id', 'courier_assignment',
+        'awaiting_confirmation', 'confirmation_sent_at', 'confirmed_at', 'confirmation_channel',
     ];
 
     protected function casts(): array
@@ -32,6 +33,9 @@ class Order extends Model
             'grand_total' => 'decimal:2',
             'shipping_address_snapshot' => 'array',
             'billing_address_snapshot' => 'array',
+            'awaiting_confirmation' => 'boolean',
+            'confirmation_sent_at' => 'datetime',
+            'confirmed_at' => 'datetime',
         ];
     }
 

@@ -100,7 +100,7 @@ watch(
                     <td><code class="text-muted">{{ c.slug }}</code></td>
                     <td>{{ c.products_count }}</td>
                     <td>
-                        <StatusBadge :status="c.products_count > 0 ? 'active' : 'inactive'" />
+                        <StatusBadge :status="c.is_active ? 'active' : 'inactive'" />
                     </td>
                     <td class="text-end">
                         <div class="dropdown">

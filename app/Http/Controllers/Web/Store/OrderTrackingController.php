@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web\Store;
 
 use App\Domain\Orders\CustomerOrderQueryService;
 use App\Http\Controllers\Controller;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -19,27 +20,54 @@ class OrderTrackingController extends Controller
         return Inertia::render('Store/OrderTracking', [
             'seo' => ['title' => 'Track order — '.config('app.name')],
             'result' => null,
+            'choices' => [],
+            'lookup' => null,
         ]);
     }
 
-    public function lookup(Request $request): Response|\Illuminate\Http\RedirectResponse
+    public function lookup(Request $request): Response|RedirectResponse
     {
-        $data = $request->validate([
-            'order_number' => ['required', 'string', 'max:64'],
-            'email' => ['required', 'email', 'max:255'],
-        ]);
+        $mode = $request->input('lookup_mode', 'order_number');
+        if (! in_array($mode, ['order_number', 'email', 'phone'], true)) {
+            $mode = 'order_number';
+        }
 
-        $order = $this->orders->findForPublicTracking($data['order_number'], $data['email']);
+        $data = $request->validate(match ($mode) {
+            'email' => [
+                'lookup_mode' => ['required', 'in:email'],
+                'email' => ['required', 'email', 'max:255'],
+            ],
+            'phone' => [
+                'lookup_mode' => ['required', 'in:phone'],
+                'phone' => ['required', 'string', 'max:32'],
+            ],
+            default => [
+                'lookup_mode' => ['required', 'in:order_number'],
+                'order_number' => ['required', 'string', 'max:64'],
+            ],
+        });
 
-        if ($order === null) {
+        $resolved = $this->orders->lookupForPublicTracking(
+            $mode === 'order_number' ? ($data['order_number'] ?? null) : null,
+            $mode === 'email' ? ($data['email'] ?? null) : null,
+            $mode === 'phone' ? ($data['phone'] ?? null) : null,
+        );
+
+        if ($resolved['error'] !== null) {
             return back()->withErrors([
-                'order_number' => 'No order matches that reference and email.',
+                'lookup' => $resolved['error'],
             ])->withInput();
         }
 
         return Inertia::render('Store/OrderTracking', [
             'seo' => ['title' => 'Track order — '.config('app.name')],
-            'result' => $this->orders->toTrackingPayload($order),
+            'result' => $resolved['result'],
+            'choices' => $resolved['choices'],
+            'lookup' => [
+                'mode' => $mode,
+                'email' => $data['email'] ?? '',
+                'phone' => $data['phone'] ?? '',
+            ],
         ]);
     }
 }

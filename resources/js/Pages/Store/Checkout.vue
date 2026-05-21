@@ -1,216 +1,423 @@
 <script setup>
+
 import StoreSeoHead from '@/Components/Store/StoreSeoHead.vue';
+
 import StoreTrustStrip from '@/Components/Store/StoreTrustStrip.vue';
+
 import StoreLayout from '@/Layouts/StoreLayout.vue';
+
 import { useStoreAnalytics } from '@/composables/useStoreAnalytics';
+
 import { useForm, usePage } from '@inertiajs/vue3';
+
 import { onMounted } from 'vue';
+
+
 
 const page = usePage();
 
+
+
 const props = defineProps({
+
     seo: {
+
         type: Object,
+
         required: true,
+
     },
+
     analytics_checkout: {
+
         type: Object,
+
         default: () => ({}),
+
     },
+
     gateways: {
+
         type: Array,
+
         default: () => [],
+
     },
+
 });
+
+
 
 const analytics = useStoreAnalytics();
 
+
+
 onMounted(() => {
+
     if (props.analytics_checkout?.items?.length) {
+
         analytics.trackBeginCheckout(props.analytics_checkout);
+
     }
+
 });
+
+
 
 const defaultGateway = props.gateways[0]?.code ?? 'cod';
 
+
+
 const form = useForm({
+
     full_name: '',
+
     phone: '',
+
     line1: '',
+
     city: '',
+
     area: '',
+
     postal_code: '',
+
     notes: '',
+
     guest_email: '',
+
     payment_gateway: defaultGateway,
+
 });
 
+
+
 function submit() {
+
     form.post(route('store.checkout.store'));
+
 }
+
+
 
 function feeHint(g) {
+
     const parts = [];
+
     if (g.fee_fixed > 0) {
+
         parts.push(`PKR ${g.fee_fixed} fixed`);
+
     }
+
     if (g.fee_percent > 0) {
+
         parts.push(`${g.fee_percent}%`);
+
     }
+
     if (parts.length === 0) {
+
         return null;
+
     }
+
     return `Fee: ${parts.join(' + ')} (applied before COD surcharge)`;
+
 }
+
+
+
+const labelClass = 'block text-label text-stadium-secondary';
+
+const inputClass =
+
+    'mt-2 w-full min-h-14 rounded-2xl border border-stadium-outline-soft bg-stadium-white px-4 text-base text-stadium-ink shadow-sm placeholder:text-stadium-secondary focus:border-store-primary focus:outline-none focus:ring-2 focus:ring-store-primary/20';
+
 </script>
 
+
+
 <template>
+
     <StoreSeoHead :seo="seo" />
+
     <StoreLayout>
+
         <div class="mx-auto max-w-lg px-4 pb-44 pt-8 sm:max-w-xl sm:pb-16">
-            <h1 class="text-2xl font-semibold tracking-tight text-stone-900">
-                Checkout
-            </h1>
-            <p class="mt-2 text-sm leading-relaxed text-stone-600">
+
+            <h1 class="text-display-md text-stadium-ink">Checkout</h1>
+
+            <p class="mt-2 text-body-lg text-stadium-secondary">
+
                 One-handed friendly fields. Your details stay on our encrypted session until the order is placed.
+
             </p>
+
+
 
             <StoreTrustStrip compact class="mt-8" />
 
+
+
             <form class="mt-10 space-y-5" @submit.prevent="submit">
+
                 <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wide text-stone-500">Full name</label>
+
+                    <label :class="labelClass">Full name</label>
+
                     <input
+
                         v-model="form.full_name"
+
                         type="text"
+
                         required
+
                         autocomplete="name"
-                        class="mt-2 w-full min-h-14 rounded-2xl border border-stone-200 bg-white px-4 text-base text-stone-900 shadow-sm ring-stone-900/5 focus:border-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900/15"
+
+                        :class="inputClass"
+
                     >
+
                 </div>
+
                 <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wide text-stone-500">Phone (WhatsApp)</label>
+
+                    <label :class="labelClass">Phone (WhatsApp)</label>
+
                     <input
+
                         v-model="form.phone"
+
                         type="tel"
+
                         required
+
                         autocomplete="tel"
+
                         inputmode="tel"
-                        class="mt-2 w-full min-h-14 rounded-2xl border border-stone-200 bg-white px-4 text-base text-stone-900 shadow-sm focus:border-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900/15"
+
+                        :class="inputClass"
+
                     >
+
                 </div>
+
                 <div v-if="!$page.props.auth.user">
-                    <label class="block text-xs font-semibold uppercase tracking-wide text-stone-500">Email</label>
+
+                    <label :class="labelClass">Email</label>
+
                     <input
+
                         v-model="form.guest_email"
+
                         type="email"
+
                         required
+
                         autocomplete="email"
+
                         inputmode="email"
-                        class="mt-2 w-full min-h-14 rounded-2xl border border-stone-200 bg-white px-4 text-base focus:outline-none focus:ring-2 focus:ring-stone-900/15"
+
+                        :class="inputClass"
+
                     >
+
                 </div>
+
                 <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wide text-stone-500">Street address</label>
+
+                    <label :class="labelClass">Street address</label>
+
                     <input
+
                         v-model="form.line1"
+
                         type="text"
+
                         required
+
                         autocomplete="street-address"
-                        class="mt-2 w-full min-h-14 rounded-2xl border border-stone-200 bg-white px-4 text-base focus:outline-none focus:ring-2 focus:ring-stone-900/15"
+
+                        :class="inputClass"
+
                     >
+
                 </div>
+
                 <div class="grid grid-cols-2 gap-3">
+
                     <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wide text-stone-500">City</label>
-                        <input
-                            v-model="form.city"
-                            type="text"
-                            required
-                            class="mt-2 w-full min-h-14 rounded-2xl border border-stone-200 px-3 text-base focus:outline-none focus:ring-2 focus:ring-stone-900/15"
-                        >
+
+                        <label :class="labelClass">City</label>
+
+                        <input v-model="form.city" type="text" required :class="inputClass">
+
                     </div>
+
                     <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wide text-stone-500">Area</label>
-                        <input
-                            v-model="form.area"
-                            type="text"
-                            class="mt-2 w-full min-h-14 rounded-2xl border border-stone-200 px-3 text-base focus:outline-none focus:ring-2 focus:ring-stone-900/15"
-                        >
+
+                        <label :class="labelClass">Area</label>
+
+                        <input v-model="form.area" type="text" :class="inputClass">
+
                     </div>
+
                 </div>
+
                 <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wide text-stone-500">Postal code</label>
+
+                    <label :class="labelClass">Postal code</label>
+
                     <input
+
                         v-model="form.postal_code"
+
                         type="text"
+
                         autocomplete="postal-code"
-                        class="mt-2 w-full min-h-14 rounded-2xl border border-stone-200 px-4 text-base focus:outline-none focus:ring-2 focus:ring-stone-900/15"
+
+                        :class="inputClass"
+
                     >
+
                 </div>
+
                 <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wide text-stone-500">Order notes</label>
+
+                    <label :class="labelClass">Order notes</label>
+
                     <textarea
+
                         v-model="form.notes"
+
                         rows="3"
-                        class="mt-2 w-full rounded-2xl border border-stone-200 px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-stone-900/15"
+
+                        :class="inputClass + ' min-h-0 py-3'"
+
                     />
+
                 </div>
+
+
 
                 <fieldset>
-                    <legend class="text-xs font-semibold uppercase tracking-wide text-stone-500">
-                        Payment
-                    </legend>
+
+                    <legend :class="labelClass">Payment</legend>
+
                     <div class="mt-3 space-y-2">
+
                         <label
+
                             v-for="g in gateways"
+
                             :key="g.code"
-                            class="flex min-h-14 cursor-pointer flex-col gap-1 rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm font-medium transition"
-                            :class="form.payment_gateway === g.code ? 'ring-2 ring-stone-900' : 'hover:border-stone-300'"
+
+                            class="flex min-h-14 cursor-pointer flex-col gap-1 rounded-2xl border border-stadium-outline-soft bg-stadium-white px-4 py-3 text-sm font-medium text-stadium-ink transition"
+
+                            :class="
+
+                                form.payment_gateway === g.code
+
+                                    ? 'ring-2 ring-store-primary border-store-primary/40'
+
+                                    : 'hover:border-stadium-outline'
+
+                            "
+
                         >
+
                             <div class="flex w-full items-center gap-4">
+
                                 <input
+
                                     v-model="form.payment_gateway"
+
                                     type="radio"
+
                                     name="payment_gateway"
+
                                     :value="g.code"
-                                    class="h-5 w-5 shrink-0 border-stone-300 text-stone-900"
+
+                                    class="h-5 w-5 shrink-0 border-stadium-outline-soft text-store-primary focus:ring-store-primary/30"
+
                                 >
+
                                 <span>{{ g.label }}</span>
+
                             </div>
-                            <p v-if="feeHint(g)" class="pl-9 text-xs font-normal text-stone-500">
+
+                            <p v-if="feeHint(g)" class="pl-9 text-xs font-normal text-stadium-secondary">
+
                                 {{ feeHint(g) }}
+
                             </p>
+
                         </label>
+
                     </div>
+
                 </fieldset>
 
-                <p v-if="page.props.errors?.checkout" class="text-sm text-red-600">
+
+
+                <p v-if="page.props.errors?.checkout" class="text-sm text-red-600 dark:text-red-400">
+
                     {{ page.props.errors.checkout }}
+
                 </p>
 
+
+
                 <button
+
                     type="submit"
-                    class="hidden w-full min-h-14 rounded-2xl bg-stone-900 text-base font-semibold text-white shadow-lg transition hover:bg-stone-800 active:scale-[0.99] disabled:opacity-50 sm:block"
+
+                    class="hidden w-full min-h-14 rounded-2xl bg-stadium-lime text-base font-bold text-stadium-lime-ink shadow-lg transition hover:bg-stadium-lime/90 active:scale-[0.99] disabled:opacity-50 sm:block"
+
                     :disabled="form.processing"
+
                 >
-                    Place order
+
+                    {{ form.processing ? 'Placing order…' : 'Place order' }}
+
                 </button>
+
             </form>
+
         </div>
 
+
+
         <!-- Mobile sticky submit -->
+
         <div
-            class="store-sticky-above-nav fixed inset-x-0 z-[45] border-t border-stadium-outline-soft bg-stadium-white px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] sm:hidden"
+
+            class="store-sticky-above-nav fixed inset-x-0 z-[45] border-t border-stadium-outline-soft bg-stadium-white px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-stadium-nav sm:hidden"
+
         >
+
             <button
+
                 type="button"
-                class="w-full min-h-14 rounded-2xl bg-stone-900 text-base font-semibold text-white shadow-lg transition active:scale-[0.98] disabled:opacity-50"
+
+                class="w-full min-h-14 rounded-2xl bg-stadium-lime text-base font-bold text-stadium-lime-ink shadow-lg transition hover:bg-stadium-lime/90 active:scale-[0.98] disabled:opacity-50"
+
                 :disabled="form.processing"
+
                 @click="submit"
+
             >
-                Place order securely
+
+                {{ form.processing ? 'Placing order…' : 'Place order securely' }}
+
             </button>
+
         </div>
+
     </StoreLayout>
+
 </template>
+
+

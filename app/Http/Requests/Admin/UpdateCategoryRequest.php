@@ -31,13 +31,18 @@ class UpdateCategoryRequest extends FormRequest
             'og_image_url' => ['nullable', 'string', 'max:1024'],
             'intro_html' => ['nullable', 'string'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
+            'is_active' => ['sometimes', 'boolean'],
         ];
     }
 
     protected function prepareForValidation(): void
     {
-        $this->merge([
+        $merge = [
             'parent_id' => $this->filled('parent_id') ? (int) $this->input('parent_id') : null,
-        ]);
+        ];
+        if ($this->has('is_active')) {
+            $merge['is_active'] = $this->boolean('is_active');
+        }
+        $this->merge($merge);
     }
 }

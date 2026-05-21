@@ -24,6 +24,7 @@ class CategoryFactory extends Factory
             'meta_title' => null,
             'meta_description' => null,
             'sort_order' => 0,
+            'is_active' => true,
         ];
     }
 }

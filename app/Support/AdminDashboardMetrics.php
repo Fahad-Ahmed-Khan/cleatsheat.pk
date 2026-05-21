@@ -10,11 +10,14 @@ use App\Models\Category;
 use App\Models\Color;
 use App\Models\Coupon;
 use App\Models\Courier;
+use App\Models\NotificationLog;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Shipment;
 use App\Models\SizeChart;
 use App\Models\VariantSize;
+use App\Models\WhatsAppInboundMessage;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 final class AdminDashboardMetrics
@@ -33,6 +36,48 @@ final class AdminDashboardMetrics
             'recent_orders' => self::recentOrders(),
             'top_products' => self::topProducts($now),
             'logistics' => self::logisticsShipments(),
+            'whatsapp' => self::whatsappTiles($now),
+        ];
+    }
+
+    /**
+     * @return array<string, int|float>
+     */
+    private static function whatsappTiles(\Illuminate\Support\Carbon $now): array
+    {
+        $todayStart = $now->copy()->startOfDay();
+
+        $sentToday = (int) NotificationLog::query()
+            ->where('channel', 'whatsapp')
+            ->where('status', 'sent')
+            ->where('created_at', '>=', $todayStart)
+            ->count();
+
+        $pendingCod = (int) Order::query()
+            ->where('awaiting_confirmation', true)
+            ->whereNot('status', OrderStatus::Cancelled)
+            ->count();
+
+        $deliveredShipments = (int) Shipment::query()
+            ->where('status', ShipmentStatus::Delivered)
+            ->count();
+        $totalTerminal = (int) Shipment::query()
+            ->whereIn('status', [ShipmentStatus::Delivered, ShipmentStatus::Failed, ShipmentStatus::Canceled])
+            ->count();
+
+        $deliveryRate = $totalTerminal > 0
+            ? round(($deliveredShipments / $totalTerminal) * 100, 1)
+            : 0.0;
+
+        $inboundToday = (int) WhatsAppInboundMessage::query()
+            ->where('received_at', '>=', $todayStart)
+            ->count();
+
+        return [
+            'sent_today' => $sentToday,
+            'pending_cod_confirmations' => $pendingCod,
+            'delivery_rate_percent' => $deliveryRate,
+            'inbound_today' => $inboundToday,
         ];
     }
 
@@ -192,7 +237,7 @@ final class AdminDashboardMetrics
         $feesData = [];
         $ordersData = [];
         foreach ($days as $d) {
-            $categories[] = \Carbon\Carbon::parse($d)->format('d M');
+            $categories[] = Carbon::parse($d)->format('d M');
             $revenueData[] = round($byDay[$d]['revenue'], 2);
             $feesData[] = round($byDay[$d]['fees'], 2);
             $ordersData[] = (int) $byDay[$d]['orders'];

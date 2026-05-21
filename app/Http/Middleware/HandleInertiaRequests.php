@@ -6,6 +6,7 @@ use App\Models\CartItem;
 use App\Models\Category;
 use App\Models\MarketingSetting;
 use App\Models\StorefrontAssistantSetting;
+use App\Models\StorefrontSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Middleware;
@@ -79,15 +80,30 @@ class HandleInertiaRequests extends Middleware
         $marketing = [
             'ga4_enabled' => false,
             'ga4_measurement_id' => null,
+            'gtm_enabled' => false,
+            'gtm_container_id' => null,
             'meta_pixel_enabled' => false,
             'meta_pixel_id' => null,
             'tiktok_pixel_enabled' => false,
             'tiktok_pixel_id' => null,
         ];
-        if (Schema::hasTable('marketing_settings')) {
+        if (Schema::hasTable('storefront_settings')) {
+            $row = StorefrontSetting::query()->first();
+            if ($row) {
+                $marketing = $row->toAnalyticsPayload();
+            }
+        } elseif (Schema::hasTable('marketing_settings')) {
             $row = MarketingSetting::query()->first();
             if ($row) {
                 $marketing = $row->toPublicPayload();
+            }
+        }
+
+        $storeBranding = null;
+        if (Schema::hasTable('storefront_settings')) {
+            $row = StorefrontSetting::query()->first();
+            if ($row) {
+                $storeBranding = $row->toBrandingPayload();
             }
         }
 
@@ -109,6 +125,7 @@ class HandleInertiaRequests extends Middleware
             ],
             'bargainEnabled' => (bool) config('bargain.enabled', true),
             'marketing' => $marketing,
+            'storeBranding' => $storeBranding,
             'storefrontAssistant' => $storefrontAssistant,
             'flashPaymentError' => $request->session()->pull('flash_payment_error'),
             'auth' => [
@@ -122,9 +139,11 @@ class HandleInertiaRequests extends Middleware
                 'delivery_days_min' => config('store.delivery_days_min'),
                 'delivery_days_max' => config('store.delivery_days_max'),
                 'return_policy_summary' => config('store.return_policy_summary'),
+                'surface_parent_slug' => config('store.surface_parent_slug'),
             ],
             'navCategories' => Schema::hasTable('categories')
                 ? Category::query()
+                    ->active()
                     ->whereNull('parent_id')
                     ->orderBy('sort_order')
                     ->get(['id', 'name', 'slug'])

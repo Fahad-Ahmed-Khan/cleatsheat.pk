@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web\Admin;
 
+use App\Domain\Notifications\WhatsApp\ManualMessageService;
 use App\Domain\Shipping\CourierDispatchService;
 use App\Domain\Shipping\PostEx\PostExApiClient;
 use App\Domain\Shipping\PostEx\PostExHttpDiagnostics;
@@ -19,14 +20,15 @@ use App\Models\Order;
 use App\Models\Shipment;
 use App\Models\ShipmentEvent;
 use App\Models\ShippingSetting;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Facades\Http;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class OrderAdminController extends Controller
 {
@@ -239,14 +241,14 @@ class OrderAdminController extends Controller
             })
             ->when($dateFrom, function ($q) use ($dateFrom) {
                 try {
-                    $q->where('created_at', '>=', \Carbon\Carbon::parse($dateFrom)->startOfDay());
+                    $q->where('created_at', '>=', Carbon::parse($dateFrom)->startOfDay());
                 } catch (\Throwable) {
                     // ignore malformed date
                 }
             })
             ->when($dateTo, function ($q) use ($dateTo) {
                 try {
-                    $q->where('created_at', '<=', \Carbon\Carbon::parse($dateTo)->endOfDay());
+                    $q->where('created_at', '<=', Carbon::parse($dateTo)->endOfDay());
                 } catch (\Throwable) {
                     // ignore malformed date
                 }
@@ -297,7 +299,17 @@ class OrderAdminController extends Controller
         $defaultBookingCourierId = $latestPending?->courier_id
             ?? $this->dispatch->resolveDefaultCourierId($order);
 
+        $manual = app(ManualMessageService::class);
+
         return Inertia::render('Admin/Orders/Show', [
+            'whatsapp_templates' => $manual->customerTemplateOptions(),
+            'whatsapp_send_route' => route('admin.orders.whatsapp.send', $order),
+            'whatsapp_confirmation' => [
+                'awaiting' => (bool) $order->awaiting_confirmation,
+                'sent_at' => $order->confirmation_sent_at?->format('M j, H:i'),
+                'confirmed_at' => $order->confirmed_at?->format('M j, H:i'),
+                'channel' => $order->confirmation_channel,
+            ],
             'order_statuses' => collect(OrderStatus::cases())->map(fn (OrderStatus $s) => [
                 'value' => $s->value,
                 'label' => Str::headline($s->name),

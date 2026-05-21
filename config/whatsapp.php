@@ -14,6 +14,15 @@ return [
         'phone_number_id' => env('WHATSAPP_CLOUD_PHONE_NUMBER_ID'),
         'api_version' => env('WHATSAPP_CLOUD_API_VERSION', 'v21.0'),
         /**
+         * Webhook signature secret (App Secret from the Meta App Dashboard) and
+         * verify token used by Meta's webhook subscription handshake.
+         *
+         * The verify token can also be set per-tenant via Admin → WhatsApp settings,
+         * which takes precedence over this env value at runtime.
+         */
+        'app_secret' => env('WHATSAPP_CLOUD_APP_SECRET'),
+        'webhook_verify_token' => env('WHATSAPP_CLOUD_WEBHOOK_VERIFY_TOKEN'),
+        /**
          * Meta-approved template names (each body should define 4 variables:
          * {{1}} customer name, {{2}} order id/number, {{3}} total, {{4}} short status).
          * Leave name empty to send a plain text message instead (dev / fallback).
@@ -67,4 +76,3 @@ return [
 
     'queue' => env('WHATSAPP_QUEUE'),
 ];
-

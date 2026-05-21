@@ -1,15 +1,18 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\RobotsController;
+use App\Http\Controllers\SitemapController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 require __DIR__.'/storefront.php';
 require __DIR__.'/payments.php';
 require __DIR__.'/shipping.php';
+require __DIR__.'/whatsapp.php';
 
-Route::get('/robots.txt', \App\Http\Controllers\RobotsController::class)->name('robots');
-Route::get('/sitemap.xml', \App\Http\Controllers\SitemapController::class)->name('sitemap');
+Route::get('/robots.txt', RobotsController::class)->name('robots');
+Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 
 Route::get('/welcome-skeleton', function () {
     return Inertia::render('Welcome');

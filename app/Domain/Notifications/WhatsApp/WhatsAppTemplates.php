@@ -21,6 +21,22 @@ final class WhatsAppTemplates
                 'short' => 'Order placed',
                 'body' => "Hi {$name}, your order {$orderNo} has been placed. Total: PKR {$total}. We’ll update you as it moves to dispatch.",
             ],
+            'order_placed_cod_confirm' => [
+                'short' => 'Confirm COD order',
+                'body' => "Hi {$name}, we received your COD order {$orderNo} for PKR {$total}. Please confirm so we can dispatch it.",
+            ],
+            'order_confirmed' => [
+                'short' => 'Order confirmed',
+                'body' => "Hi {$name}, your order {$orderNo} is confirmed. Total: PKR {$total}. We’ll dispatch it shortly.",
+            ],
+            'out_for_delivery' => [
+                'short' => 'Out for delivery',
+                'body' => "Hi {$name}, your order {$orderNo} is out for delivery today. Please keep your phone available.",
+            ],
+            'order_returned' => [
+                'short' => 'Order returned',
+                'body' => "Hi {$name}, the courier returned your order {$orderNo}. Reply on WhatsApp to redeliver.",
+            ],
             'payment_received' => [
                 'short' => 'Payment received',
                 'body' => "Hi {$name}, payment received for order {$orderNo}. Total: PKR {$total}. We’ll start preparing your shoes now.",
@@ -74,6 +90,7 @@ final class WhatsAppTemplates
             && in_array($from, [OrderStatus::Pending, OrderStatus::Confirmed], true);
 
         return match (true) {
+            $to === OrderStatus::Confirmed && $from !== null => 'order_confirmed',
             $entersProcessingFromPrep => 'order_packed',
             $to === OrderStatus::Shipped => 'order_shipped',
             $to === OrderStatus::Delivered => 'order_delivered',
@@ -82,4 +99,3 @@ final class WhatsAppTemplates
         };
     }
 }
-

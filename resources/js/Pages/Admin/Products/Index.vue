@@ -418,11 +418,18 @@ function onImportFileChange(e) {
                 >
                     <td>
                         <div class="d-flex align-items-center gap-2">
-                            <span class="avatar avatar-sm bg-label-secondary">
-                                <span class="avatar-initial rounded-2">
-                                    <i class="icon-base ti tabler-box icon-18px"></i>
-                                </span>
-                            </span>
+                            <div
+                                class="flex-shrink-0 border rounded bg-body-tertiary overflow-hidden d-flex align-items-center justify-content-center"
+                                style="width: 38px; height: 38px;"
+                            >
+                                <img
+                                    v-if="p.thumbnail_path"
+                                    :src="p.thumbnail_path"
+                                    :alt="p.name"
+                                    class="w-100 h-100 object-fit-cover"
+                                />
+                                <i v-else class="icon-base ti tabler-box icon-18px text-muted"></i>
+                            </div>
                             <div class="d-flex flex-column">
                                 <Link
                                     class="fw-semibold text-heading"

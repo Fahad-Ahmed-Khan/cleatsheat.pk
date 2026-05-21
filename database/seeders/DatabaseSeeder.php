@@ -13,8 +13,10 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call(ShippingCourierSeeder::class);
+        $this->call(WhatsAppTemplateSeeder::class);
 
         $this->call(DemoCatalogSeeder::class);
+        $this->call(JournalBlogSeeder::class);
 
         User::factory()->create([
             'name' => 'Test User',

@@ -17,6 +17,11 @@
     --stadium-inverse: 47 49 49;
     --stadium-inverse-text: 241 241 241;
     --stadium-secondary: 95 94 94;
+
+    /* Brand — overridden from admin Storefront settings */
+    --store-primary: 223 255 0;
+    --store-secondary: 87 101 0;
+    --store-primary-fg: 25 30 0;
 }
 
 /* Stadium Energy — dark */
@@ -36,9 +41,92 @@ html.dark {
     --stadium-secondary: 168 170 168;
 }
 
+@layer components {
+    .text-display-xl {
+        @apply font-display text-4xl font-extrabold leading-[1.1] tracking-tighter md:text-6xl lg:text-[4rem];
+    }
+
+    .text-display-md {
+        @apply font-display text-2xl font-bold tracking-tight sm:text-[28px] lg:text-[32px];
+    }
+
+    .text-label {
+        @apply font-display text-xs font-bold uppercase tracking-widest;
+    }
+
+    .text-body-lg {
+        @apply text-base leading-relaxed md:text-lg;
+    }
+
+    .store-section {
+        @apply py-12 md:py-20;
+    }
+
+    /** Full-width store shell with comfortable side gutters */
+    .store-container {
+        @apply mx-auto w-full max-w-content px-5 sm:px-8 lg:px-10;
+    }
+
+    /** Product grids — full-width sections (home rails, etc.) */
+    .store-product-grid {
+        @apply grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5;
+    }
+
+    /** Product grids beside shop/category filter sidebar */
+    .store-product-grid--sidebar {
+        @apply grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5;
+    }
+
+    /** PDP size chip — idle state (theme-aware) */
+    .store-size-chip {
+        @apply flex min-h-[3.25rem] flex-col items-center justify-center rounded-2xl px-1 py-2 text-center ring-1 transition active:scale-[0.98];
+    }
+
+    .store-size-chip--idle {
+        @apply bg-stadium-container-high text-stadium-ink ring-stadium-outline-soft hover:bg-stadium-muted hover:ring-stadium-outline;
+    }
+
+    .store-size-chip--selected {
+        @apply bg-store-primary text-store-primary-fg shadow-md ring-2 ring-store-primary/40;
+    }
+
+    .store-size-chip--disabled {
+        @apply cursor-not-allowed bg-stadium-muted/60 text-stadium-outline line-through ring-stadium-outline-soft;
+    }
+
+    .store-review-card {
+        @apply rounded-2xl bg-stadium-muted p-4 ring-1 ring-stadium-outline-soft/70;
+    }
+
+    .store-pitch-pattern {
+        background-image:
+            linear-gradient(90deg, rgba(223, 255, 0, 0.04) 1px, transparent 1px),
+            linear-gradient(0deg, rgba(223, 255, 0, 0.04) 1px, transparent 1px);
+        background-size: 48px 48px;
+    }
+
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+}
+
 @layer utilities {
     .stadium-ambient-shadow {
         box-shadow: 0 10px 30px -10px rgba(26, 28, 28, 0.08);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .motion-safe-only {
+            transform: none !important;
+            opacity: 1 !important;
+            animation: none !important;
+            transition: none !important;
+        }
     }
 
     /** Fixed bars sit above the mobile bottom nav (4.25rem + safe area). */

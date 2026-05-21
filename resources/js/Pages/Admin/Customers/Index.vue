@@ -197,9 +197,12 @@ function formatDate(iso) {
                     <td class="text-end fw-semibold">{{ money(c.lifetime_spend) }}</td>
                     <td class="text-nowrap text-muted small">{{ formatDate(c.last_order_at) }}</td>
                     <td class="text-nowrap text-muted small">{{ c.created_at_human ?? '—' }}</td>
-                    <td class="text-end">
+                    <td class="text-end d-flex gap-1 justify-content-end">
+                        <Link :href="route('admin.customers.show', c.id)" class="btn btn-sm btn-outline-primary">
+                            Profile
+                        </Link>
                         <Link :href="route('admin.orders.index', { search: c.email })" class="btn btn-sm btn-outline-secondary">
-                            View orders
+                            Orders
                         </Link>
                     </td>
                 </tr>

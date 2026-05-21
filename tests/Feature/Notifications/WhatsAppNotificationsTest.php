@@ -8,7 +8,9 @@ use App\Jobs\SendWhatsAppNotificationJob;
 use App\Models\NotificationLog;
 use App\Models\Order;
 use App\Models\WhatsAppSetting;
+use App\Models\WhatsAppTemplate;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -77,6 +79,11 @@ class WhatsAppNotificationsTest extends TestCase
         Config::set('whatsapp.cloud.templates.order_placed.name', 'order_placed_v1');
         Config::set('whatsapp.cloud.templates.order_placed.language', 'en_US');
 
+        WhatsAppTemplate::query()->where('key', 'order_placed')->update([
+            'cloud_template_name' => 'order_placed_v1',
+            'cloud_template_language' => 'en_US',
+        ]);
+
         Http::fake([
             'graph.facebook.com/*' => Http::response(['messages' => [['id' => 'wamid.test']]], 200),
         ]);
@@ -104,11 +111,11 @@ class WhatsAppNotificationsTest extends TestCase
             'payment_status' => PaymentStatus::Pending,
         ]);
 
-        \Illuminate\Support\Facades\Bus::fake();
+        Bus::fake();
 
         $order->update(['payment_status' => PaymentStatus::Paid]);
 
-        \Illuminate\Support\Facades\Bus::assertDispatched(SendWhatsAppNotificationJob::class, function (SendWhatsAppNotificationJob $job): bool {
+        Bus::assertDispatched(SendWhatsAppNotificationJob::class, function (SendWhatsAppNotificationJob $job): bool {
             return $job->templateKey === 'payment_received' && $job->audience === 'customer';
         });
     }
@@ -122,11 +129,11 @@ class WhatsAppNotificationsTest extends TestCase
             'status' => OrderStatus::Processing,
         ]);
 
-        \Illuminate\Support\Facades\Bus::fake();
+        Bus::fake();
 
         $order->update(['status' => OrderStatus::Shipped]);
 
-        \Illuminate\Support\Facades\Bus::assertDispatched(SendWhatsAppNotificationJob::class, function (SendWhatsAppNotificationJob $job): bool {
+        Bus::assertDispatched(SendWhatsAppNotificationJob::class, function (SendWhatsAppNotificationJob $job): bool {
             return $job->templateKey === 'order_shipped' && $job->audience === 'customer';
         });
     }

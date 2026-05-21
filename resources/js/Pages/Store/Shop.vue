@@ -1,10 +1,13 @@
 <script setup>
 import StoreBottomSheet from '@/Components/Store/StoreBottomSheet.vue';
 import StoreProductCard from '@/Components/Store/StoreProductCard.vue';
+import StoreProductQuickAddSheet from '@/Components/Store/StoreProductQuickAddSheet.vue';
+import StoreShopHeader from '@/Components/Store/StoreShopHeader.vue';
 import StoreSeoHead from '@/Components/Store/StoreSeoHead.vue';
 import StoreLayout from '@/Layouts/StoreLayout.vue';
+import { useStoreQuickAdd } from '@/composables/useStoreQuickAdd';
 import { Link, router } from '@inertiajs/vue3';
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, onUnmounted, provide, reactive, ref, watch } from 'vue';
 
 const props = defineProps({
     products: { type: Array, default: () => [] },
@@ -15,6 +18,24 @@ const props = defineProps({
 });
 
 const filterOpen = ref(false);
+
+const {
+    sheetOpen,
+    sheetProduct,
+    adding,
+    quickAdd,
+    addWithSize,
+    closeSheet,
+} = useStoreQuickAdd();
+
+provide('storeQuickAdd', { quickAdd });
+
+onUnmounted(closeSheet);
+
+function onSheetSelect({ variantId, sizeLabel }) {
+    if (!sheetProduct.value) return;
+    addWithSize(sheetProduct.value, variantId, sizeLabel);
+}
 
 // Filters intentionally hidden from the storefront for now: color, gender.
 // They are still tracked locally so deep-linked URLs keep working without
@@ -237,68 +258,29 @@ watch(sentinel, (el) => {
     if (el) observer.observe(el);
 });
 
-const sortLabel = computed(() => {
-    if (local.sort === 'price_asc') return 'Price: low to high';
-    if (local.sort === 'price_desc') return 'Price: high to low';
-    return 'Newest';
-});
-
 const ukSizes = computed(() => props.filterOptions.sizes_uk || []);
+
 </script>
 
 <template>
     <StoreSeoHead :seo="seo" />
     <StoreLayout>
-        <div class="mx-auto max-w-content pb-28 lg:pb-12">
-            <!-- Hero / breadcrumb header -->
-            <div class="border-b border-stadium-outline-soft/25 bg-stadium-white px-4 py-8 sm:px-6 sm:py-10">
-                <p class="font-display text-[11px] font-bold uppercase tracking-[0.15em] text-stadium-secondary">
-                    Catalogue
-                </p>
-                <h1 class="mt-2 font-display text-3xl font-bold tracking-tighter text-stadium-ink sm:text-[32px]">
-                    Shop all
-                </h1>
-                <p class="mt-2 text-sm text-stadium-secondary">
-                    {{ feedTotal }} styles · filter by category, brand, UK size &amp; price.
-                </p>
-            </div>
+        <div class="store-container pb-28 lg:pb-12">
+            <StoreShopHeader
+                :total="feedTotal"
+                :active-filter-count="activeFilterCount"
+                :sort="local.sort"
+                :availability="local.availability"
+                @update:sort="local.sort = $event"
+                @update:availability="local.availability = $event"
+                @clear-filters="clearFilters"
+                @open-filters="filterOpen = true"
+            />
 
-            <!-- Sort + active count strip -->
-            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-stadium-outline-soft/25 bg-stadium-white px-4 py-3 sm:px-6">
-                <div class="flex items-center gap-2 text-xs text-stadium-secondary">
-                    <span class="font-medium">Sort by</span>
-                    <select
-                        v-model="local.sort"
-                        class="min-h-9 rounded-full border border-stadium-outline-soft bg-white px-3 text-xs font-medium text-stadium-ink"
-                        :aria-label="`Sort products. Current: ${sortLabel}`"
-                    >
-                        <option value="">
-                            Newest
-                        </option>
-                        <option value="price_asc">
-                            Price: low → high
-                        </option>
-                        <option value="price_desc">
-                            Price: high → low
-                        </option>
-                    </select>
-                </div>
-                <p v-if="activeFilterCount" class="text-xs text-stadium-secondary">
-                    <span class="font-semibold text-stadium-ink">{{ activeFilterCount }}</span> filter{{ activeFilterCount === 1 ? '' : 's' }} applied
-                    <button
-                        type="button"
-                        class="ml-2 underline underline-offset-2 hover:text-stadium-ink"
-                        @click="clearFilters"
-                    >
-                        Clear
-                    </button>
-                </p>
-            </div>
-
-            <div class="lg:grid lg:grid-cols-[minmax(0,260px)_1fr] lg:gap-10 lg:px-6 lg:pt-8">
+            <div class="lg:grid lg:grid-cols-[minmax(0,220px)_1fr] lg:gap-5 lg:pt-6">
                 <!-- Desktop filters -->
                 <aside class="hidden lg:block">
-                    <div class="sticky top-24 space-y-6 bg-white p-5 shadow-sm ring-1 ring-stadium-outline-soft/80">
+                    <div class="sticky top-24 space-y-6 rounded-3xl bg-stadium-white p-5 shadow-sm ring-1 ring-stadium-outline-soft/80">
                         <p class="text-xs font-semibold uppercase tracking-wide text-stadium-secondary">
                             Filters
                         </p>
@@ -316,7 +298,7 @@ const ukSizes = computed(() => props.filterOptions.sizes_uk || []);
                                     class="min-h-10 min-w-[42px] rounded-full px-3 py-2 text-xs font-semibold tabular-nums transition"
                                     :class="
                                         local.size_uk.includes(s)
-                                            ? 'bg-stadium-ink text-white'
+                                            ? 'bg-store-primary text-store-primary-fg ring-2 ring-store-primary/40 shadow-sm'
                                             : 'bg-stadium-muted text-stadium-ink ring-1 ring-stadium-outline-soft hover:bg-stadium-container-high'
                                     "
                                     :aria-pressed="local.size_uk.includes(s)"
@@ -337,7 +319,7 @@ const ukSizes = computed(() => props.filterOptions.sizes_uk || []);
                                         <input
                                             type="checkbox"
                                             :checked="local.category_ids.includes(c.id)"
-                                            class="h-4 w-4 rounded border-stadium-outline-soft text-stadium-ink focus:ring-stadium-ink"
+                                            class="h-4 w-4 rounded border-stadium-outline-soft bg-stadium-white text-stadium-lime focus:ring-stadium-ink"
                                             @change="toggleArray(local.category_ids, c.id)"
                                         >
                                         <span class="truncate">{{ c.name }}</span>
@@ -356,7 +338,7 @@ const ukSizes = computed(() => props.filterOptions.sizes_uk || []);
                                         <input
                                             type="checkbox"
                                             :checked="local.brand_ids.includes(b.id)"
-                                            class="h-4 w-4 rounded border-stadium-outline-soft text-stadium-ink focus:ring-stadium-ink"
+                                            class="h-4 w-4 rounded border-stadium-outline-soft bg-stadium-white text-stadium-lime focus:ring-stadium-ink"
                                             @change="toggleArray(local.brand_ids, b.id)"
                                         >
                                         <span class="truncate">{{ b.name }}</span>
@@ -374,13 +356,13 @@ const ukSizes = computed(() => props.filterOptions.sizes_uk || []);
                                     v-model.number="local.price_min"
                                     type="number"
                                     placeholder="Min"
-                                    class="min-h-11 rounded-xl border border-stadium-outline-soft px-2 text-sm"
+                                    class="min-h-11 rounded-xl border border-stadium-outline-soft bg-stadium-white px-2 text-sm text-stadium-ink placeholder:text-stadium-secondary focus:border-stadium-ink focus:ring-1 focus:ring-stadium-ink"
                                 >
                                 <input
                                     v-model.number="local.price_max"
                                     type="number"
                                     placeholder="Max"
-                                    class="min-h-11 rounded-xl border border-stadium-outline-soft px-2 text-sm"
+                                    class="min-h-11 rounded-xl border border-stadium-outline-soft bg-stadium-white px-2 text-sm text-stadium-ink placeholder:text-stadium-secondary focus:border-stadium-ink focus:ring-1 focus:ring-stadium-ink"
                                 >
                             </div>
                             <p class="mt-1 text-[11px] text-stadium-outline">
@@ -392,7 +374,7 @@ const ukSizes = computed(() => props.filterOptions.sizes_uk || []);
                             <p class="text-xs font-medium text-stadium-ink">
                                 Availability
                             </p>
-                            <select v-model="local.availability" class="mt-2 w-full min-h-11 rounded-xl border border-stadium-outline-soft px-3 text-sm">
+                            <select v-model="local.availability" class="mt-2 w-full min-h-11 rounded-xl border border-stadium-outline-soft bg-stadium-white px-3 text-sm text-stadium-ink">
                                 <option value="">
                                     All
                                 </option>
@@ -411,7 +393,7 @@ const ukSizes = computed(() => props.filterOptions.sizes_uk || []);
                 </aside>
 
                 <!-- Grid -->
-                <div class="px-4 pt-6 sm:px-0">
+                <div>
                     <div v-if="!feedItems.length" class="bg-stadium-muted py-16 text-center text-sm text-stadium-secondary">
                         <p class="text-sm font-medium text-stadium-ink">
                             No shoes match these filters.
@@ -422,20 +404,20 @@ const ukSizes = computed(() => props.filterOptions.sizes_uk || []);
                         <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-center">
                             <button
                                 type="button"
-                                class="min-h-11 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-stadium-ink shadow-sm ring-1 ring-stadium-outline-soft transition hover:ring-stadium-outline"
+                                class="min-h-11 rounded-full bg-stadium-white px-5 py-2.5 text-sm font-semibold text-stadium-ink shadow-sm ring-1 ring-stadium-outline-soft transition hover:ring-stadium-outline"
                                 @click="clearFilters"
                             >
                                 Reset filters
                             </button>
                             <Link
                                 :href="route('store.shop')"
-                                class="min-h-11 rounded-full bg-stadium-lime px-5 py-2.5 text-sm font-bold text-stadium-ink shadow-md"
+                                class="min-h-11 rounded-full bg-stadium-lime px-5 py-2.5 text-sm font-bold text-stadium-lime-ink shadow-md"
                             >
                                 Shop all
                             </Link>
                         </div>
                     </div>
-                    <div v-else class="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+                    <div v-else class="store-product-grid--sidebar">
                         <StoreProductCard v-for="(p, i) in feedItems" :key="p.id" :product="p" :index="i" />
                     </div>
 
@@ -456,7 +438,7 @@ const ukSizes = computed(() => props.filterOptions.sizes_uk || []);
                         <button
                             v-else-if="hasMore"
                             type="button"
-                            class="min-h-11 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-stadium-ink shadow-sm ring-1 ring-stadium-outline-soft transition hover:ring-stadium-outline"
+                            class="min-h-11 rounded-full bg-stadium-white px-5 py-2.5 text-sm font-semibold text-stadium-ink shadow-sm ring-1 ring-stadium-outline-soft transition hover:ring-stadium-outline"
                             @click="loadMore"
                         >
                             Load more
@@ -473,13 +455,13 @@ const ukSizes = computed(() => props.filterOptions.sizes_uk || []);
         <div class="fixed bottom-24 left-4 z-40 lg:hidden">
             <button
                 type="button"
-                        class="flex min-h-12 items-center gap-2 rounded-full bg-stadium-ink pl-5 pr-5 text-sm font-semibold text-white shadow-lg ring-2 ring-stadium-white/90 transition active:scale-[0.98]"
+                class="flex min-h-12 items-center gap-2 rounded-full bg-stadium-inverse pl-5 pr-5 text-sm font-semibold text-stadium-inverse-text shadow-lg ring-2 ring-store-primary/35 transition active:scale-[0.98]"
                 @click="filterOpen = true"
             >
                 Filters
                 <span
                     v-if="activeFilterCount"
-                    class="flex h-6 min-w-6 items-center justify-center rounded-full bg-stadium-lime px-1.5 text-[11px] font-bold text-stadium-ink"
+                    class="flex h-6 min-w-6 items-center justify-center rounded-full bg-store-primary px-1.5 text-[11px] font-bold text-store-primary-fg"
                 >{{ activeFilterCount }}</span>
             </button>
         </div>
@@ -498,7 +480,7 @@ const ukSizes = computed(() => props.filterOptions.sizes_uk || []);
                             class="min-h-11 min-w-[52px] rounded-full px-4 py-2 text-sm font-semibold tabular-nums"
                             :class="
                                 local.size_uk.includes(s)
-                                    ? 'bg-stadium-ink text-white'
+                                    ? 'bg-store-primary text-store-primary-fg ring-2 ring-store-primary/40'
                                     : 'bg-stadium-muted text-stadium-ink ring-1 ring-stadium-outline-soft'
                             "
                             :aria-pressed="local.size_uk.includes(s)"
@@ -518,7 +500,7 @@ const ukSizes = computed(() => props.filterOptions.sizes_uk || []);
                                 <input
                                     type="checkbox"
                                     :checked="local.category_ids.includes(c.id)"
-                                    class="h-5 w-5 rounded border-stadium-outline-soft text-stadium-ink focus:ring-stadium-ink"
+                                    class="h-5 w-5 rounded border-stadium-outline-soft bg-stadium-white text-stadium-lime focus:ring-stadium-ink"
                                     @change="toggleArray(local.category_ids, c.id)"
                                 >
                                 <span class="truncate">{{ c.name }}</span>
@@ -536,7 +518,7 @@ const ukSizes = computed(() => props.filterOptions.sizes_uk || []);
                                 <input
                                     type="checkbox"
                                     :checked="local.brand_ids.includes(b.id)"
-                                    class="h-5 w-5 rounded border-stadium-outline-soft text-stadium-ink focus:ring-stadium-ink"
+                                    class="h-5 w-5 rounded border-stadium-outline-soft bg-stadium-white text-stadium-lime focus:ring-stadium-ink"
                                     @change="toggleArray(local.brand_ids, b.id)"
                                 >
                                 <span class="truncate">{{ b.name }}</span>
@@ -547,16 +529,16 @@ const ukSizes = computed(() => props.filterOptions.sizes_uk || []);
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="text-xs font-medium text-stadium-secondary">Min price</label>
-                        <input v-model.number="local.price_min" type="number" class="mt-1 w-full min-h-12 rounded-xl border border-stadium-outline-soft px-3 text-sm">
+                        <input v-model.number="local.price_min" type="number" class="mt-1 w-full min-h-12 rounded-xl border border-stadium-outline-soft bg-stadium-white px-3 text-sm text-stadium-ink placeholder:text-stadium-secondary focus:border-stadium-ink focus:ring-1 focus:ring-stadium-ink">
                     </div>
                     <div>
                         <label class="text-xs font-medium text-stadium-secondary">Max price</label>
-                        <input v-model.number="local.price_max" type="number" class="mt-1 w-full min-h-12 rounded-xl border border-stadium-outline-soft px-3 text-sm">
+                        <input v-model.number="local.price_max" type="number" class="mt-1 w-full min-h-12 rounded-xl border border-stadium-outline-soft bg-stadium-white px-3 text-sm text-stadium-ink placeholder:text-stadium-secondary focus:border-stadium-ink focus:ring-1 focus:ring-stadium-ink">
                     </div>
                 </div>
                 <div>
                     <label class="text-xs font-medium text-stadium-secondary">Availability</label>
-                    <select v-model="local.availability" class="mt-1 w-full min-h-12 rounded-xl border border-stadium-outline-soft px-2 text-sm">
+                    <select v-model="local.availability" class="mt-1 w-full min-h-12 rounded-xl border border-stadium-outline-soft bg-stadium-white px-2 text-sm text-stadium-ink">
                         <option value="">
                             All
                         </option>
@@ -568,7 +550,7 @@ const ukSizes = computed(() => props.filterOptions.sizes_uk || []);
                 <div class="flex gap-3 pt-2">
                     <button
                         type="button"
-                        class="min-h-12 flex-1 rounded-2xl bg-stadium-lime text-sm font-bold text-stadium-ink"
+                        class="min-h-12 flex-1 rounded-2xl bg-stadium-lime text-sm font-bold text-stadium-lime-ink"
                         @click="filterOpen = false"
                     >
                         Show {{ feedTotal }} result{{ feedTotal === 1 ? '' : 's' }}
@@ -579,5 +561,13 @@ const ukSizes = computed(() => props.filterOptions.sizes_uk || []);
                 </div>
             </div>
         </StoreBottomSheet>
+
+        <StoreProductQuickAddSheet
+            :open="sheetOpen"
+            :product="sheetProduct"
+            :adding="adding"
+            @close="closeSheet"
+            @select="onSheetSelect"
+        />
     </StoreLayout>
 </template>

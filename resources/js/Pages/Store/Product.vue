@@ -263,9 +263,9 @@ function stars(n) {
 <template>
     <StoreSeoHead :seo="seo" />
     <StoreLayout>
-        <div class="mx-auto max-w-content pb-44 sm:pb-14 lg:pb-12">
-            <div class="sm:grid sm:grid-cols-[1.1fr_1fr] sm:gap-10 sm:px-6 sm:pt-10 lg:gap-14">
-                <div class="px-4 pt-4 sm:px-0 sm:pt-0">
+        <div class="store-container pb-44 sm:pb-14 lg:pb-12">
+            <div class="sm:grid sm:grid-cols-[1.1fr_1fr] sm:gap-10 sm:pt-10 lg:gap-14">
+                <div class="pt-4 sm:pt-0">
                     <StoreProductGallery
                         :images="gallery"
                         :product-name="product.name"
@@ -274,7 +274,7 @@ function stars(n) {
                     />
                 </div>
 
-                <div class="px-4 pt-6 sm:px-0 sm:pt-0">
+                <div class="pt-6 sm:pt-0">
                     <p class="font-display text-[11px] font-bold uppercase tracking-[0.15em] text-stadium-secondary">
                         {{ product.brand?.name }}
                     </p>
@@ -288,13 +288,13 @@ function stars(n) {
                     <div v-if="saleBadgeVisible || product.fit_guidance" class="mt-4 flex flex-wrap gap-2">
                         <span
                             v-if="saleBadgeVisible"
-                            class="rounded-full bg-stadium-ink px-3 py-1.5 font-display text-xs font-bold uppercase tracking-wide text-stadium-lime"
+                            class="rounded-full bg-store-primary px-3 py-1.5 font-display text-xs font-bold uppercase tracking-wide text-store-primary-fg shadow-sm ring-1 ring-store-primary/30"
                         >
                             Sale
                         </span>
                         <span
                             v-if="product.fit_guidance"
-                            class="rounded-full bg-stadium-lime/25 px-3 py-1.5 font-display text-xs font-bold uppercase tracking-wide text-stadium-lime-muted ring-1 ring-stadium-outline-soft/60"
+                            class="rounded-full bg-stadium-container-high px-3 py-1.5 font-display text-xs font-bold uppercase tracking-wide text-stadium-ink ring-1 ring-stadium-outline-soft/80"
                         >
                             Fit: {{ fitLabels[product.fit_guidance] ?? product.fit_guidance }}
                         </span>
@@ -318,7 +318,7 @@ function stars(n) {
                             aria-hidden="true"
                         >
                             <span class="flex items-center gap-2 font-display text-xs font-bold uppercase tracking-wide text-stadium-ink">
-                                <span class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-stadium-ink text-sm text-stadium-lime">⚡</span>
+                                <span class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-store-primary text-sm text-store-primary-fg">⚡</span>
                                 Stud grip
                             </span>
                             <div class="h-2 w-28 overflow-hidden rounded-full bg-stadium-container">
@@ -328,7 +328,7 @@ function stars(n) {
                     </template>
                     <div
                         v-if="product.description"
-                        class="prose prose-sm prose-stone mt-8 max-w-none leading-relaxed"
+                        class="prose prose-sm prose-stone mt-8 max-w-none leading-relaxed dark:prose-invert"
                         v-html="product.description"
                     />
 
@@ -348,7 +348,7 @@ function stars(n) {
 
                     <p
                         v-if="product.fit_notes"
-                        class="mt-8 rounded-2xl bg-amber-50 p-4 text-sm leading-relaxed text-amber-950 ring-1 ring-amber-200/90"
+                        class="mt-8 rounded-2xl bg-amber-50 p-4 text-sm leading-relaxed text-amber-950 ring-1 ring-amber-200/90 dark:bg-amber-950/35 dark:text-amber-100 dark:ring-amber-800/60"
                     >
                         <span class="font-semibold">Fit tip:</span>
                         {{ product.fit_notes }}
@@ -356,7 +356,7 @@ function stars(n) {
 
                     <div
                         v-if="product.size_info"
-                        class="prose prose-sm prose-stone mt-6 max-w-none rounded-2xl bg-stadium-muted/80 p-4 text-stadium-secondary ring-1 ring-stadium-outline-soft/80"
+                        class="prose prose-sm prose-stone mt-6 max-w-none rounded-2xl bg-stadium-muted/80 p-4 text-stadium-secondary ring-1 ring-stadium-outline-soft/80 dark:prose-invert"
                     >
                         <p class="text-xs font-semibold uppercase tracking-wide text-stadium-secondary">
                             Sizing notes
@@ -377,8 +377,8 @@ function stars(n) {
                                 class="min-h-12 rounded-full px-5 py-2.5 text-sm font-semibold transition active:scale-[0.98]"
                                 :class="
                                     v.id === selectedVariantId
-                                        ? 'bg-stadium-ink text-white shadow-md'
-                                        : 'bg-white text-stadium-secondary ring-1 ring-stadium-outline-soft hover:ring-stadium-outline'
+                                        ? 'bg-store-primary text-store-primary-fg shadow-md ring-2 ring-store-primary/40'
+                                        : 'bg-stadium-container-high text-stadium-ink ring-1 ring-stadium-outline-soft hover:bg-stadium-muted hover:ring-stadium-outline'
                                 "
                                 @click="selectedVariantId = v.id"
                             >
@@ -401,7 +401,7 @@ function stars(n) {
                                     <button
                                         type="button"
                                         class="min-h-9 min-w-[2.75rem] rounded-full px-3 text-xs font-semibold transition"
-                                        :class="sizeSystem === 'uk' ? 'bg-white text-stadium-ink shadow-sm' : 'text-stadium-secondary'"
+                                        :class="sizeSystem === 'uk' ? 'bg-stadium-container-high text-stadium-ink shadow-sm ring-1 ring-stadium-outline-soft/80' : 'text-stadium-secondary'"
                                         @click="sizeSystem = 'uk'"
                                     >
                                         UK
@@ -409,7 +409,7 @@ function stars(n) {
                                     <button
                                         type="button"
                                         class="min-h-9 min-w-[2.75rem] rounded-full px-3 text-xs font-semibold transition"
-                                        :class="sizeSystem === 'eu' ? 'bg-white text-stadium-ink shadow-sm' : 'text-stadium-secondary'"
+                                        :class="sizeSystem === 'eu' ? 'bg-stadium-container-high text-stadium-ink shadow-sm ring-1 ring-stadium-outline-soft/80' : 'text-stadium-secondary'"
                                         @click="sizeSystem = 'eu'"
                                     >
                                         EU
@@ -417,7 +417,7 @@ function stars(n) {
                                     <button
                                         type="button"
                                         class="min-h-9 min-w-[2.75rem] rounded-full px-3 text-xs font-semibold transition"
-                                        :class="sizeSystem === 'pk' ? 'bg-white text-stadium-ink shadow-sm' : 'text-stadium-secondary'"
+                                        :class="sizeSystem === 'pk' ? 'bg-stadium-container-high text-stadium-ink shadow-sm ring-1 ring-stadium-outline-soft/80' : 'text-stadium-secondary'"
                                         @click="sizeSystem = 'pk'"
                                     >
                                         PK
@@ -454,21 +454,21 @@ function stars(n) {
                                 :key="s.size_label"
                                 type="button"
                                 :disabled="!s.in_stock"
-                                class="flex min-h-[3.25rem] flex-col items-center justify-center rounded-2xl px-1 py-2 text-center transition active:scale-[0.98]"
-                                :class="[
+                                class="store-size-chip"
+                                :class="
                                     selectedSize === s.size_label
-                                        ? 'bg-stadium-ink text-white shadow-md'
+                                        ? 'store-size-chip--selected'
                                         : s.in_stock
-                                          ? 'bg-white text-stadium-ink ring-1 ring-stadium-outline-soft hover:ring-stadium-outline'
-                                          : 'cursor-not-allowed bg-stadium-muted text-stadium-outline line-through ring-1 ring-stadium-muted',
-                                ]"
+                                          ? 'store-size-chip--idle'
+                                          : 'store-size-chip--disabled'
+                                "
                                 @click="s.in_stock && selectSize(s.size_label)"
                             >
                                 <span class="text-sm font-bold tabular-nums">{{ displaySizeLabel(s) }}</span>
                                 <span
                                     v-if="subSizeCaption(s)"
-                                    class="mt-0.5 text-[10px] font-normal opacity-80"
-                                    :class="selectedSize === s.size_label ? 'text-stadium-outline-soft' : 'text-stadium-secondary'"
+                                    class="mt-0.5 text-[10px] font-medium"
+                                    :class="selectedSize === s.size_label ? 'text-store-primary-fg/80' : 'text-stadium-secondary'"
                                 >
                                     {{ subSizeCaption(s) }}
                                 </span>
@@ -479,7 +479,7 @@ function stars(n) {
                         <button
                             v-if="hasMultipleSizes"
                             type="button"
-                            class="mt-4 flex w-full min-h-14 items-center justify-between rounded-2xl bg-white px-4 py-3 text-left shadow-sm ring-1 ring-stadium-outline-soft transition hover:ring-stadium-outline-soft sm:hidden active:scale-[0.99]"
+                            class="mt-4 flex w-full min-h-14 items-center justify-between rounded-2xl bg-stadium-container-high px-4 py-3 text-left shadow-sm ring-1 ring-stadium-outline-soft transition hover:bg-stadium-muted hover:ring-stadium-outline sm:hidden active:scale-[0.99]"
                             @click="sizeSheetOpen = true"
                         >
                             <span class="text-sm font-semibold text-stadium-ink">
@@ -488,7 +488,7 @@ function stars(n) {
                             <span class="text-xs font-medium text-stadium-secondary">{{ sizeSystem.toUpperCase() }}</span>
                         </button>
 
-                        <p v-if="selectedSize && !isSizeAvailable(selectedSize)" class="mt-3 text-sm text-red-600">
+                        <p v-if="selectedSize && !isSizeAvailable(selectedSize)" class="mt-3 text-sm text-red-600 dark:text-red-400">
                             Out of stock for this size.
                         </p>
                         <p v-else-if="selectedSizeRow && selectedSize" class="mt-3 text-sm text-stadium-secondary">
@@ -508,7 +508,7 @@ function stars(n) {
 
                     <button
                         type="button"
-                        class="mt-6 hidden w-full min-h-14 rounded-2xl bg-stadium-lime px-6 text-base font-bold text-stadium-ink shadow-lg transition hover:-translate-y-px hover:bg-stadium-lime/90 active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-stadium-outline-soft disabled:text-stadium-secondary sm:block"
+                        class="mt-6 hidden w-full min-h-14 rounded-2xl bg-stadium-lime px-6 text-base font-bold text-stadium-lime-ink shadow-lg transition hover:-translate-y-px hover:bg-stadium-lime/90 active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-stadium-outline-soft disabled:text-stadium-secondary sm:block"
                         :disabled="!canAddToCart"
                         @click="primaryCta"
                     >
@@ -552,11 +552,14 @@ function stars(n) {
                             <li
                                 v-for="r in reviews"
                                 :key="r.id"
-                                class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-stadium-outline-soft/90"
+                                class="store-review-card"
                             >
                                 <div class="flex flex-wrap items-center gap-2">
-                                    <span class="text-amber-500" aria-hidden="true">{{ stars(r.rating) }}</span>
-                                    <span v-if="r.fit_feedback" class="rounded-full bg-stadium-muted px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-stadium-ink">
+                                    <span class="text-amber-500 dark:text-amber-400" aria-hidden="true">{{ stars(r.rating) }}</span>
+                                    <span
+                                        v-if="r.fit_feedback"
+                                        class="rounded-full bg-stadium-container-high px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-stadium-ink ring-1 ring-stadium-outline-soft/80"
+                                    >
                                         Fit: {{ fitReviewLabels[r.fit_feedback] ?? r.fit_feedback }}
                                     </span>
                                 </div>
@@ -566,7 +569,7 @@ function stars(n) {
                                 <p v-if="r.body" class="mt-1 text-sm leading-relaxed text-stadium-secondary">
                                     {{ r.body }}
                                 </p>
-                                <p class="mt-3 text-xs text-stadium-outline">
+                                <p class="mt-3 text-xs font-medium text-stadium-secondary">
                                     {{ r.author_display }}
                                 </p>
                             </li>
@@ -601,7 +604,7 @@ function stars(n) {
                         Shop all
                     </a>
                 </div>
-                <div class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 lg:gap-5">
+                <div class="store-product-grid mt-6">
                     <StoreProductCard
                         v-for="(rp, i) in relatedProducts"
                         :key="rp.id"
@@ -614,7 +617,7 @@ function stars(n) {
 
         <!-- Mobile sticky purchase bar (sits above the bottom navigation) -->
         <div
-            class="store-sticky-above-nav fixed inset-x-0 z-[45] border-t border-stadium-outline-soft bg-stadium-white px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] sm:hidden"
+            class="store-sticky-above-nav fixed inset-x-0 z-[45] border-t border-stadium-outline-soft bg-stadium-white px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.35)] sm:hidden"
         >
             <div class="mx-auto flex max-w-lg items-center gap-2">
                 <button
@@ -644,7 +647,7 @@ function stars(n) {
                 </div>
                 <button
                     type="button"
-                    class="min-h-12 shrink-0 rounded-2xl bg-stadium-lime px-4 text-sm font-bold text-stadium-ink shadow-md transition hover:bg-stadium-lime/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-stadium-outline-soft disabled:text-stadium-secondary min-[400px]:min-h-14 min-[400px]:px-6"
+                    class="min-h-12 shrink-0 rounded-2xl bg-stadium-lime px-4 text-sm font-bold text-stadium-lime-ink shadow-md transition hover:bg-stadium-lime/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-stadium-outline-soft disabled:text-stadium-secondary min-[400px]:min-h-14 min-[400px]:px-6"
                     :disabled="!canAddToCart && !hasMultipleSizes"
                     @click="primaryCta"
                 >
@@ -689,7 +692,7 @@ function stars(n) {
                 </div>
                 <button
                     type="button"
-                    class="mt-6 w-full min-h-12 rounded-2xl bg-stadium-lime text-sm font-bold text-stadium-ink"
+                    class="mt-6 w-full min-h-12 rounded-2xl bg-stadium-lime text-sm font-bold text-stadium-lime-ink"
                     @click="chartOpen = false"
                 >
                     Done
@@ -704,7 +707,7 @@ function stars(n) {
                     <button
                         type="button"
                         class="min-h-10 rounded-full px-4 text-xs font-bold"
-                        :class="sizeSystem === 'uk' ? 'bg-white shadow-sm' : 'text-stadium-secondary'"
+                        :class="sizeSystem === 'uk' ? 'bg-stadium-container-high text-stadium-ink shadow-sm ring-1 ring-stadium-outline-soft/80' : 'text-stadium-secondary'"
                         @click="sizeSystem = 'uk'"
                     >
                         UK
@@ -712,7 +715,7 @@ function stars(n) {
                     <button
                         type="button"
                         class="min-h-10 rounded-full px-4 text-xs font-bold"
-                        :class="sizeSystem === 'eu' ? 'bg-white shadow-sm' : 'text-stadium-secondary'"
+                        :class="sizeSystem === 'eu' ? 'bg-stadium-container-high text-stadium-ink shadow-sm ring-1 ring-stadium-outline-soft/80' : 'text-stadium-secondary'"
                         @click="sizeSystem = 'eu'"
                     >
                         EU
@@ -720,7 +723,7 @@ function stars(n) {
                     <button
                         type="button"
                         class="min-h-10 rounded-full px-4 text-xs font-bold"
-                        :class="sizeSystem === 'pk' ? 'bg-white shadow-sm' : 'text-stadium-secondary'"
+                        :class="sizeSystem === 'pk' ? 'bg-stadium-container-high text-stadium-ink shadow-sm ring-1 ring-stadium-outline-soft/80' : 'text-stadium-secondary'"
                         @click="sizeSystem = 'pk'"
                     >
                         PK
@@ -732,23 +735,29 @@ function stars(n) {
                         :key="'ms-' + s.size_label"
                         type="button"
                         :disabled="!s.in_stock"
-                        class="flex min-h-[3.25rem] flex-col items-center justify-center rounded-2xl py-2 transition active:scale-[0.97]"
-                        :class="[
+                        class="store-size-chip"
+                        :class="
                             selectedSize === s.size_label
-                                ? 'bg-stadium-ink text-white'
+                                ? 'store-size-chip--selected'
                                 : s.in_stock
-                                  ? 'bg-stadium-muted ring-1 ring-stadium-outline-soft'
-                                  : 'cursor-not-allowed opacity-40 line-through',
-                        ]"
+                                  ? 'store-size-chip--idle'
+                                  : 'store-size-chip--disabled'
+                        "
                         @click="s.in_stock && selectSize(s.size_label)"
                     >
                         <span class="text-sm font-bold tabular-nums">{{ displaySizeLabel(s) }}</span>
-                        <span v-if="subSizeCaption(s)" class="mt-0.5 text-[10px] opacity-80">{{ subSizeCaption(s) }}</span>
+                        <span
+                            v-if="subSizeCaption(s)"
+                            class="mt-0.5 text-[10px] font-medium"
+                            :class="selectedSize === s.size_label ? 'text-store-primary-fg/80' : 'text-stadium-secondary'"
+                        >
+                            {{ subSizeCaption(s) }}
+                        </span>
                     </button>
                 </div>
                 <button
                     type="button"
-                    class="w-full min-h-12 rounded-2xl bg-stadium-lime text-sm font-bold text-stadium-ink disabled:bg-stadium-outline-soft disabled:text-stadium-secondary"
+                    class="w-full min-h-12 rounded-2xl bg-stadium-lime text-sm font-bold text-stadium-lime-ink disabled:bg-stadium-outline-soft disabled:text-stadium-secondary"
                     :disabled="!canAddToCart"
                     @click="addToBag"
                 >

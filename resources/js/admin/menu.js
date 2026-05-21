@@ -35,15 +35,27 @@ export function buildAdminMenu(route) {
             icon: 'ti tabler-truck',
             children: [
                 { label: 'Couriers', href: route('admin.couriers.index'), active: 'admin.couriers.*' },
+                { label: 'Riders', href: route('admin.riders.index'), active: 'admin.riders.*' },
+                { label: 'Daily pickups', href: route('admin.pickups.index'), active: 'admin.pickups.*' },
                 { label: 'Shipment timeline', href: route('admin.logistics.timeline'), active: 'admin.logistics.*' },
                 { label: 'Shipping settings', href: route('admin.shipping-settings.edit'), active: 'admin.shipping-settings.*' },
+            ],
+        },
+        {
+            label: 'WhatsApp',
+            icon: 'ti tabler-brand-whatsapp',
+            children: [
+                { label: 'Settings', href: route('admin.whatsapp-settings.edit'), active: 'admin.whatsapp-settings.*' },
+                { label: 'Templates', href: route('admin.whatsapp-templates.index'), active: 'admin.whatsapp-templates.*' },
+                { label: 'Campaigns', href: route('admin.whatsapp-campaigns.index'), active: 'admin.whatsapp-campaigns.*' },
+                { label: 'Inbox', href: route('admin.whatsapp-inbox.index'), active: 'admin.whatsapp-inbox.*' },
+                { label: 'Notifications log', href: route('admin.notifications.index'), active: 'admin.notifications.*' },
             ],
         },
         {
             label: 'Operations',
             icon: 'ti tabler-bell',
             children: [
-                { label: 'Notifications', href: route('admin.notifications.index'), active: 'admin.notifications.*' },
                 { label: 'Courier settlements', href: route('admin.finance.courier-settlements'), active: 'admin.finance.*' },
             ],
         },
@@ -52,9 +64,9 @@ export function buildAdminMenu(route) {
             icon: 'ti tabler-settings',
             children: [
                 { label: 'Payments', href: route('admin.payment-settings.edit'), active: 'admin.payment-settings.*' },
-                { label: 'WhatsApp', href: route('admin.whatsapp-settings.edit'), active: 'admin.whatsapp-settings.*' },
+                { label: 'Storefront', href: route('admin.storefront-settings.edit'), active: 'admin.storefront-settings.*' },
                 { label: 'Storefront Assistant', href: route('admin.storefront-assistant.edit'), active: 'admin.storefront-assistant.*' },
-                { label: 'Marketing & SEO', href: route('admin.marketing-settings.edit'), active: 'admin.marketing-settings.*' },
+                { label: 'Marketing & SEO (robots)', href: route('admin.marketing-settings.edit'), active: 'admin.marketing-settings.*' },
             ],
         },
         {
@@ -71,4 +83,3 @@ export function buildAdminMenu(route) {
         },
     ];
 }
-

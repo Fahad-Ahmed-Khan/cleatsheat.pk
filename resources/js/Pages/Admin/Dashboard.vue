@@ -12,6 +12,7 @@ const props = defineProps({
     recent_orders: { type: Array, default: () => [] },
     top_products: { type: Array, default: () => [] },
     logistics: { type: Array, default: () => [] },
+    whatsapp: { type: Object, default: () => ({}) },
 });
 
 const logTab = ref('new');
@@ -264,6 +265,45 @@ const logTabCounts = computed(() => {
                         <div class="text-muted small mb-1">Bookings failed today</div>
                         <div class="h5 mb-0 text-danger">{{ kpis.bookings_failed_today ?? 0 }}</div>
                         <div class="text-muted mt-2 small">Open the filtered Orders view</div>
+                    </div>
+                </Link>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-12 col-sm-6 col-xl-3">
+                <Link :href="route('admin.notifications.index')" class="card h-100 mb-0 text-decoration-none">
+                    <div class="card-body py-3">
+                        <div class="text-muted small mb-1">WhatsApp sent today</div>
+                        <div class="h5 mb-0 text-success">{{ whatsapp.sent_today ?? 0 }}</div>
+                        <div class="text-muted mt-2 small">Outbound notification log</div>
+                    </div>
+                </Link>
+            </div>
+            <div class="col-12 col-sm-6 col-xl-3">
+                <Link :href="route('admin.orders.index')" class="card h-100 mb-0 text-decoration-none">
+                    <div class="card-body py-3">
+                        <div class="text-muted small mb-1">Pending COD confirmations</div>
+                        <div class="h5 mb-0 text-warning">{{ whatsapp.pending_cod_confirmations ?? 0 }}</div>
+                        <div class="text-muted mt-2 small">Awaiting customer button reply</div>
+                    </div>
+                </Link>
+            </div>
+            <div class="col-12 col-sm-6 col-xl-3">
+                <div class="card h-100 mb-0">
+                    <div class="card-body py-3">
+                        <div class="text-muted small mb-1">Shipment delivery rate</div>
+                        <div class="h5 mb-0">{{ whatsapp.delivery_rate_percent ?? 0 }}%</div>
+                        <div class="text-muted mt-2 small">Delivered vs terminal shipments</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-xl-3">
+                <Link :href="route('admin.whatsapp-inbox.index')" class="card h-100 mb-0 text-decoration-none">
+                    <div class="card-body py-3">
+                        <div class="text-muted small mb-1">Inbound WhatsApp today</div>
+                        <div class="h5 mb-0">{{ whatsapp.inbound_today ?? 0 }}</div>
+                        <div class="text-muted mt-2 small">Open inbox</div>
                     </div>
                 </Link>
             </div>

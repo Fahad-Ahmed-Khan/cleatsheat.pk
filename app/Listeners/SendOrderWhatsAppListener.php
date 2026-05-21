@@ -10,11 +10,19 @@ class SendOrderWhatsAppListener
 {
     public function handle(OrderCreated $event): void
     {
-        $orderId = $event->order->id;
-
-        SendWhatsAppNotificationJob::dispatch($orderId, 'order_placed', 'customer');
+        $order = $event->order;
+        $orderId = $order->id;
 
         $settings = WhatsAppSetting::current();
+
+        $isCod = is_string($order->payment_gateway) && str_contains(strtolower($order->payment_gateway), 'cod');
+
+        $customerTemplate = ($isCod && $settings->enabled_cod_confirmation)
+            ? 'order_placed_cod_confirm'
+            : 'order_placed';
+
+        SendWhatsAppNotificationJob::dispatch($orderId, $customerTemplate, 'customer');
+
         if (! $settings->enabled_admin_notifications) {
             return;
         }

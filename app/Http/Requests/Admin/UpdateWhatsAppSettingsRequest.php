@@ -34,6 +34,13 @@ class UpdateWhatsAppSettingsRequest extends FormRequest
         return [
             'enabled_customer_notifications' => ['sometimes', 'boolean'],
             'enabled_admin_notifications' => ['sometimes', 'boolean'],
+            'enabled_cod_confirmation' => ['sometimes', 'boolean'],
+            'enabled_shipment_status_customer_alerts' => ['sometimes', 'boolean'],
+            'enabled_pickup_notices' => ['sometimes', 'boolean'],
+            'pickup_notice_time' => ['nullable', 'string', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
+            'cloud_webhook_verify_token' => ['nullable', 'string', 'min:8', 'max:128'],
+            'marketing_opt_out_keyword' => ['nullable', 'string', 'max:32'],
+            'promotional_throttle_per_minute' => ['nullable', 'integer', 'min:1', 'max:600'],
             'admin_recipients' => ['array', 'max:30'],
             'admin_recipients.*' => ['string', 'min:7', 'max:32'],
         ];

@@ -25,6 +25,7 @@ class StoreCategoryRequest extends FormRequest
             'og_image_url' => ['nullable', 'string', 'max:1024'],
             'intro_html' => ['nullable', 'string'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
+            'is_active' => ['sometimes', 'boolean'],
         ];
     }
 
@@ -32,6 +33,7 @@ class StoreCategoryRequest extends FormRequest
     {
         $this->merge([
             'parent_id' => $this->filled('parent_id') ? (int) $this->input('parent_id') : null,
+            'is_active' => $this->boolean('is_active', true),
         ]);
     }
 }

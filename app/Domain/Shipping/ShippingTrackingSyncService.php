@@ -2,6 +2,7 @@
 
 namespace App\Domain\Shipping;
 
+use App\Domain\Notifications\WhatsApp\ShipmentStatusCustomerAlertService;
 use App\Enums\ShipmentStatus;
 use App\Models\Shipment;
 use App\Models\ShipmentEvent;
@@ -11,6 +12,7 @@ class ShippingTrackingSyncService
 {
     public function __construct(
         private readonly CourierRegistry $registry,
+        private readonly ShipmentStatusCustomerAlertService $customerAlerts,
     ) {}
 
     public function syncShipment(Shipment $shipment): void
@@ -28,6 +30,8 @@ class ShippingTrackingSyncService
 
         $adapter = $this->registry->forCourier($courier);
         $result = $adapter->track($shipment, $courier, $shipment->courierAccount);
+
+        $previous = $shipment->status;
 
         DB::transaction(function () use ($shipment, $result): void {
             $shipment->last_tracking_response = $result->raw;
@@ -54,5 +58,10 @@ class ShippingTrackingSyncService
                 ]);
             }
         });
+
+        if ($result->status !== $previous) {
+            $shipment->refresh();
+            $this->customerAlerts->notifyStatusTransition($shipment, $previous, $result->status);
+        }
     }
 }

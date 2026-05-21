@@ -11,6 +11,13 @@ class WhatsAppSetting extends Model
     protected $fillable = [
         'enabled_customer_notifications',
         'enabled_admin_notifications',
+        'enabled_cod_confirmation',
+        'enabled_shipment_status_customer_alerts',
+        'enabled_pickup_notices',
+        'pickup_notice_time',
+        'cloud_webhook_verify_token',
+        'marketing_opt_out_keyword',
+        'promotional_throttle_per_minute',
         'admin_recipients',
     ];
 
@@ -19,6 +26,10 @@ class WhatsAppSetting extends Model
         return [
             'enabled_customer_notifications' => 'boolean',
             'enabled_admin_notifications' => 'boolean',
+            'enabled_cod_confirmation' => 'boolean',
+            'enabled_shipment_status_customer_alerts' => 'boolean',
+            'enabled_pickup_notices' => 'boolean',
+            'promotional_throttle_per_minute' => 'integer',
             'admin_recipients' => 'array',
         ];
     }
@@ -33,6 +44,12 @@ class WhatsAppSetting extends Model
         return static::query()->create([
             'enabled_customer_notifications' => true,
             'enabled_admin_notifications' => true,
+            'enabled_cod_confirmation' => true,
+            'enabled_shipment_status_customer_alerts' => true,
+            'enabled_pickup_notices' => true,
+            'pickup_notice_time' => '11:00',
+            'marketing_opt_out_keyword' => 'STOP',
+            'promotional_throttle_per_minute' => 20,
             'admin_recipients' => [],
         ]);
     }

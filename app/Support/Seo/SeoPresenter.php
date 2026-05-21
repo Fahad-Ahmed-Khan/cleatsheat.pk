@@ -204,6 +204,54 @@ final class SeoPresenter
      * @param  array<string, mixed>  $base
      * @return array<string, mixed>
      */
+    /**
+     * @param  list<array{slug: string, name: string}>  $products
+     * @return array<string, mixed>
+     */
+    public function homeJsonLd(string $siteName, string $canonicalUrl, array $products): array
+    {
+        $items = [];
+        foreach (array_slice($products, 0, 12) as $i => $p) {
+            $slug = $p['slug'] ?? null;
+            if (! $slug) {
+                continue;
+            }
+            $items[] = [
+                '@type' => 'ListItem',
+                'position' => $i + 1,
+                'url' => rtrim(config('app.url'), '/').'/p/'.$slug,
+                'name' => $p['name'] ?? '',
+            ];
+        }
+
+        return [
+            '@context' => 'https://schema.org',
+            '@graph' => [
+                [
+                    '@type' => 'WebSite',
+                    'name' => $siteName,
+                    'url' => $canonicalUrl,
+                    'potentialAction' => [
+                        '@type' => 'SearchAction',
+                        'target' => rtrim(config('app.url'), '/').'/shop?q={search_term_string}',
+                        'query-input' => 'required name=search_term_string',
+                    ],
+                ],
+                [
+                    '@type' => 'Organization',
+                    'name' => $siteName,
+                    'url' => $canonicalUrl,
+                    'areaServed' => 'PK',
+                ],
+                [
+                    '@type' => 'ItemList',
+                    'name' => 'Featured football boots',
+                    'itemListElement' => $items,
+                ],
+            ],
+        ];
+    }
+
     public function mergeSocialTags(array $base, ?string $defaultOgImage, ?string $twitterSite): array
     {
         $ogImage = $this->absoluteUrl($base['og_image'] ?? null)

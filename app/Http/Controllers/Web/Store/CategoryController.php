@@ -16,7 +16,8 @@ class CategoryController extends Controller
     public function __invoke(string $slug, Request $request, CatalogQueryService $catalog, SeoPresenter $seo): Response
     {
         $category = $catalog->categoryBySlug($slug);
-        $filters = $catalog->parseProductListFilters($request);
+        $category->load(['children' => fn ($q) => $q->active()->orderBy('sort_order')]);
+        $filters = $catalog->parseCategoryListFilters($request);
         $products = $catalog->paginatedFilteredProductsForCategory($category, $filters);
         $options = $catalog->filterOptionsForCategory($category);
 
@@ -46,6 +47,11 @@ class CategoryController extends Controller
                 'meta_description' => $category->meta_description,
                 'intro_html' => $category->intro_html,
                 'og_image_url' => $category->og_image_url,
+                'children' => $category->children->map(fn ($c) => [
+                    'id' => $c->id,
+                    'name' => $c->name,
+                    'slug' => $c->slug,
+                ])->values()->all(),
             ],
             'products' => ProductResource::collection($products->items())->resolve(),
             'pagination' => [
@@ -67,6 +73,7 @@ class CategoryController extends Controller
                     'hex' => $c->hex,
                 ])->values()->all(),
                 'sizes' => $options['sizes'],
+                'sizes_uk' => $options['sizes_uk'] ?? [],
                 'genders' => $options['genders'],
                 'price_min' => $options['price_min'],
                 'price_max' => $options['price_max'],

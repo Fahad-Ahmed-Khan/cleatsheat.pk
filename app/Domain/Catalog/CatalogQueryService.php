@@ -43,7 +43,7 @@ class CatalogQueryService
     {
         return Product::query()
             ->where('is_active', true)
-            ->with(['brand', 'category', 'images', 'variants.color'])
+            ->with(['brand', 'category', 'images', 'variants.color', 'variants.sizes'])
             ->latest()
             ->limit($limit)
             ->get();
@@ -54,7 +54,7 @@ class CatalogQueryService
     {
         return Product::query()
             ->where('is_active', true)
-            ->with(['brand', 'category', 'images', 'variants.color'])
+            ->with(['brand', 'category', 'images', 'variants.color', 'variants.sizes'])
             ->latest()
             ->limit($limit)
             ->get();
@@ -83,7 +83,7 @@ class CatalogQueryService
         $products = Product::query()
             ->whereIn('id', $ids)
             ->where('is_active', true)
-            ->with(['brand', 'category', 'images', 'variants.color'])
+            ->with(['brand', 'category', 'images', 'variants.color', 'variants.sizes'])
             ->get()
             ->keyBy('id');
 
@@ -105,7 +105,7 @@ class CatalogQueryService
     {
         $slice = Product::query()
             ->where('is_active', true)
-            ->with(['brand', 'category', 'images', 'variants.color'])
+            ->with(['brand', 'category', 'images', 'variants.color', 'variants.sizes'])
             ->latest()
             ->skip(8)
             ->take($limit)
@@ -122,25 +122,60 @@ class CatalogQueryService
     public function rootCategories(): Collection
     {
         return Category::query()
+            ->active()
             ->whereNull('parent_id')
             ->orderBy('sort_order')
-            ->with('children')
+            ->with(['children' => fn ($q) => $q->active()->orderBy('sort_order')])
+            ->get();
+    }
+
+    /**
+     * Surface subcategories for the home page tile row (FG, SG, AG, etc.).
+     *
+     * @return Collection<int, Category>
+     */
+    public function surfaceCategories(): Collection
+    {
+        $parentSlug = (string) config('store.surface_parent_slug', '');
+        if ($parentSlug === '') {
+            return new Collection;
+        }
+
+        $parent = Category::query()->active()->where('slug', $parentSlug)->first();
+        if ($parent === null) {
+            return new Collection;
+        }
+
+        return Category::query()
+            ->active()
+            ->where('parent_id', $parent->id)
+            ->orderBy('sort_order')
             ->get();
     }
 
     public function categoryBySlug(string $slug): Category
     {
-        return Category::query()->where('slug', $slug)->firstOrFail();
+        return Category::query()->active()->where('slug', $slug)->firstOrFail();
     }
 
     /**
      * @param  array<string, mixed>  $filters
      * @return array<string, mixed>
      */
+    /**
+     * @return list<int>
+     */
+    private function categoryScopeIds(Category $category): array
+    {
+        return $category->selfAndDescendantIds();
+    }
+
     public function filterOptionsForCategory(Category $category): array
     {
+        $categoryIds = $this->categoryScopeIds($category);
+
         $base = Product::query()
-            ->where('category_id', $category->id)
+            ->whereIn('category_id', $categoryIds)
             ->where('is_active', true);
 
         $brandIds = (clone $base)->pluck('brand_id')->unique()->filter()->values();
@@ -149,7 +184,7 @@ class CatalogQueryService
             : Brand::query()->whereIn('id', $brandIds)->orderBy('name')->get(['id', 'name', 'slug']);
 
         $colorIds = ProductVariant::query()
-            ->whereHas('product', fn (Builder $q) => $q->where('category_id', $category->id)->where('is_active', true))
+            ->whereHas('product', fn (Builder $q) => $q->whereIn('category_id', $categoryIds)->where('is_active', true))
             ->pluck('color_id')
             ->unique()
             ->filter()
@@ -160,14 +195,14 @@ class CatalogQueryService
             : Color::query()->whereIn('id', $colorIds)->orderBy('name')->get(['id', 'name', 'slug', 'hex']);
 
         $priceAgg = ProductVariant::query()
-            ->whereHas('product', fn (Builder $q) => $q->where('category_id', $category->id)->where('is_active', true))
+            ->whereHas('product', fn (Builder $q) => $q->whereIn('category_id', $categoryIds)->where('is_active', true))
             ->selectRaw('MIN(price) as min_price, MAX(price) as max_price')
             ->first();
 
         $sizes = DB::table('variant_sizes')
             ->join('product_variants', 'variant_sizes.product_variant_id', '=', 'product_variants.id')
             ->join('products', 'product_variants.product_id', '=', 'products.id')
-            ->where('products.category_id', $category->id)
+            ->whereIn('products.category_id', $categoryIds)
             ->where('products.is_active', true)
             ->distinct()
             ->orderBy('variant_sizes.size_label')
@@ -179,7 +214,7 @@ class CatalogQueryService
             DB::table('variant_sizes')
                 ->join('product_variants', 'variant_sizes.product_variant_id', '=', 'product_variants.id')
                 ->join('products', 'product_variants.product_id', '=', 'products.id')
-                ->where('products.category_id', $category->id)
+                ->whereIn('products.category_id', $categoryIds)
                 ->where('products.is_active', true)
         );
 
@@ -246,8 +281,10 @@ class CatalogQueryService
      */
     public function paginatedFilteredProductsForCategory(Category $category, array $filters, int $perPage = 12): LengthAwarePaginator
     {
+        $categoryIds = $this->categoryScopeIds($category);
+
         $query = Product::query()
-            ->where('category_id', $category->id)
+            ->whereIn('category_id', $categoryIds)
             ->where('is_active', true)
             ->with(['brand', 'category', 'images', 'variants.color', 'variants.sizes']);
 
@@ -306,8 +343,22 @@ class CatalogQueryService
             $query->whereHas('variants.sizes', fn (Builder $sq) => $sq->where('stock_qty', '>', 0));
         }
 
+        $sort = $filters['sort'] ?? null;
+        if ($sort === 'price_asc') {
+            $query->orderBy(
+                ProductVariant::query()->select('price')->whereColumn('product_id', 'products.id')->orderBy('price')->limit(1),
+                'asc'
+            );
+        } elseif ($sort === 'price_desc') {
+            $query->orderBy(
+                ProductVariant::query()->select('price')->whereColumn('product_id', 'products.id')->orderBy('price')->limit(1),
+                'desc'
+            );
+        } else {
+            $query->latest();
+        }
+
         return $query
-            ->latest()
             ->paginate($perPage)
             ->withQueryString();
     }
@@ -502,10 +553,29 @@ class CatalogQueryService
             'intval',
             (array) $request->input('category_ids', [])
         ))));
-        $sort = $request->input('sort');
-        $base['sort'] = in_array($sort, ['price_asc', 'price_desc', 'newest'], true) ? $sort : null;
+        $base['sort'] = $this->parseSortFilter($request);
 
         return $base;
+    }
+
+    /**
+     * Query-string filters for category product listings (includes sort).
+     *
+     * @return array<string, mixed>
+     */
+    public function parseCategoryListFilters(Request $request): array
+    {
+        $base = $this->parseProductListFilters($request);
+        $base['sort'] = $this->parseSortFilter($request);
+
+        return $base;
+    }
+
+    private function parseSortFilter(Request $request): ?string
+    {
+        $sort = $request->input('sort');
+
+        return in_array($sort, ['price_asc', 'price_desc', 'newest'], true) ? $sort : null;
     }
 
     /**
@@ -559,7 +629,7 @@ class CatalogQueryService
      */
     public function relatedProducts(Product $product, int $limit = 8): Collection
     {
-        $with = ['brand', 'category', 'images', 'variants.color'];
+        $with = ['brand', 'category', 'images', 'variants.color', 'variants.sizes'];
 
         $primary = Product::query()
             ->where('is_active', true)
