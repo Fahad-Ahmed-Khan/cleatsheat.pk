@@ -38,49 +38,54 @@ function formatPrice(n) {
 <template>
     <StoreSeoHead :seo="seo" />
     <StoreLayout>
-        <div class="mx-auto max-w-lg px-4 py-16 text-center">
-            <p class="text-sm font-medium text-emerald-700">
-                Order placed
-            </p>
-            <h1 class="mt-2 text-3xl font-semibold tracking-tight text-stone-900">
-                Thank you
-            </h1>
-            <p
-                v-if="notice"
-                class="mx-auto mt-4 max-w-md rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+        <div class="store-container py-12 md:py-16">
+            <div
+                class="mx-auto max-w-lg rounded-2xl border border-stadium-outline-soft/40 bg-stadium-white px-6 py-10 text-center shadow-stadium dark:border-white/10 dark:bg-stadium-container md:px-8 md:py-12"
             >
-                {{ notice }}
-            </p>
-            <p class="mt-4 text-sm text-stone-600">
-                Reference <span class="font-mono font-semibold text-stone-900">{{ order.order_number }}</span>
-            </p>
-            <p class="mt-2 text-lg font-semibold text-stone-900">
-                {{ formatPrice(order.grand_total) }}
-            </p>
-            <p class="mt-6 text-xs uppercase text-stone-500">
-                Payment: {{ order.payment_gateway }} · {{ order.payment_status }}
-            </p>
-
-            <ul class="mt-10 space-y-3 text-left text-sm">
-                <li
-                    v-for="(item, idx) in order.items"
-                    :key="idx"
-                    class="flex justify-between gap-4 border-b border-stone-100 pb-3"
+                <p class="text-label text-emerald-700 dark:text-emerald-400">
+                    Order placed
+                </p>
+                <h1 class="mt-2 text-display-md text-stadium-ink">
+                    Thank you
+                </h1>
+                <p
+                    v-if="notice"
+                    class="mx-auto mt-4 max-w-md rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100"
                 >
-                    <span class="text-stone-700">
-                        {{ item.product_name }} · {{ item.variant_label }} · {{ item.size_label }}
-                        × {{ item.quantity }}
-                    </span>
-                    <span class="shrink-0 font-medium">{{ formatPrice(item.line_total) }}</span>
-                </li>
-            </ul>
+                    {{ notice }}
+                </p>
+                <p class="mt-4 text-sm text-stadium-secondary">
+                    Reference
+                    <span class="font-mono font-semibold text-stadium-ink">{{ order.order_number }}</span>
+                </p>
+                <p class="mt-2 text-lg font-semibold text-stadium-ink">
+                    {{ formatPrice(order.grand_total) }}
+                </p>
+                <p class="mt-6 text-xs font-bold uppercase tracking-wide text-stadium-secondary">
+                    Payment: {{ order.payment_gateway }} · {{ order.payment_status }}
+                </p>
 
-            <Link
-                :href="route('store.home')"
-                class="mt-10 inline-block rounded-full bg-stone-900 px-8 py-3 text-sm font-semibold text-white"
-            >
-                Continue shopping
-            </Link>
+                <ul class="mt-10 space-y-3 border-t border-stadium-outline-soft/30 pt-8 text-left text-sm dark:border-white/10">
+                    <li
+                        v-for="(item, idx) in order.items"
+                        :key="idx"
+                        class="flex justify-between gap-4 border-b border-stadium-outline-soft/25 pb-3 last:border-0 dark:border-white/10"
+                    >
+                        <span class="text-stadium-secondary">
+                            {{ item.product_name }} · {{ item.variant_label }} · {{ item.size_label }}
+                            × {{ item.quantity }}
+                        </span>
+                        <span class="shrink-0 font-semibold text-stadium-ink">{{ formatPrice(item.line_total) }}</span>
+                    </li>
+                </ul>
+
+                <Link
+                    :href="route('store.home')"
+                    class="mt-10 inline-flex min-h-11 items-center justify-center rounded-2xl bg-store-primary px-8 py-3 text-label text-store-primary-fg shadow-md transition hover:opacity-95"
+                >
+                    Continue shopping
+                </Link>
+            </div>
         </div>
     </StoreLayout>
 </template>

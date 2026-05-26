@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Web\Store\PaymentCallbackController;
 use App\Http\Controllers\Web\Store\PaymentRedirectController;
+use App\Http\Controllers\Web\Webhooks\SafepayWebhookController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/payments/redirect/{gateway}/{token}', [PaymentRedirectController::class, 'form'])
@@ -9,3 +10,6 @@ Route::get('/payments/redirect/{gateway}/{token}', [PaymentRedirectController::c
 
 Route::match(['get', 'post'], '/payments/callback/{gateway}', [PaymentCallbackController::class, 'callback'])
     ->name('payments.callback');
+
+Route::post('/webhooks/safepay', [SafepayWebhookController::class, 'handle'])
+    ->name('webhooks.safepay');

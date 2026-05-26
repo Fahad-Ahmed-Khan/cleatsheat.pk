@@ -48,7 +48,10 @@ class OrderAdminController extends Controller
         $orders->through(function (Order $o) {
             $o->created_at_human = $o->created_at?->format('M j, Y H:i');
             $ship = is_array($o->shipping_address_snapshot) ? $o->shipping_address_snapshot : [];
-            $o->customer_name = (string) ($o->user?->name ?? $ship['full_name'] ?? 'Guest');
+            // Prefer the recipient name typed at checkout (the shipping snapshot) over the
+            // logged-in account's profile name — staff placing orders for customers would
+            // otherwise show up as themselves instead of the actual recipient.
+            $o->customer_name = (string) ($ship['full_name'] ?? $o->user?->name ?? 'Guest');
             $o->customer_phone = (string) ($ship['phone'] ?? '');
 
             return $o;
@@ -119,7 +122,7 @@ class OrderAdminController extends Controller
                         fputcsv($out, [
                             $order->order_number,
                             $order->created_at?->format('Y-m-d H:i:s'),
-                            (string) ($order->user?->name ?? $ship['full_name'] ?? 'Guest'),
+                            (string) ($ship['full_name'] ?? $order->user?->name ?? 'Guest'),
                             (string) ($order->user?->email ?? $order->guest_email ?? ''),
                             (string) ($ship['phone'] ?? ''),
                             $order->status->value,
@@ -486,7 +489,9 @@ class OrderAdminController extends Controller
             if ((string) $shipment->tracking_number === '') {
                 continue;
             }
-            SyncShipmentTrackingJob::dispatch($shipment->id);
+            // Operator-initiated sync — force=true lets the service reconcile shipments
+            // that already sit in terminal Failed state (e.g. cancelled on the courier).
+            SyncShipmentTrackingJob::dispatch($shipment->id, true);
             $queued++;
         }
 
@@ -522,6 +527,10 @@ class OrderAdminController extends Controller
             ->timeout(45)
             ->withHeaders(['token' => $token])
             ->get($url, ['trackingNumbers' => $tracking]);
+
+        if ($res->status() === 404) {
+            abort(404, 'PostEx no longer has this shipment (tracking '.$tracking.'). It was likely cancelled on the PostEx portal. Go back to the order and click "Sync tracking" to refresh the local status.');
+        }
 
         abort_unless($res->successful(), 502, 'PostEx invoice PDF request failed. '.PostExHttpDiagnostics::summarizeFailedResponse($res));
 
@@ -574,6 +583,10 @@ class OrderAdminController extends Controller
             ->accept('application/pdf')
             ->asJson()
             ->post($url, $payload);
+
+        if ($res->status() === 404) {
+            abort(404, 'PostEx does not recognise one or more of these tracking numbers ('.implode(', ', $trackingNumbers).'). They may have been cancelled on the PostEx portal. Sync tracking on the affected shipments and try again.');
+        }
 
         abort_unless($res->successful(), 502, 'PostEx load sheet PDF request failed. '.PostExHttpDiagnostics::summarizeFailedResponse($res));
 

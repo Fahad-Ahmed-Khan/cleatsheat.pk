@@ -147,7 +147,7 @@ class OrderBulkAdminController extends Controller
                     continue;
                 }
 
-                SyncShipmentTrackingJob::dispatch($shipment->id);
+                SyncShipmentTrackingJob::dispatch($shipment->id, true);
                 $queued++;
             }
         }

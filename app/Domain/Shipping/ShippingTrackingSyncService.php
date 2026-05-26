@@ -15,7 +15,7 @@ class ShippingTrackingSyncService
         private readonly ShipmentStatusCustomerAlertService $customerAlerts,
     ) {}
 
-    public function syncShipment(Shipment $shipment): void
+    public function syncShipment(Shipment $shipment, bool $force = false): void
     {
         $shipment->load(['order', 'courier', 'courierAccount']);
 
@@ -24,7 +24,10 @@ class ShippingTrackingSyncService
             return;
         }
 
-        if (in_array($shipment->status, [ShipmentStatus::Delivered, ShipmentStatus::Canceled, ShipmentStatus::Failed], true)) {
+        // Skip terminal states for automatic/scheduled syncs to avoid courier flap. An
+        // operator-initiated sync passes $force=true so we can reconcile late updates
+        // (e.g. a Failed booking that's now been cancelled on the courier portal).
+        if (! $force && in_array($shipment->status, [ShipmentStatus::Delivered, ShipmentStatus::Canceled, ShipmentStatus::Failed], true)) {
             return;
         }
 

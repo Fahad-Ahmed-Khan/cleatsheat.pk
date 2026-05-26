@@ -6,6 +6,7 @@ use App\Domain\Payments\Contracts\PaymentGatewayInterface;
 use App\Domain\Payments\Gateways\CodGateway;
 use App\Domain\Payments\Gateways\EasypaisaGateway;
 use App\Domain\Payments\Gateways\JazzCashGateway;
+use App\Domain\Payments\Gateways\SafepayGateway;
 use InvalidArgumentException;
 
 class PaymentGatewayRegistry
@@ -17,8 +18,9 @@ class PaymentGatewayRegistry
         CodGateway $cod,
         EasypaisaGateway $easypaisa,
         JazzCashGateway $jazzCash,
+        SafepayGateway $safepay,
     ) {
-        foreach ([$cod, $easypaisa, $jazzCash] as $g) {
+        foreach ([$cod, $easypaisa, $jazzCash, $safepay] as $g) {
             $this->gateways[$g->code()] = $g;
         }
     }

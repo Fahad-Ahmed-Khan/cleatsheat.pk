@@ -23,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->validateCsrfTokens(except: [
             'payments/callback/*',
+            'webhooks/safepay',
             'webhooks/shipping/*',
             'webhooks/whatsapp',
         ]);

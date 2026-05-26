@@ -76,38 +76,21 @@ final class BargainEngine
 
             $label = $this->variantLabel($variant);
             $base = DeterministicShopkeeperReply::welcome($customerName, $variant->product->name, $label, $policy->listPrice, 'welcome:'.$session->id);
-            $text = $base;
-            if (filter_var(config('bargain.ai.enabled'), FILTER_VALIDATE_BOOLEAN)) {
-                $decision = new NegotiationDecision(
-                    allowedAction: 'welcome',
-                    targetShopOfferPkr: null,
-                    customerOfferPkr: null,
-                    derivedState: 'negotiating',
-                    listPricePkr: $policy->listPrice,
-                    currentShopOfferPkr: null,
-                    acceptedPricePkr: null,
-                    integrityFloorPkr: null,
-                );
-                $ai = $this->aiResponder->respond([], $decision, $base, 'roman_urdu');
-                if (trim($ai) !== '') {
-                    $text = $ai;
-                } else {
-                    $text = $this->polisher->polishShopkeeperWithContext(
-                        draftText: $base,
-                        contextMessages: [],
-                        facts: [
-                            'list_price' => $policy->listPrice,
-                            'current_offer' => null,
-                            'last_customer_offer' => null,
-                            'customer_name' => $customerName,
-                            'product_name' => (string) $variant->product->name,
-                            'variant_label' => $label,
-                            'color_name' => (string) ($variant->color?->name ?? ''),
-                        ],
-                        languageHint: 'roman_urdu',
-                    );
-                }
-            }
+            $text = $this->naturalizeShopReply(
+                draftText: $base,
+                contextMessages: [],
+                facts: [
+                    'list_price' => $policy->listPrice,
+                    'current_offer' => null,
+                    'last_customer_offer' => null,
+                    'customer_name' => $customerName,
+                    'product_name' => (string) $variant->product->name,
+                    'variant_label' => $label,
+                    'color_name' => (string) ($variant->color?->name ?? ''),
+                ],
+                languageHint: 'roman_urdu',
+                pricingCritical: false,
+            );
 
             BargainMessage::query()->create([
                 'bargain_session_id' => $session->id,
@@ -301,13 +284,52 @@ final class BargainEngine
 
             if (in_array($intentDetected['type'], ['ask_discount', 'ask_best_price'], true)) {
                 $stateKey = (new NegotiationStateManager)->deriveState($session, $intentDetected['type']);
+                $shopLine = $session->current_offer !== null ? (string) $session->current_offer : null;
+                $lastCustomer = $pkg['last_customer_offer'];
+
+                if ($shopLine !== null && $lastCustomer !== null && $lastCustomer !== '') {
+                    $fallback = DeterministicShopkeeperReply::discountWithActiveNegotiation(
+                        $lastCustomer,
+                        $shopLine,
+                        $policy->listPrice,
+                        $seedTail.':disc_active',
+                        $avoid,
+                    );
+                    $facts = $this->mergeNegotiationFacts([
+                        'list_price' => $policy->listPrice,
+                        'current_offer' => $shopLine,
+                        'last_customer_offer' => $lastCustomer,
+                        'customer_name' => $session->customer_name ?? null,
+                        'product_name' => (string) $variant->product->name,
+                        'variant_label' => $this->variantLabel($variant),
+                        'color_name' => (string) ($variant->color?->name ?? ''),
+                    ], NegotiationState::fromConversation($session, $msgs, $lastCustomer, $shopLine), $pkg['assistant_phrases'], null);
+                    $text = $this->naturalizeShopReply(
+                        draftText: $fallback,
+                        contextMessages: $pkg['context'],
+                        facts: $facts,
+                        languageHint: $pkg['language_hint'],
+                        pricingCritical: true,
+                    );
+
+                    return BargainMessage::query()->create([
+                        'bargain_session_id' => $session->id,
+                        'role' => 'assistant',
+                        'body' => $text,
+                        'meta' => [
+                            'kind' => 'intent_discount',
+                            'list_price' => $policy->listPrice,
+                        ],
+                    ]);
+                }
+
                 $decision = new NegotiationDecision(
                     allowedAction: 'casual_reply',
-                    targetShopOfferPkr: $session->current_offer !== null ? (string) $session->current_offer : null,
-                    customerOfferPkr: null,
+                    targetShopOfferPkr: $shopLine,
+                    customerOfferPkr: $lastCustomer,
                     derivedState: $stateKey,
                     listPricePkr: $policy->listPrice,
-                    currentShopOfferPkr: $session->current_offer !== null ? (string) $session->current_offer : null,
+                    currentShopOfferPkr: $shopLine,
                     acceptedPricePkr: $session->accepted_price !== null ? (string) $session->accepted_price : null,
                     integrityFloorPkr: $session->customer_integrity_floor !== null ? (string) $session->customer_integrity_floor : null,
                 );
@@ -315,11 +337,13 @@ final class BargainEngine
                 $fallback = DeterministicShopkeeperReply::askDiscountOrBestPrice(
                     $intentDetected['type'] === 'ask_best_price',
                     $policy->listPrice,
-                    $session->current_offer !== null ? (string) $session->current_offer : null,
+                    $shopLine,
                     $seedTail.':disc',
                     $avoid,
                 );
-                $text = trim($aiText) !== '' ? $aiText : $this->polisher->polishShopkeeperWithContext($fallback, $pkg['context'], [], $pkg['language_hint']);
+                $text = trim($aiText) !== ''
+                    ? $aiText
+                    : $this->naturalizeShopReply($fallback, $pkg['context'], [], $pkg['language_hint'], false);
 
                 return BargainMessage::query()->create([
                     'bargain_session_id' => $session->id,
@@ -522,25 +546,13 @@ final class BargainEngine
                     'variant_label' => $this->variantLabel($variant),
                     'color_name' => (string) ($variant->color?->name ?? ''),
                 ], $state, $pkg['assistant_phrases'], null);
-                $decision = new NegotiationDecision(
-                    allowedAction: 'counter',
-                    targetShopOfferPkr: $counter,
-                    customerOfferPkr: $stated,
-                    derivedState: (new NegotiationStateManager)->deriveState($session, 'offer'),
-                    listPricePkr: $policy->listPrice,
-                    currentShopOfferPkr: $session->current_offer !== null ? (string) $session->current_offer : null,
-                    acceptedPricePkr: $session->accepted_price !== null ? (string) $session->accepted_price : null,
-                    integrityFloorPkr: $session->customer_integrity_floor !== null ? (string) $session->customer_integrity_floor : null,
+                $text = $this->naturalizeShopReply(
+                    draftText: $base,
+                    contextMessages: $pkg['context'],
+                    facts: $facts,
+                    languageHint: $pkg['language_hint'],
+                    pricingCritical: true,
                 );
-                $aiText = $this->aiResponder->respond($pkg['context'], $decision, $message, $pkg['language_hint']);
-                $text = trim($aiText) !== ''
-                    ? $aiText
-                    : $this->polisher->polishShopkeeperWithContext(
-                        draftText: $base,
-                        contextMessages: $pkg['context'],
-                        facts: $facts,
-                        languageHint: $pkg['language_hint'],
-                    );
 
                 return BargainMessage::query()->create([
                     'bargain_session_id' => $session->id,
@@ -613,25 +625,13 @@ final class BargainEngine
                 'variant_label' => $this->variantLabel($variant),
                 'color_name' => (string) ($variant->color?->name ?? ''),
             ], $state, $pkg['assistant_phrases'], null);
-            $decision = new NegotiationDecision(
-                allowedAction: 'finalize',
-                targetShopOfferPkr: $nudged,
-                customerOfferPkr: $offer,
-                derivedState: (new NegotiationStateManager)->deriveState($session, 'offer'),
-                listPricePkr: $policy->listPrice,
-                currentShopOfferPkr: $session->current_offer !== null ? (string) $session->current_offer : null,
-                acceptedPricePkr: $session->accepted_price !== null ? (string) $session->accepted_price : null,
-                integrityFloorPkr: $session->customer_integrity_floor !== null ? (string) $session->customer_integrity_floor : null,
+            $text = $this->naturalizeShopReply(
+                draftText: $base,
+                contextMessages: $pkg['context'],
+                facts: $facts,
+                languageHint: $pkg['language_hint'],
+                pricingCritical: true,
             );
-            $aiText = $this->aiResponder->respond($pkg['context'], $decision, $message, $pkg['language_hint']);
-            $text = trim($aiText) !== ''
-                ? $aiText
-                : $this->polisher->polishShopkeeperWithContext(
-                    draftText: $base,
-                    contextMessages: $pkg['context'],
-                    facts: $facts,
-                    languageHint: $pkg['language_hint'],
-                );
 
             return BargainMessage::query()->create([
                 'bargain_session_id' => $session->id,
@@ -1126,5 +1126,44 @@ final class BargainEngine
 
         return $signals->sameOfferStreakAtEnd >= $streakNeed
             && (int) $session->concession_count >= $minCons;
+    }
+
+    /**
+     * @param  array<int, array{role:string, body:string}>  $contextMessages
+     * @param  array<string, mixed>  $facts
+     * @param  'roman_urdu'|'english'|'mixed'  $languageHint
+     */
+    private function naturalizeShopReply(
+        string $draftText,
+        array $contextMessages,
+        array $facts,
+        string $languageHint,
+        bool $pricingCritical,
+    ): string {
+        // Pricing turns use deterministic drafts + light polish so counters are never dropped.
+        if ($pricingCritical) {
+            return $this->polisher->polishShopkeeperWithContext(
+                draftText: $draftText,
+                contextMessages: $contextMessages,
+                facts: $facts,
+                languageHint: $languageHint,
+            );
+        }
+
+        if (! filter_var(config('bargain.ai.enabled'), FILTER_VALIDATE_BOOLEAN)) {
+            return $this->polisher->polishShopkeeperWithContext(
+                draftText: $draftText,
+                contextMessages: $contextMessages,
+                facts: $facts,
+                languageHint: $languageHint,
+            );
+        }
+
+        return $this->polisher->polishShopkeeperWithContext(
+            draftText: $draftText,
+            contextMessages: $contextMessages,
+            facts: $facts,
+            languageHint: $languageHint,
+        );
     }
 }

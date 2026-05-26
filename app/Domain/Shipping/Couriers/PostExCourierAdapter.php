@@ -169,6 +169,17 @@ class PostExCourierAdapter extends AbstractCourierAdapter
             $this->logger->log($courier, $account, $shipment, 'poll', $url, $response->status(), ['trackingNumber' => $tracking], $body, null);
 
             if (! $response->successful()) {
+                // PostEx returns 404 when the tracking number is no longer in their system
+                // (most commonly because the booking was cancelled on the PostEx portal).
+                // Treat that as a Canceled shipment so we can reconcile local state.
+                if ($response->status() === 404) {
+                    return new TrackingResult(
+                        status: ShipmentStatus::Canceled,
+                        raw: $body,
+                        publicMessage: 'Shipment cancelled or removed on PostEx (tracking number not found).',
+                    );
+                }
+
                 return new TrackingResult(status: $shipment->status, raw: $body, publicMessage: (string) ($body['statusMessage'] ?? 'PostEx HTTP error'));
             }
 
@@ -210,6 +221,7 @@ class PostExCourierAdapter extends AbstractCourierAdapter
         return match (true) {
             str_contains($s, 'deliver') => ShipmentStatus::Delivered,
             str_contains($s, 'transit') || str_contains($s, 'picked') => ShipmentStatus::InTransit,
+            str_contains($s, 'cancel') || str_contains($s, 'void') => ShipmentStatus::Canceled,
             str_contains($s, 'return') => ShipmentStatus::Failed,
             str_contains($s, 'fail') => ShipmentStatus::Failed,
             default => ShipmentStatus::Booked,

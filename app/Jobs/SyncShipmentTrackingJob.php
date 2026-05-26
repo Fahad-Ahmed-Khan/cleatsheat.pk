@@ -19,6 +19,7 @@ class SyncShipmentTrackingJob implements ShouldQueue
 
     public function __construct(
         public int $shipmentId,
+        public bool $force = false,
     ) {}
 
     public function handle(ShippingTrackingSyncService $sync): void
@@ -29,7 +30,7 @@ class SyncShipmentTrackingJob implements ShouldQueue
         }
 
         try {
-            $sync->syncShipment($shipment);
+            $sync->syncShipment($shipment, $this->force);
         } catch (\Throwable $e) {
             Log::notice('shipping.track_sync_failed', [
                 'shipment_id' => $this->shipmentId,

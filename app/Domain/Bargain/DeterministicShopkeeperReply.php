@@ -53,6 +53,27 @@ final class DeterministicShopkeeperReply
         return self::pickAvoiding($variants, $seedMaterial.':ask', $avoidSnippets);
     }
 
+    /**
+     * Customer asked for discount while negotiation is already in progress.
+     *
+     * @param  list<string>  $avoidSnippets
+     */
+    public static function discountWithActiveNegotiation(
+        string $customerOffer,
+        string $shopLine,
+        string $listPrice,
+        string $seedMaterial,
+        array $avoidSnippets = [],
+    ): string {
+        $variants = [
+            "Haan thora adjust ho sakta hai — aap PKR {$customerOffer} pe thay, meri line ab PKR {$shopLine} hai (list PKR {$listPrice}).\n\nIsi ke around close kar lein?",
+            "Discount margin tight hai is pair pe. Aapka PKR {$customerOffer}, mera best ab PKR {$shopLine}.\n\nThora sa upar aayein to deal ho jaye gi.",
+            "PKR {$customerOffer} note hai. Shop side PKR {$shopLine} tak aa chuka hun (list PKR {$listPrice}).\n\nAap confirm kar dein agar theek ho.",
+        ];
+
+        return self::pickAvoiding($variants, $seedMaterial.':disc_active', $avoidSnippets);
+    }
+
     public static function askDiscountOrBestPrice(
         bool $askBest,
         string $listPrice,
@@ -211,6 +232,14 @@ final class DeterministicShopkeeperReply
                 "Yar same PKR {$customerOffer} dubara — scene thora mushkil hai 😄\n\nPKR {$counterOffer} tak best de sakta hun.",
                 "Dekho PKR {$customerOffer} pe phir aa gaye.\n\nPKR {$counterOffer} realistic line hai meri side se.",
                 "Samajh raha hun PKR {$customerOffer} repeat ho raha hai.\n\nPKR {$counterOffer} pe aa jayein, warna stuck ho jaye ga.",
+            ];
+        }
+
+        if ($signals->customerIsProgressing && count($signals->customerOfferAmountsChronological) >= 2) {
+            $pools[] = [
+                "Acha PKR {$customerOffer} tak aa gaye — improvement hai 😄\n\nPKR {$counterOffer} pe close kar lein?",
+                "Theek hai PKR {$customerOffer} note kiya, upar aa rahe ho.\n\nMeri line PKR {$counterOffer} hai — isi pe deal try karte hain.",
+                "PKR {$customerOffer} better hai pehle se.\n\nPKR {$counterOffer} final side se — confirm kar dein agar theek ho.",
             ];
         }
 

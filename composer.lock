@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "c3e6de480fbc16366b6574f8b291c48e",
+    "content-hash": "951cd3c4540b04dd719dd06d4ea3e128",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -977,6 +977,54 @@
                 }
             ],
             "time": "2025-12-03T09:33:47+00:00"
+        },
+        {
+            "name": "getsafepay/sfpy-php",
+            "version": "v0.0.21",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/getsafepay/sfpy-php.git",
+                "reference": "abeda39ab6e96f00a2eb09148cb5acf7dd170eef"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/getsafepay/sfpy-php/zipball/abeda39ab6e96f00a2eb09148cb5acf7dd170eef",
+                "reference": "abeda39ab6e96f00a2eb09148cb5acf7dd170eef",
+                "shasum": ""
+            },
+            "require": {
+                "ext-curl": "*",
+                "ext-json": "*",
+                "ext-mbstring": "*",
+                "php": ">=5.6.0"
+            },
+            "require-dev": {
+                "friendsofphp/php-cs-fixer": "3.5.0",
+                "phpstan/phpstan": "^1.2",
+                "phpunit/phpunit": "^5.7 || ^9.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Safepay\\": "lib/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Safepay",
+                    "email": "integrations@getsafepay.com"
+                }
+            ],
+            "description": "Safepay PHP Library",
+            "support": {
+                "issues": "https://github.com/getsafepay/sfpy-php/issues",
+                "source": "https://github.com/getsafepay/sfpy-php/tree/v0.0.21"
+            },
+            "time": "2025-07-28T08:53:55+00:00"
         },
         {
             "name": "graham-campbell/result-type",

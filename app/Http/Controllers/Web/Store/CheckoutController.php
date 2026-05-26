@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use InvalidArgumentException;
+use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
 class CheckoutController extends Controller
 {
@@ -90,7 +91,7 @@ class CheckoutController extends Controller
         ]);
     }
 
-    public function store(CheckoutStoreRequest $request): RedirectResponse
+    public function store(CheckoutStoreRequest $request): RedirectResponse|HttpResponse
     {
         $cart = $this->cartService->getOrCreateCart($request->user(), $request);
         if ($cart->items()->doesntExist()) {
@@ -113,6 +114,14 @@ class CheckoutController extends Controller
 
         $init = $placement->paymentInit;
         if ($init !== null && $init->redirectUrl !== null && $init->redirectUrl !== '') {
+            // Inertia intercepts plain redirect()->away() as an XHR follow, which fails
+            // for cross-origin gateway URLs (Safepay) because of CORS. Inertia::location
+            // returns the 409 + X-Inertia-Location header that triggers a real browser
+            // navigation, and falls back gracefully for non-Inertia callers.
+            if ($request->header('X-Inertia')) {
+                return Inertia::location($init->redirectUrl);
+            }
+
             return redirect()->away($init->redirectUrl);
         }
 

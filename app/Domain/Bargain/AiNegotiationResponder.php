@@ -70,10 +70,14 @@ final class AiNegotiationResponder
             '- Never go below the allowed shop offer / locked price.',
             '- Never renegotiate after the deal is locked/accepted.',
             '- Never mention internal floors/margins/policy.',
-            '- Avoid robotic repetition; do NOT keep saying the same opener (e.g. avoid repeating "Samajh gaya").',
+            '- When allowed_action is counter or finalize and target_shop_offer is set, you MUST clearly state that shop price (PKR with two decimals). Do NOT reply with only the list price.',
+            '- Acknowledge the customer’s latest amount when customer_offer is set (e.g. "PKR X thora low hai" / "PKR X note kiya").',
+            '- If the customer increased their amount vs earlier messages, acknowledge the move briefly before your line.',
+            '- Avoid robotic repetition; rotate openers — do NOT keep saying "Samajh gaya", "Mujhe samajh aata hai", or "sirf PKR … hai".',
+            '- Never ask "is price par le sakte hain?" when you have not offered a lower shop price yet.',
             '- Do not quit too quickly: if customer says "no/nahi" but didn’t cancel, ask what price would work and try to close with a small friendly push (within allowed action/price constraints).',
             '- Don’t repeatedly ask for budget if the customer already gave a number.',
-            'Style: friendly, natural, sometimes light humor; keep under ~60 words; plain text only.',
+            'Style: friendly stall-owner, not corporate sales bot; keep under ~55 words; plain text only.',
         ]);
     }
 
@@ -99,8 +103,17 @@ final class AiNegotiationResponder
             $ctx[] = strtoupper($role).': '.$body;
         }
 
+        $actionHint = match ($d->allowedAction) {
+            'counter', 'finalize' => 'Reply must include target_shop_offer as your shop price. Mention customer_offer if set.',
+            'needs_amount' => 'Ask for a PKR number once; do not lecture about list price only.',
+            'welcome' => 'Greet briefly, mention list price, ask their budget — no hard sell.',
+            default => 'Stay on-topic; do not repeat the same line as your last assistant message.',
+        };
+
         return implode("\n", [
             'LANGUAGE_HINT: '.$languageHint,
+            '',
+            'ACTION_HINT: '.$actionHint,
             '',
             'STATE:',
             'derived_state='.$d->derivedState,
@@ -190,16 +203,12 @@ final class AiNegotiationResponder
 
     private function isValidOutput(string $text, NegotiationDecision $d): bool
     {
-        // If session is locked, disallow negotiation language changes via numbers.
-        if ($d->derivedState === 'locked' && preg_match('/\b(counter|offer|kam|reduce|less)\b/i', $text) === 1) {
-            // Still allow “guide to checkout”, but don’t hard-block—only block if it mentions numbers not allowed.
-        }
-
         $allowed = array_values(array_unique(array_filter([
             $d->listPricePkr,
             $d->currentShopOfferPkr,
             $d->targetShopOfferPkr,
             $d->acceptedPricePkr,
+            $d->customerOfferPkr,
         ], fn ($v) => is_string($v) && $v !== '')));
 
         $found = $this->extractMentionedPkrAmounts($text);
@@ -209,7 +218,49 @@ final class AiNegotiationResponder
             }
         }
 
+        $target = $d->targetShopOfferPkr;
+        if (in_array($d->allowedAction, ['counter', 'finalize'], true)
+            && is_string($target)
+            && $target !== '') {
+            if (! in_array($target, $found, true)) {
+                return false;
+            }
+
+            $list = $d->listPricePkr;
+            if (bccomp($target, $list, 2) === -1 && $found !== []) {
+                $nonList = array_values(array_filter($found, fn (string $p) => $p !== $list));
+                if ($nonList === []) {
+                    return false;
+                }
+            }
+        }
+
+        if ($this->containsBannedRoboticPhrases($text)) {
+            return false;
+        }
+
         return true;
+    }
+
+    private function containsBannedRoboticPhrases(string $text): bool
+    {
+        $t = mb_strtolower($text);
+        $banned = [
+            'mujhe samajh aata hai',
+            'i understand your budget',
+            'considering the listed price',
+            'great investment',
+            'happy shopping',
+            'zaroor pasand aayenge',
+            'unbeatable',
+        ];
+        foreach ($banned as $phrase) {
+            if (str_contains($t, $phrase)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

@@ -117,6 +117,44 @@ class BargainPricingTest extends TestCase
         $this->assertStringNotContainsStringIgnoringCase('listed price', $body);
     }
 
+    public function test_counter_reply_includes_shop_offer_when_ai_enabled(): void
+    {
+        Config::set('bargain.ai.enabled', true);
+        Config::set('bargain.ai.api_key', 'test-key');
+        Config::set('bargain.counter.concession.enabled', false);
+        Config::set('bargain.counter.min_step', 100);
+
+        $this->seed(DemoCatalogSeeder::class);
+
+        $variant = ProductVariant::query()->where('sku', 'URB-BLK-001')->firstOrFail();
+        $variant->update([
+            'bargain_enabled' => true,
+            'bargain_min_price' => '11300.00',
+            'bargain_max_discount_percent' => '10.00',
+            'price' => '12999.00',
+        ]);
+
+        $phone = '+923001234567';
+
+        $start = $this->postJson('/api/v1/bargain/sessions', [
+            'product_variant_id' => $variant->id,
+            'customer_name' => 'Fahad',
+            'customer_phone' => $phone,
+        ]);
+        $sessionId = (int) $start->json('data.session.id');
+
+        $msg = $this->postJson("/api/v1/bargain/sessions/{$sessionId}/messages", [
+            'customer_phone' => $phone,
+            'message' => 'Mera budget 6000',
+        ]);
+        $msg->assertOk();
+        $counter = (string) $msg->json('data.assistant_message.meta.counter_offer');
+        $body = (string) $msg->json('data.assistant_message.body');
+        $this->assertNotSame('', $counter);
+        $this->assertStringContainsString('PKR '.$counter, $body);
+        $this->assertStringNotContainsStringIgnoringCase('sirf PKR 12999', $body);
+    }
+
     public function test_stepped_counter_moves_down_from_list_each_message(): void
     {
         Config::set('bargain.counter.concession.enabled', false);
