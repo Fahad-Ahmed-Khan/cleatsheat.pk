@@ -12,6 +12,15 @@ Set your domain's **Document Root** to Laravel's `public/` directory:
 - Preferred: `~/apps/tryino-ecom/public`
 - Fallback: `~/public_html/tryino-ecom/public`
 
+### If you cannot change Document Root (403 on `/`, works only on `/public`)
+
+Clone/deploy the **full Laravel repo** into `public_html` (or your domain folder). The repo includes a **root** [`.htaccess`](../../.htaccess) that:
+
+- routes all requests into `public/` internally
+- 301-redirects `/public/...` and `/public/index.php` to `/...`
+
+After deploy, open `https://your-domain/` (not `/public`). If you still see 403, confirm `mod_rewrite` is enabled and that `public/.htaccess` exists.
+
 ## 2) Hostinger: allow GitHub repo access (deploy key)
 
 On Hostinger (SSH):
