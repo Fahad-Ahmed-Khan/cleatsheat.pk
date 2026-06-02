@@ -23,7 +23,7 @@ php artisan down --render="errors::503" --retry=60 || true
 git fetch --all --prune
 git reset --hard "origin/${BRANCH}"
 
-composer install --no-dev --optimize-autoloader --no-interaction --no-progress
+composer install --no-dev --optimize-autoloader --no-interaction --no-progress --ignore-platform-reqs
 
 php artisan migrate --force
 
