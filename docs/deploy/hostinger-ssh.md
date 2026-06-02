@@ -98,14 +98,44 @@ Private key value:
 cat ~/.ssh/tryino_ecom_deploy
 ```
 
-## 6) Deploy
+## 6) Build frontend assets (Vite) — required
 
-Push to `main`. GitHub Actions will:
-- install dependencies
-- run `php artisan test`
+Laravel expects `public/build/manifest.json`. That folder is **not** in git (see `.gitignore`).
+
+### Quick fix (one time, manual)
+
+On your PC:
+
+```bash
+npm ci
+npm run build
+```
+
+Upload the entire `public/build/` folder to the server at:
+
+`.../public_html/public/build/`  
+(so `manifest.json` exists at `public_html/public/build/manifest.json`)
+
+### Automatic (recommended)
+
+GitHub Actions runs `npm run build` and copies `public/build` to Hostinger before `deploy.sh` runs. Ensure workflow secrets are set (section 5).
+
+### On-server build (only if Node is available over SSH)
+
+```bash
+cd ~/domains/your-domain/public_html
+npm ci
+npm run build
+```
+
+## 7) Deploy
+
+Push to `master`. GitHub Actions will:
+- install PHP dependencies and run tests
+- run `npm run build` and upload `public/build` to the server
 - SSH into Hostinger and run `bash ./deploy.sh`
 
-## 7) Scheduler (optional)
+## 8) Scheduler (optional)
 
 If you use Laravel Scheduler, set a Hostinger cron:
 
@@ -113,7 +143,7 @@ If you use Laravel Scheduler, set a Hostinger cron:
 * * * * * php /home/<user>/apps/tryino-ecom/artisan schedule:run >> /dev/null 2>&1
 ```
 
-## 8) Rollback (manual, basic)
+## 9) Rollback (manual, basic)
 
 On Hostinger:
 

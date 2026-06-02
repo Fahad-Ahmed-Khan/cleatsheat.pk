@@ -25,6 +25,19 @@ git reset --hard "origin/${BRANCH}"
 
 composer install --no-dev --optimize-autoloader --no-interaction --no-progress --ignore-platform-reqs
 
+if [ ! -f public/build/manifest.json ]; then
+  if command -v npm >/dev/null 2>&1; then
+    echo "Building frontend assets (Vite)..."
+    npm ci --no-audit --no-fund
+    npm run build
+  else
+    echo "ERROR: public/build/manifest.json is missing."
+    echo "Run 'npm ci && npm run build' locally, upload public/build to the server,"
+    echo "or deploy via GitHub Actions (builds assets before SSH deploy)."
+    exit 1
+  fi
+fi
+
 php artisan migrate --force
 
 php artisan optimize:clear
