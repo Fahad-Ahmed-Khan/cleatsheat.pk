@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BRANCH="${DEPLOY_BRANCH:-main}"
+BRANCH="${DEPLOY_BRANCH:-master}"
 
 if [ ! -f artisan ]; then
   echo "ERROR: artisan not found. Run this from your Laravel project root."
