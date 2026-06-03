@@ -7,5 +7,9 @@ import { bootInertiaApp } from './inertia/createInertia';
 initStoreTheme();
 
 bootInertiaApp({
-    pageGlob: import.meta.glob('./Pages/**/*.vue'),
+    pageGlob: import.meta.glob([
+        './Pages/Store/**/*.vue',
+        './Pages/Auth/**/*.vue',
+        './Pages/Profile/**/*.vue',
+    ]),
 });

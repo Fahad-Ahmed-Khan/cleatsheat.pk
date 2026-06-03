@@ -104,12 +104,14 @@ Laravel expects `public/build/manifest.json`. That folder is **not** in git (see
 
 ### Quick fix (one time, manual)
 
-On your PC:
+On your PC (install deps first — fixes `'vite' is not recognized`):
 
 ```bash
-npm ci
-npm run build
+npm install
+npm run build:store
 ```
+
+`build:store` builds the **shop** only. `npm run build` builds shop + admin (admin assets live in `resources/vendor/admin-theme/`).
 
 Upload the entire `public/build/` folder to the server at:
 

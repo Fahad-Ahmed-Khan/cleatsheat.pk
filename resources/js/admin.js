@@ -1,5 +1,5 @@
 import '../css/admin.scss';
-import '../../vue-admin-design/resources/assets/vendor/fonts/iconify/iconify.css';
+import '../vendor/admin-theme/fonts/iconify/iconify.css';
 import 'sweetalert2/dist/sweetalert2.min.css';
 
 import 'bootstrap';
@@ -15,7 +15,7 @@ import { bootInertiaApp } from './inertia/createInertia';
 initAdminTheme();
 
 bootInertiaApp({
-    pageGlob: import.meta.glob('./Pages/**/*.vue'),
+    pageGlob: import.meta.glob('./Pages/Admin/**/*.vue'),
     progressColor: '#6366F1',
 });
 

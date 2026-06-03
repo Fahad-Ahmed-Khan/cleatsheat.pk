@@ -4,10 +4,13 @@ import { createApp, h } from 'vue';
 import { ZiggyVue } from '../../../vendor/tightenco/ziggy';
 
 export function bootInertiaApp({
-    pageGlob = import.meta.glob('../Pages/**/*.vue'),
+    pageGlob,
     appName = import.meta.env.VITE_APP_NAME || 'Laravel',
     progressColor = '#4B5563',
 } = {}) {
+    if (!pageGlob) {
+        throw new Error('bootInertiaApp requires a pageGlob from app.js or admin.js');
+    }
     return createInertiaApp({
         title: (title) => `${title} - ${appName}`,
         resolve: (name) => {

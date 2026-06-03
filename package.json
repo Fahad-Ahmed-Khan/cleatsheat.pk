@@ -3,8 +3,9 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build": "vite build",
-        "dev": "vite"
+        "build": "npx vite build",
+        "build:store": "npx vite build --config vite.store.config.js",
+        "dev": "npx vite"
     },
     "devDependencies": {
         "@inertiajs/vue3": "^2.0.0",

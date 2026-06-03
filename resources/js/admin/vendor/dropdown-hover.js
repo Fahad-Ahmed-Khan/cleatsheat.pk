@@ -1,2 +1,2 @@
-import '../../../../vue-admin-design/resources/assets/vendor/js/dropdown-hover.js';
+import '../../../vendor/admin-theme/js/dropdown-hover.js';
 

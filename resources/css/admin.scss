@@ -7,7 +7,7 @@
 // If later we copy fonts into `public/admin-assets/fonts`, we can point theme variables here.
 $asset-path: "/admin-assets" !default;
 
-@import "../../vue-admin-design/resources/assets/vendor/scss/core.scss";
+@import "../vendor/admin-theme/scss/core.scss";
 
 // ---- Admin menu stability overrides (Inertia + vendor menu)
 // Prevent hover/active styles from causing layout shifts (e.g. borders/font-weight changes).

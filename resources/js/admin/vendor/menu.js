@@ -1,4 +1,4 @@
-import { Menu as VendorMenu } from '../../../../vue-admin-design/resources/assets/vendor/js/menu.js';
+import { Menu as VendorMenu } from '../../../vendor/admin-theme/js/menu.js';
 
 function safeRemove(node) {
     if (!node) return;
