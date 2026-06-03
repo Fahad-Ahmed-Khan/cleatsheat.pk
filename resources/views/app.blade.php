@@ -1,4 +1,9 @@
 <!DOCTYPE html>
+@php
+    use App\Support\Seo\LcpPreloadUrl;
+    $lcpImage = isset($page) && is_array($page) ? LcpPreloadUrl::fromInertiaPage($page) : null;
+    $appOrigin = rtrim((string) config('app.url'), '/');
+@endphp
 <html lang="{{ config('app.html_lang', 'en-PK') }}">
     <head>
         <meta charset="utf-8">
@@ -6,6 +11,13 @@
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
+
+        @if ($appOrigin !== '')
+            <link rel="preconnect" href="{{ $appOrigin }}" crossorigin>
+        @endif
+        @if ($lcpImage)
+            <link rel="preload" as="image" href="{{ $lcpImage }}" fetchpriority="high">
+        @endif
 
         <!-- Fonts (loaded async so they don't block first render; text uses fallback then swaps) -->
         @php

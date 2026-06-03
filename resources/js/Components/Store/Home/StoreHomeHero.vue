@@ -35,15 +35,7 @@ const primaryLabel = computed(() => {
     return 'Shop all boots';
 });
 
-const heroStyle = computed(() => {
-    const url = props.hero?.image_url;
-    if (!url) return {};
-    return {
-        backgroundImage: `linear-gradient(to top, rgba(10,11,11,0.88), rgba(10,11,11,0.45), transparent), url("${url}")`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-    };
-});
+const heroImageUrl = computed(() => props.hero?.image_url || null);
 
 function stagger(i) {
     if (prefersReducedMotion.value) return {};
@@ -57,17 +49,25 @@ function stagger(i) {
 
 <template>
     <section class="relative overflow-hidden bg-stadium-inverse store-pitch-pattern">
-        <div
-            class="absolute inset-0 bg-cover bg-center"
-            :style="hero.image_url ? heroStyle : {}"
-        >
+        <div class="absolute inset-0">
+            <img
+                v-if="heroImageUrl"
+                :src="heroImageUrl"
+                alt=""
+                aria-hidden="true"
+                width="1920"
+                height="1080"
+                class="h-full w-full object-cover object-center"
+                fetchpriority="high"
+                decoding="async"
+            >
             <div
-                v-if="!hero.image_url"
+                v-else
                 class="absolute inset-0 bg-[linear-gradient(135deg,#0a0b0b_0%,#1a1c1c_45%,#414c00_100%)]"
             />
             <div class="absolute inset-0 bg-gradient-to-t from-stadium-inverse via-stadium-inverse/70 to-stadium-inverse/30" />
             <div
-                v-if="hero.image_url"
+                v-if="heroImageUrl"
                 class="pointer-events-none absolute inset-0 bg-black/25 dark:bg-transparent"
                 aria-hidden="true"
             />

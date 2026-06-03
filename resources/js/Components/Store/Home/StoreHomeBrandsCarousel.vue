@@ -11,6 +11,8 @@ const { prefersReducedMotion } = useReducedMotion();
 
 const trackRef = ref(null);
 let scrollTimer = null;
+/** Cached scroll step to avoid layout reads on every auto-scroll tick. */
+let cachedScrollStep = 120;
 
 const items = computed(() =>
     (props.brands ?? []).filter((b) => b?.slug && (b.logo_url || b.name)),
@@ -24,11 +26,17 @@ function brandInitial(name) {
     return String(name ?? '?').trim().charAt(0).toUpperCase();
 }
 
+function measureScrollStep() {
+    const el = trackRef.value;
+    if (!el) return;
+    const card = el.querySelector('[data-brand-card]');
+    cachedScrollStep = card ? card.offsetWidth + 12 : 120;
+}
+
 function scrollStep() {
     const el = trackRef.value;
     if (!el || prefersReducedMotion.value) return;
-    const card = el.querySelector('[data-brand-card]');
-    const step = card ? card.offsetWidth + 12 : 120;
+    const step = cachedScrollStep;
     const max = el.scrollWidth - el.clientWidth;
     if (max <= 0) return;
     const next = el.scrollLeft + step;
@@ -46,7 +54,12 @@ function stopAutoScroll() {
     scrollTimer = null;
 }
 
-onMounted(() => startAutoScroll());
+onMounted(() => {
+    requestAnimationFrame(() => {
+        measureScrollStep();
+        startAutoScroll();
+    });
+});
 
 onUnmounted(() => stopAutoScroll());
 </script>

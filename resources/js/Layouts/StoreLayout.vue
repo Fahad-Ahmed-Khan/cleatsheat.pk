@@ -119,7 +119,7 @@ onUnmounted(() => {
                             :alt="appName"
                             width="140"
                             height="36"
-                            fetchpriority="high"
+                            fetchpriority="low"
                             class="h-8 w-auto max-w-[140px] object-contain object-left dark:hidden md:h-9"
                         />
                         <img
@@ -128,7 +128,7 @@ onUnmounted(() => {
                             :alt="appName"
                             width="140"
                             height="36"
-                            fetchpriority="high"
+                            fetchpriority="low"
                             class="hidden h-8 w-auto max-w-[140px] object-contain object-left dark:block md:h-9"
                         />
                         <img
@@ -137,7 +137,7 @@ onUnmounted(() => {
                             :alt="appName"
                             width="140"
                             height="36"
-                            fetchpriority="high"
+                            fetchpriority="low"
                             class="hidden h-8 w-auto max-w-[140px] object-contain object-left dark:block md:h-9"
                         />
                     </template>

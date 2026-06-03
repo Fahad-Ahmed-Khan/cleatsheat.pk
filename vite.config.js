@@ -28,6 +28,9 @@ export default defineConfig({
                     if (/node_modules\/(@vue|vue|@inertiajs|ziggy-js)\//.test(norm)) {
                         return 'vendor';
                     }
+                    if (/node_modules\/(apexcharts|@svgdotjs)\//.test(norm)) {
+                        return 'charts';
+                    }
                     return undefined;
                 },
             },

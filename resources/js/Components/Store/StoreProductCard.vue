@@ -31,6 +31,9 @@ const props = defineProps({
 
     index: { type: Number, default: 0 },
 
+    /** When true, image loads eagerly (above-the-fold / LCP candidates). */
+    eagerImage: { type: Boolean, default: false },
+
 });
 
 
@@ -233,7 +236,9 @@ function onQuickAdd(e) {
 
                     :class="hoverImage(product) && imageHover ? 'opacity-0' : 'opacity-100 group-hover:scale-[1.03]'"
 
-                    loading="lazy"
+                    :loading="eagerImage ? 'eager' : 'lazy'"
+
+                    :fetchpriority="eagerImage && index === 0 ? 'high' : undefined"
 
                     decoding="async"
 

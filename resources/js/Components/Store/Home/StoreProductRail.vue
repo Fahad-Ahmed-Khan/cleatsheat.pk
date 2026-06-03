@@ -67,7 +67,7 @@ const motionProps = computed(() =>
                         :key="p.id"
                         class="w-[min(72vw,280px)] shrink-0 snap-start md:w-auto"
                     >
-                        <StoreProductCard :product="p" :index="i" />
+                        <StoreProductCard :product="p" :index="i" :eager-image="scrollMobile && i < 2" />
                     </div>
                     <div
                         v-if="showCta"
