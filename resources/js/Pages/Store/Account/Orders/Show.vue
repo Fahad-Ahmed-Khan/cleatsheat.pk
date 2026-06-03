@@ -1,11 +1,19 @@
 <script setup>
 import StoreAccountLayout from '@/Layouts/StoreAccountLayout.vue';
+import StoreOrderBadges from '@/Components/Store/Account/StoreOrderBadges.vue';
+import StoreWhatsAppButton from '@/Components/Store/Account/StoreWhatsAppButton.vue';
+import { paymentStatusBadge } from '@/composables/useStoreOrderBadges';
+import { useStoreWhatsApp } from '@/composables/useStoreWhatsApp';
 import { Link } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
-defineProps({
+const props = defineProps({
     seo: { type: Object, required: true },
     order: { type: Object, required: true },
 });
+
+const { orderSupportUrl } = useStoreWhatsApp();
+const whatsappHref = computed(() => orderSupportUrl(props.order, { includeItems: true }));
 
 const cardClass =
     'rounded-2xl bg-stadium-white p-6 shadow-stadium ring-1 ring-stadium-outline-soft/50';
@@ -31,14 +39,7 @@ function formatPlacedAt(iso) {
 }
 
 function paymentStatusLabel(s) {
-    const map = {
-        pending: 'Pending',
-        paid: 'Paid',
-        failed: 'Failed',
-        canceled: 'Canceled',
-        refunded: 'Refunded',
-    };
-    return map[s] ?? s;
+    return paymentStatusBadge(s).label;
 }
 
 function itemSummary(item) {
@@ -51,24 +52,25 @@ function itemSummary(item) {
 
 <template>
     <StoreAccountLayout :seo="seo" :title="`Order ${order.order_number}`">
-        <Link
-            :href="route('store.account.orders.index')"
-            class="text-sm font-semibold text-stadium-ink underline decoration-stadium-outline-soft underline-offset-4"
-        >
-            ← Back to orders
-        </Link>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <Link
+                :href="route('store.account.orders.index')"
+                class="text-sm font-semibold text-stadium-ink underline decoration-stadium-outline-soft underline-offset-4"
+            >
+                ← Back to orders
+            </Link>
+            <StoreWhatsAppButton :href="whatsappHref" label="Chat about this order" />
+        </div>
 
         <div class="mt-6 space-y-6">
             <div :class="cardClass">
                 <h2 :class="labelClass">Order details</h2>
                 <p class="mt-3 font-mono text-lg font-bold text-stadium-ink">{{ order.order_number }}</p>
-                <div class="mt-3 flex flex-wrap gap-2">
-                    <span class="rounded-full bg-stadium-muted px-3 py-1 text-xs font-bold uppercase text-stadium-ink">{{ order.status }}</span>
-                    <span class="rounded-full bg-store-primary/15 px-3 py-1 text-xs font-bold uppercase text-stadium-ink ring-1 ring-store-primary/30">
-                        {{ paymentStatusLabel(order.payment_status) }}
-                    </span>
+                <div class="mt-3">
+                    <StoreOrderBadges :status="order.status" :payment-status="order.payment_status" />
                 </div>
                 <p v-if="order.placed_at" class="mt-3 text-sm text-stadium-secondary">Placed {{ formatPlacedAt(order.placed_at) }}</p>
+                <p class="mt-4 text-sm font-bold tabular-nums text-stadium-ink">{{ formatMoney(order.grand_total) }}</p>
             </div>
 
             <div v-if="order.items?.length" :class="cardClass">
@@ -85,6 +87,7 @@ function itemSummary(item) {
                         </div>
                         <div class="min-w-0 flex-1">
                             <p class="text-sm font-semibold text-stadium-ink">{{ itemSummary(item) }}</p>
+                            <p v-if="item.quantity > 1" class="mt-0.5 text-xs text-stadium-secondary">Qty {{ item.quantity }}</p>
                             <p class="mt-2 text-sm font-bold tabular-nums text-stadium-ink">{{ formatMoney(item.line_total) }}</p>
                         </div>
                     </li>
@@ -98,9 +101,12 @@ function itemSummary(item) {
                     <span class="font-semibold">{{ order.payment.gateway_label }}</span>
                 </p>
                 <ul v-if="order.payments?.length" class="mt-4 space-y-3 border-t border-stadium-outline-soft/50 pt-4">
-                    <li v-for="(p, i) in order.payments" :key="i" class="flex justify-between gap-4 text-sm">
-                        <span class="text-stadium-secondary">{{ p.gateway_label }} · {{ paymentStatusLabel(p.status) }}</span>
-                        <span class="font-semibold tabular-nums text-stadium-ink">{{ formatMoney(p.amount) }}</span>
+                    <li v-for="(p, i) in order.payments" :key="i" class="flex flex-wrap items-center justify-between gap-2 text-sm">
+                        <span class="text-stadium-secondary">{{ p.gateway_label }}</span>
+                        <div class="flex items-center gap-3">
+                            <span :class="paymentStatusBadge(p.status).class">{{ paymentStatusLabel(p.status) }}</span>
+                            <span class="font-semibold tabular-nums text-stadium-ink">{{ formatMoney(p.amount) }}</span>
+                        </div>
                     </li>
                 </ul>
                 <dl v-if="order.totals" class="mt-4 space-y-2 text-sm">
@@ -127,7 +133,7 @@ function itemSummary(item) {
                 <div v-for="(s, i) in order.shipments" :key="i" class="mt-4 border-t border-stadium-outline-soft/50 pt-4 first:mt-2 first:border-t-0 first:pt-0">
                     <p class="text-sm font-medium text-stadium-ink">
                         {{ s.courier ?? 'Courier' }}
-                        <span class="ml-2 rounded-full bg-stadium-muted px-2 py-0.5 text-xs">{{ s.status }}</span>
+                        <span class="ml-2 rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-bold uppercase text-indigo-900 ring-1 ring-indigo-200/80">{{ s.status }}</span>
                     </p>
                     <p class="mt-1 font-mono text-sm text-stadium-ink">{{ s.tracking_number ?? 'Awaiting booking' }}</p>
                     <ul v-if="s.events?.length" class="mt-4 space-y-3 border-l-2 border-stadium-outline-soft pl-4">
@@ -137,6 +143,16 @@ function itemSummary(item) {
                         </li>
                     </ul>
                 </div>
+            </div>
+
+            <div :class="cardClass" class="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                    <h2 :class="labelClass">Need help?</h2>
+                    <p class="mt-2 text-sm text-stadium-secondary">
+                        Message us on WhatsApp with your order number and we will look it up.
+                    </p>
+                </div>
+                <StoreWhatsAppButton :href="whatsappHref" label="Open WhatsApp" />
             </div>
         </div>
     </StoreAccountLayout>

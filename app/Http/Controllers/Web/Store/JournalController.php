@@ -55,6 +55,15 @@ class JournalController extends Controller
         $title = ($post->meta_title ?: $post->title).' — '.config('app.name');
         $description = $post->meta_description ?? (string) ($post->excerpt ?? '');
 
+        $schemas = [
+            $seo->articleJsonLd($post, $canonical, $m?->default_og_image_url),
+            $seo->breadcrumbJsonLd([
+                ['name' => 'Home', 'url' => $seo->canonicalHome()],
+                ['name' => 'Journal', 'url' => $seo->canonicalJournalIndex()],
+                ['name' => $post->title, 'url' => $canonical],
+            ]),
+        ];
+
         $seoPayload = $seo->mergeSocialTags([
             'title' => $title,
             'description' => $description,
@@ -62,6 +71,7 @@ class JournalController extends Controller
             'og_title' => $post->meta_title ?: $post->title,
             'og_description' => $description,
             'og_type' => 'article',
+            'schema_json' => $seo->encodeSchemas($schemas),
         ], $m?->default_og_image_url, $m?->twitter_site);
 
         return Inertia::render('Store/JournalShow', [

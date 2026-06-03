@@ -27,6 +27,36 @@ class PageController extends Controller
         return $this->show($request, 'return-policy', $seo);
     }
 
+    public function paymentPolicy(Request $request, SeoPresenter $seo): Response
+    {
+        return $this->show($request, 'payment-policy', $seo);
+    }
+
+    public function disclaimer(Request $request, SeoPresenter $seo): Response
+    {
+        return $this->show($request, 'disclaimer', $seo);
+    }
+
+    public function shippingPolicy(Request $request, SeoPresenter $seo): Response
+    {
+        return $this->show($request, 'shipping-policy', $seo);
+    }
+
+    public function about(Request $request, SeoPresenter $seo): Response
+    {
+        return $this->show($request, 'about', $seo);
+    }
+
+    public function faq(Request $request, SeoPresenter $seo): Response
+    {
+        return $this->show($request, 'faq', $seo);
+    }
+
+    public function contact(Request $request, SeoPresenter $seo): Response
+    {
+        return $this->show($request, 'contact', $seo);
+    }
+
     public function show(Request $request, string $slug, SeoPresenter $seo): Response
     {
         $pages = config('pages', []);
@@ -37,28 +67,32 @@ class PageController extends Controller
         $page = $pages[$slug];
         $title = html_entity_decode(strip_tags((string) ($page['title'] ?? 'Page')), ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $description = (string) ($page['description'] ?? '');
-        $body = $page['body'];
+        $body = $page['body'] ?? null;
 
-        if ($body === null && $slug === 'return-policy') {
-            $summary = config('store.return_policy_summary', '');
-            $body = '<p>'.e($summary).'</p>'
-                .'<h2>Eligibility</h2>'
-                .'<ul>'
-                .'<li>Items must be unworn, in original condition, with tags and packaging where applicable.</li>'
-                .'<li>Return requests should be raised within the window stated at checkout or on your order confirmation.</li>'
-                .'<li>Pre-owned or clearance items may be final sale unless otherwise marked on the product page.</li>'
-                .'</ul>'
-                .'<h2>How to start a return</h2>'
-                .'<p>Contact our support team with your order number and reason for return. We will confirm next steps, including pickup or drop-off instructions if applicable.</p>'
-                .'<h2>Refunds</h2>'
-                .'<p>Approved refunds are processed to the original payment method where possible. COD orders may be refunded via bank transfer or store credit as agreed with support.</p>'
-                .'<h2>Exchanges</h2>'
-                .'<p>Size exchanges depend on stock availability. We will do our best to offer an alternative size or store credit if exchange is not possible.</p>';
+        if ($body === null && $slug === 'faq') {
+            $body = $this->faqBodyFromConfig($page['faqs'] ?? []);
         }
 
         $canonical = rtrim(config('app.url'), '/').'/'.$slug;
-        $seoTitle = $title.' — '.config('app.name');
+        $seoTitle = $title.' — '.$seo->storeName();
         $marketing = MarketingSetting::query()->first();
+
+        $schemas = [];
+        if ($slug === 'faq' && ! empty($page['faqs'])) {
+            $schemas[] = $seo->faqJsonLd($page['faqs']);
+        }
+        if ($slug === 'contact' && ! empty($page['local_business'])) {
+            $lb = $page['local_business'];
+            $schemas[] = $seo->localBusinessJsonLd([
+                'name' => $seo->storeName(),
+                'url' => $canonical,
+                'telephone' => $lb['telephone'] ?? config('store.support_phone'),
+                'email' => $lb['email'] ?? null,
+                'streetAddress' => $lb['streetAddress'] ?? null,
+                'addressLocality' => $lb['addressLocality'] ?? null,
+                'openingHours' => $lb['openingHours'] ?? null,
+            ]);
+        }
 
         $seoPayload = $seo->mergeSocialTags([
             'title' => $seoTitle,
@@ -67,6 +101,7 @@ class PageController extends Controller
             'og_title' => $seoTitle,
             'og_description' => $description,
             'og_type' => 'website',
+            'schema_json' => $schemas !== [] ? $seo->encodeSchemas($schemas) : null,
         ], $marketing?->default_og_image_url, $marketing?->twitter_site);
 
         return Inertia::render('Store/StaticPage', [
@@ -75,5 +110,20 @@ class PageController extends Controller
             'body' => (string) $body,
             'seo' => $seoPayload,
         ]);
+    }
+
+    /**
+     * @param  list<array{q: string, a: string}>  $faqs
+     */
+    private function faqBodyFromConfig(array $faqs): string
+    {
+        $html = '<p>Quick answers about shopping football boots, cleats, grippers, and accessories in Pakistan.</p>';
+        foreach ($faqs as $faq) {
+            $q = htmlspecialchars((string) ($faq['q'] ?? ''), ENT_QUOTES, 'UTF-8');
+            $a = htmlspecialchars((string) ($faq['a'] ?? ''), ENT_QUOTES, 'UTF-8');
+            $html .= "<h2>{$q}</h2><p>{$a}</p>";
+        }
+
+        return $html;
     }
 }

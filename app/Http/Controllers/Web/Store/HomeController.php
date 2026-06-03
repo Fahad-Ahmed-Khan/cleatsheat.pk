@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Web\Store;
 use App\Domain\Catalog\CatalogQueryService;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\CategoryResource;
-use App\Http\Resources\Api\V1\ProductResource;
+use App\Http\Resources\Api\V1\ProductCardResource;
 use App\Models\Brand;
 use App\Models\ContentPost;
 use App\Models\MarketingSetting;
@@ -21,10 +21,10 @@ class HomeController extends Controller
 {
     public function __invoke(CatalogQueryService $catalog, SeoPresenter $seo): Response
     {
-        $featured = ProductResource::collection($catalog->featuredProducts(8))->resolve();
-        $bestSellers = ProductResource::collection($catalog->bestSellingProducts(8))->resolve();
-        $newArrivals = ProductResource::collection($catalog->newArrivals(8))->resolve();
-        $trending = ProductResource::collection($catalog->trendingProducts(8))->resolve();
+        $featured = ProductCardResource::collection($catalog->featuredProducts(8))->resolve();
+        $bestSellers = ProductCardResource::collection($catalog->bestSellingProducts(8))->resolve();
+        $newArrivals = ProductCardResource::collection($catalog->newArrivals(8))->resolve();
+        $trending = ProductCardResource::collection($catalog->trendingProducts(8))->resolve();
         $categories = CategoryResource::collection($catalog->rootCategories())->resolve();
 
         $storefront = Schema::hasTable('storefront_settings')
@@ -46,7 +46,14 @@ class HomeController extends Controller
         $twitterSite = $storefront?->twitter_site ?: $m?->twitter_site;
 
         $listForSchema = array_merge($featured, $trending);
-        $schema = $seo->homeJsonLd($siteName, $canonical, $listForSchema);
+        $schema = $seo->homeJsonLd($siteName, $canonical, $listForSchema, [
+            'logo' => $ogImage,
+            'telephone' => config('store.support_phone'),
+            'sameAs' => [
+                $storefront?->instagram_url ?? null,
+                $storefront?->tiktok_url ?? null,
+            ],
+        ]);
 
         $seoPayload = $seo->mergeSocialTags([
             'title' => $title,
@@ -54,6 +61,7 @@ class HomeController extends Controller
             'canonical' => $canonical,
             'og_title' => $title,
             'og_description' => $description,
+            'og_site_name' => $siteName,
             'og_type' => 'website',
             'schema_json' => json_encode($schema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
         ], $ogImage, $twitterSite);

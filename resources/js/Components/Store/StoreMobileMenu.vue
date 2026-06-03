@@ -174,6 +174,51 @@ function closeMenu() {
                     <ul class="mt-3 space-y-1">
                         <li>
                             <Link
+                                :href="route('store.pages.about')"
+                                class="block rounded-xl px-3 py-3 text-sm font-medium text-stadium-secondary transition hover:bg-stadium-muted hover:text-stadium-ink"
+                                @click="closeMenu"
+                            >
+                                About us
+                            </Link>
+                        </li>
+                        <li>
+                            <Link
+                                :href="route('store.pages.faq')"
+                                class="block rounded-xl px-3 py-3 text-sm font-medium text-stadium-secondary transition hover:bg-stadium-muted hover:text-stadium-ink"
+                                @click="closeMenu"
+                            >
+                                FAQ
+                            </Link>
+                        </li>
+                        <li>
+                            <Link
+                                :href="route('store.pages.contact')"
+                                class="block rounded-xl px-3 py-3 text-sm font-medium text-stadium-secondary transition hover:bg-stadium-muted hover:text-stadium-ink"
+                                @click="closeMenu"
+                            >
+                                Contact
+                            </Link>
+                        </li>
+                        <li>
+                            <Link
+                                :href="route('store.pages.payment')"
+                                class="block rounded-xl px-3 py-3 text-sm font-medium text-stadium-secondary transition hover:bg-stadium-muted hover:text-stadium-ink"
+                                @click="closeMenu"
+                            >
+                                Payment policy
+                            </Link>
+                        </li>
+                        <li>
+                            <Link
+                                :href="route('store.pages.shipping')"
+                                class="block rounded-xl px-3 py-3 text-sm font-medium text-stadium-secondary transition hover:bg-stadium-muted hover:text-stadium-ink"
+                                @click="closeMenu"
+                            >
+                                Shipping policy
+                            </Link>
+                        </li>
+                        <li>
+                            <Link
                                 :href="route('store.pages.privacy')"
                                 class="block rounded-xl px-3 py-3 text-sm font-medium text-stadium-secondary transition hover:bg-stadium-muted hover:text-stadium-ink"
                                 @click="closeMenu"

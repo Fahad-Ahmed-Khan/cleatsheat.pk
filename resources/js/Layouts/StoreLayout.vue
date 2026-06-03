@@ -3,10 +3,10 @@ import StoreBottomNav from '@/Components/Store/StoreBottomNav.vue';
 import StoreHeaderNav from '@/Components/Store/StoreHeaderNav.vue';
 import StoreMobileMenu from '@/Components/Store/StoreMobileMenu.vue';
 import StoreThemeToggle from '@/Components/Store/StoreThemeToggle.vue';
-import StorefrontAssistant from '@/Components/Store/StorefrontAssistant.vue';
 import { SURFACE_TILES, useStoreCategoryHref } from '@/composables/useStoreCategoryHref';
 import { useScrollDirection } from '@/composables/useScrollDirection';
 import { useStoreAnalytics } from '@/composables/useStoreAnalytics';
+import { useStoreWhatsApp } from '@/composables/useStoreWhatsApp';
 import { applyStoreBranding } from '@/store/applyStoreBranding';
 import { initStoreTheme } from '@/store/storeTheme';
 import { Link, usePage } from '@inertiajs/vue3';
@@ -23,6 +23,15 @@ const hasLogo = computed(() => {
     return !!(b?.logo_url || b?.logo_dark_url);
 });
 const cartCount = computed(() => Number(page.props.cartCount ?? 0));
+
+const { orderSupportUrl } = useStoreWhatsApp();
+const floatingWhatsAppUrl = computed(() => {
+    const order = page.props.order;
+    if (page.component === 'Store/Account/Orders/Show' && order?.order_number) {
+        return orderSupportUrl(order, { includeItems: true });
+    }
+    return storefront.value.support_whatsapp_url ?? '#';
+});
 
 const menuOpen = ref(false);
 const { headerHidden } = useScrollDirection();
@@ -108,19 +117,28 @@ onUnmounted(() => {
                             v-if="storeBranding?.logo_url"
                             :src="storeBranding.logo_url"
                             :alt="appName"
-                            class="h-8 max-w-[140px] object-contain object-left dark:hidden md:h-9"
+                            width="140"
+                            height="36"
+                            fetchpriority="high"
+                            class="h-8 w-auto max-w-[140px] object-contain object-left dark:hidden md:h-9"
                         />
                         <img
                             v-if="storeBranding?.logo_dark_url"
                             :src="storeBranding.logo_dark_url"
                             :alt="appName"
-                            class="hidden h-8 max-w-[140px] object-contain object-left dark:block md:h-9"
+                            width="140"
+                            height="36"
+                            fetchpriority="high"
+                            class="hidden h-8 w-auto max-w-[140px] object-contain object-left dark:block md:h-9"
                         />
                         <img
                             v-else-if="storeBranding?.logo_url"
                             :src="storeBranding.logo_url"
                             :alt="appName"
-                            class="hidden h-8 max-w-[140px] object-contain object-left dark:block md:h-9"
+                            width="140"
+                            height="36"
+                            fetchpriority="high"
+                            class="hidden h-8 w-auto max-w-[140px] object-contain object-left dark:block md:h-9"
                         />
                     </template>
                     <template v-else>
@@ -182,8 +200,8 @@ onUnmounted(() => {
             <slot />
         </main>
         <a
-            v-if="storefront.support_whatsapp_url && storefront.support_whatsapp_url !== '#'"
-            :href="storefront.support_whatsapp_url"
+            v-if="floatingWhatsAppUrl && floatingWhatsAppUrl !== '#'"
+            :href="floatingWhatsAppUrl"
             target="_blank"
             rel="noopener noreferrer"
             class="store-sticky-above-nav fixed right-4 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg ring-2 ring-white/50 transition duration-200 hover:scale-105 hover:bg-[#20BD5A] active:scale-95 sm:bottom-8 sm:h-14 sm:w-14"
@@ -195,7 +213,6 @@ onUnmounted(() => {
                 />
             </svg>
         </a>
-        <StorefrontAssistant />
         <StoreBottomNav />
         <footer class="mt-12 border-t-4 border-stadium-lime bg-stadium-inverse py-12 text-stadium-inverse-text">
             <div class="store-container grid gap-10 lg:grid-cols-12 lg:gap-8">
@@ -212,8 +229,23 @@ onUnmounted(() => {
                     </p>
                 </div>
                 <div class="lg:col-span-2">
-                    <p class="text-label text-stadium-lime">Surfaces</p>
+                    <p class="text-label text-stadium-lime">Shop</p>
                     <ul class="mt-4 space-y-2 text-sm">
+                        <li>
+                            <Link :href="route('store.category', 'football-shoes')" class="hover:text-stadium-lime">Football shoes</Link>
+                        </li>
+                        <li>
+                            <Link :href="route('store.category', 'football-cleats')" class="hover:text-stadium-lime">Cleats</Link>
+                        </li>
+                        <li>
+                            <Link :href="route('store.category', 'grippers')" class="hover:text-stadium-lime">Grippers</Link>
+                        </li>
+                        <li>
+                            <Link :href="route('store.category', 'football-socks')" class="hover:text-stadium-lime">Football socks</Link>
+                        </li>
+                        <li>
+                            <Link :href="route('store.category', 'accessories')" class="hover:text-stadium-lime">Accessories</Link>
+                        </li>
                         <li v-for="tile in SURFACE_TILES" :key="tile.short">
                             <Link
                                 :href="categoryHref(tile.fragments)"
@@ -230,6 +262,15 @@ onUnmounted(() => {
                 <div class="lg:col-span-2">
                     <p class="text-label text-stadium-lime">Support</p>
                     <ul class="mt-4 space-y-2 text-sm">
+                        <li>
+                            <Link :href="route('store.pages.about')" class="hover:text-stadium-lime">About us</Link>
+                        </li>
+                        <li>
+                            <Link :href="route('store.pages.faq')" class="hover:text-stadium-lime">FAQ</Link>
+                        </li>
+                        <li>
+                            <Link :href="route('store.pages.contact')" class="hover:text-stadium-lime">Contact</Link>
+                        </li>
                         <li>
                             <Link :href="route('store.order-tracking')" class="hover:text-stadium-lime">Track order</Link>
                         </li>
@@ -256,10 +297,19 @@ onUnmounted(() => {
                     <p class="text-label text-stadium-lime">Legal</p>
                     <ul class="mt-4 space-y-2 text-sm">
                         <li>
+                            <Link :href="route('store.pages.payment')" class="hover:text-stadium-lime">Payment policy</Link>
+                        </li>
+                        <li>
+                            <Link :href="route('store.pages.shipping')" class="hover:text-stadium-lime">Shipping policy</Link>
+                        </li>
+                        <li>
                             <Link :href="route('store.pages.privacy')" class="hover:text-stadium-lime">Privacy</Link>
                         </li>
                         <li>
                             <Link :href="route('store.pages.terms')" class="hover:text-stadium-lime">Terms</Link>
+                        </li>
+                        <li>
+                            <Link :href="route('store.pages.disclaimer')" class="hover:text-stadium-lime">Disclaimer</Link>
                         </li>
                         <li>
                             <Link :href="route('store.cart')" class="hover:text-stadium-lime">Cart</Link>

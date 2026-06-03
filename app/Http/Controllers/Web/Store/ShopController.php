@@ -20,17 +20,28 @@ class ShopController extends Controller
         $options = $catalog->filterOptionsAll();
 
         $m = MarketingSetting::query()->first();
-        $title = 'Shop all — '.config('app.name');
-        $description = 'Browse the full collection — sneakers, formals, sports, and running. Filter by brand, colour, size, and price.';
+        $title = 'Shop Football Shoes, Cleats & Gear in Pakistan | '.config('app.name');
+        $description = 'Shop all football shoes, cleats, grippers, socks & accessories in Pakistan. Filter by brand, surface (FG/SG/AG/Turf), UK/EU size and price. COD and fast nationwide delivery.';
         $canonical = rtrim(config('app.url'), '/').'/shop';
+
+        $productList = ProductResource::collection($products->items())->resolve();
+
+        $schemas = [
+            $seo->collectionJsonLd('Shop all — '.config('app.name'), $description, $canonical, $productList),
+            $seo->breadcrumbJsonLd([
+                ['name' => 'Home', 'url' => $seo->canonicalHome()],
+                ['name' => 'Shop', 'url' => $canonical],
+            ]),
+        ];
 
         $seoPayload = $seo->mergeSocialTags([
             'title' => $title,
             'description' => $description,
             'canonical' => $canonical,
-            'og_title' => 'Shop all',
+            'og_title' => 'Shop all football gear',
             'og_description' => $description,
             'og_type' => 'website',
+            'schema_json' => $seo->encodeSchemas($schemas),
         ], $m?->default_og_image_url, $m?->twitter_site);
 
         return Inertia::render('Store/Shop', [

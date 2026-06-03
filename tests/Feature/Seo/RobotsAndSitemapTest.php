@@ -19,13 +19,45 @@ class RobotsAndSitemapTest extends TestCase
             ->assertSee('Sitemap: '.$base.'/sitemap.xml', false);
     }
 
-    public function test_sitemap_xml_lists_home_and_catalog_routes(): void
+    public function test_sitemap_xml_lists_home_shop_journal_and_static_pages(): void
     {
         $base = rtrim((string) config('app.url'), '/');
 
-        $this->get('/sitemap.xml')
+        $response = $this->get('/sitemap.xml')->assertOk();
+
+        $response->assertSee($base.'/', false);
+        $response->assertSee($base.'/shop', false);
+        $response->assertSee($base.'/journal', false);
+        $response->assertSee($base.'/privacy-policy', false);
+        $response->assertSee($base.'/payment-policy', false);
+        $response->assertSee($base.'/about', false);
+        $response->assertSee($base.'/faq', false);
+        $response->assertSee($base.'/contact', false);
+    }
+
+    public function test_static_pages_render_with_seo_title(): void
+    {
+        $this->get('/payment-policy')
             ->assertOk()
-            ->assertSee($base.'/', false)
-            ->assertSee($base.'/journal', false);
+            ->assertInertia(fn ($page) => $page
+                ->component('Store/StaticPage')
+                ->where('slug', 'payment-policy')
+                ->has('seo.title')
+                ->has('seo.description')
+                ->has('seo.canonical'));
+
+        $this->get('/faq')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Store/StaticPage')
+                ->where('slug', 'faq')
+                ->has('seo.schema_json'));
+
+        $this->get('/contact')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Store/StaticPage')
+                ->where('slug', 'contact')
+                ->has('seo.schema_json'));
     }
 }

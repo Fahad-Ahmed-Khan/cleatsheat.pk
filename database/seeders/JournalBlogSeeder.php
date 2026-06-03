@@ -268,6 +268,74 @@ class JournalBlogSeeder extends Seeder
                     .$this->p('<strong>New</strong> wins for primary match boots, kids, and weekly grinders. <strong>Pre-loved</strong> wins for trial models, backup pairs, and pro tiers you will replace in a year anyway. Never buy used without sole photos; never buy new without knowing your CM length — see our <a href="/journal/shoe-size-guide-pakistan-uk-eu-us">size guide</a>.')
                     .$this->p('Compare today’s listed prices on <a href="/shop">our shop</a> against any second-hand quote — if gap is under 25% and condition is unknown, new is usually the smarter play.'),
             ],
+            [
+                'slug' => 'best-football-shoes-pakistan',
+                'title' => 'Best Football Shoes in Pakistan (2026 Buying Guide)',
+                'meta_title' => 'Best Football Shoes in Pakistan 2026 — FG, AG, Turf & Cleats',
+                'meta_description' => 'How to pick the best football shoes in Pakistan: surfaces, sizing, PKR budgets, and where to shop FG, AG, turf boots and cleats online.',
+                'excerpt' => 'The best football shoes in Pakistan match your pitch — not just the colourway. Here is how to choose FG, AG, turf, and cleats with real PKR ranges.',
+                'pillar_keyword' => 'best football shoes Pakistan',
+                'is_published' => true,
+                'published_at' => $published->copy()->subHours(6),
+                'body' => $this->img('best-football-shoes-pakistan', 'Football boots lineup for Pakistan players')
+                    .$this->p('Searching <strong>best football shoes in Pakistan</strong> usually means one thing: you need boots that grip your actual pitch without destroying your knees or budget. This guide ties surfaces, sizing, and price bands to what we list in our <a href="/c/football-shoes">football shoes</a> category.')
+                    .$this->h2('Start with your surface')
+                    .$this->p('Most players in Karachi, Lahore, and Islamabad train on <strong>turf cages</strong> more than pristine grass. If that is you, prioritise <a href="/c/football-shoes">TF or AG boots</a> before flagship FG silos. FG only wins when you regularly play on natural grass.')
+                    .$this->h2('Cleats vs trainers vs grippers')
+                    .$this->ul([
+                        '<strong>Cleats / studs:</strong> browse <a href="/c/football-cleats">football cleats</a> for moulded FG, SG, or AG plates.',
+                        '<strong>Grippers:</strong> add <a href="/c/grippers">grippers</a> or grip socks if your foot slides inside an otherwise good boot.',
+                        '<strong>Socks:</strong> match with <a href="/c/football-socks">football socks</a> for blister control in heat.',
+                    ])
+                    .$this->h2('PKR budgets that make sense')
+                    .$this->p('Entry turf trainers often land <strong>PKR 4,000–8,500</strong>. Mid-tier used name-brand boots sit <strong>PKR 9,000–18,000</strong>. Pro-tier pairs with life left can reach <strong>PKR 15,000–28,000</strong> pre-loved — still below new retail when condition is honest.')
+                    .$this->p('Ready to buy? Filter by UK size on <a href="/shop">shop all</a> or read our <a href="/journal/types-of-football-shoes-fg-ag-tf-ic">FG vs AG vs turf guide</a>.'),
+            ],
+            [
+                'slug' => 'football-grippers-guide-pakistan',
+                'title' => 'Football Grippers in Pakistan: Grip Socks, Pads & When You Need Them',
+                'meta_title' => 'Football Grippers Pakistan — Grip Socks & Anti-Slip Guide',
+                'meta_description' => 'What are football grippers in Pakistan? Grip socks, anti-slip pads, and how they work with cleats. Shop grippers with COD delivery.',
+                'excerpt' => 'Grippers stop foot slip inside the boot — essential on hot turf. Learn grip socks vs pads and pair with the right cleats.',
+                'pillar_keyword' => 'football grippers Pakistan',
+                'is_published' => true,
+                'published_at' => $published->copy()->subHours(4),
+                'body' => $this->img('football-grippers-pakistan', 'Grip socks and football grippers')
+                    .$this->p('<strong>Football grippers</strong> in Pakistan usually means grip socks, anti-slip pads, or sleeve overlays that increase friction between foot and boot. They are not a replacement for correct <a href="/c/football-cleats">cleats</a> — they fine-tune lock-in once studs are right.')
+                    .$this->h2('Why players use grippers')
+                    .$this->ul([
+                        'Hot turf makes feet sweat — liners slide and toes bruise.',
+                        'Used boots may stretch; grippers recover a snug feel.',
+                        'Academy players share boots; hygiene + grip socks help.',
+                    ])
+                    .$this->h2('Grip socks vs stud choice')
+                    .$this->p('Pair <a href="/c/grippers">grippers</a> with proper surface plates from <a href="/c/football-shoes">football shoes</a>. Wrong studs plus grip socks still feel unstable on dusty courts.')
+                    .$this->h2('Shop grippers & socks together')
+                    .$this->p('Browse <a href="/c/football-socks">football socks</a> and <a href="/c/accessories">accessories</a> for bundles. Message WhatsApp with your boot model if unsure which grip thickness fits.'),
+            ],
+            [
+                'slug' => 'football-cleats-buying-guide-pakistan',
+                'title' => 'Football Cleats in Pakistan: How to Buy the Right Studs Online',
+                'meta_title' => 'Football Cleats Pakistan — FG, SG, AG Buying Guide',
+                'meta_description' => 'Buy football cleats in Pakistan with confidence: FG vs SG vs AG, sizing in UK/EU, PKR prices, and links to shop cleats online with COD.',
+                'excerpt' => 'Cleats are surface-specific. This Pakistan guide explains FG, SG, AG, and turf before you checkout.',
+                'pillar_keyword' => 'football cleats Pakistan',
+                'is_published' => true,
+                'published_at' => $published->copy()->subHours(2),
+                'body' => $this->img('football-cleats-pakistan', 'Football cleats with different stud plates')
+                    .$this->p('When you search <strong>football cleats Pakistan</strong>, you are really choosing a <strong>stud pattern</strong> for your weekly pitch. Cleats are not interchangeable — FG on turf is a common injury story.')
+                    .$this->h2('Quick cleat picker')
+                    .$this->ul([
+                        'Natural grass (dry) → FG moulded studs — <a href="/c/football-cleats">shop cleats</a>',
+                        'Wet grass → SG metal studs (sparingly)',
+                        '3G/4G turf → AG',
+                        'Rubber courts / astro → TF / turf',
+                    ])
+                    .$this->h2('Size before brand')
+                    .$this->p('Measure foot length in cm, map to UK on our <a href="/journal/shoe-size-guide-pakistan-uk-eu-us">size guide</a>, then filter <a href="/shop">shop all</a> by UK size. Half sizes sell fast — message before paying.')
+                    .$this->h2('Complete the kit')
+                    .$this->p('Add <a href="/c/football-socks">socks</a>, <a href="/c/grippers">grippers</a>, and <a href="/c/accessories">accessories</a> so your cleats perform on match day, not just in photos.'),
+            ],
         ];
     }
 

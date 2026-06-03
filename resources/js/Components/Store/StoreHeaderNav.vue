@@ -20,9 +20,15 @@ const currentPath = computed(() => {
 });
 
 const pageLinks = [
+    { label: 'About Us', href: 'store.pages.about' },
+    { label: 'FAQ', href: 'store.pages.faq' },
+    { label: 'Contact', href: 'store.pages.contact' },
+    { label: 'Payment Policy', href: 'store.pages.payment' },
+    { label: 'Shipping Policy', href: 'store.pages.shipping' },
+    { label: 'Return Policy', href: 'store.pages.returns' },
     { label: 'Privacy Policy', href: 'store.pages.privacy' },
     { label: 'Terms & Conditions', href: 'store.pages.terms' },
-    { label: 'Return Policy', href: 'store.pages.returns' },
+    { label: 'Disclaimer', href: 'store.pages.disclaimer' },
 ];
 
 function navClass(active) {
@@ -193,7 +199,19 @@ onUnmounted(() => {
                 type="button"
                 class="inline-flex items-center gap-1 font-display text-xs font-bold uppercase tracking-[0.08em] transition"
                 :class="
-                    isActive(['/privacy-policy', '/terms-and-conditions', '/return-policy'])
+                    isActive((p) =>
+                        [
+                            '/about',
+                            '/faq',
+                            '/contact',
+                            '/payment-policy',
+                            '/shipping-policy',
+                            '/privacy-policy',
+                            '/terms-and-conditions',
+                            '/return-policy',
+                            '/disclaimer',
+                        ].includes(p),
+                    )
                         ? 'text-stadium-olive dark:text-stadium-lime'
                         : 'text-stadium-ink hover:text-stadium-olive dark:text-stadium-inverse-text/90 dark:hover:text-stadium-lime'
                 "

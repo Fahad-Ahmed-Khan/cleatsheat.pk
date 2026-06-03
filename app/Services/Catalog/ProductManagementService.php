@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\ProductVariant;
 use App\Models\VariantSize;
+use App\Support\Images\ResponsiveImageGenerator;
 use App\Support\Storage\PublicAssetUrl;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\UploadedFile;
@@ -14,6 +15,8 @@ use Illuminate\Support\Facades\Storage;
 
 class ProductManagementService
 {
+    public function __construct(private readonly ResponsiveImageGenerator $imageGenerator) {}
+
     /**
      * @param  array<string, mixed>  $data  validated payload including variants & images
      */
@@ -120,11 +123,16 @@ class ProductManagementService
 
             $path = PublicAssetUrl::normalizeForStorage($path);
 
+            $meta = $this->imageGenerator->generate($path);
+
             ProductImage::query()->create([
                 'product_id' => $product->id,
                 'path' => $path,
                 'alt' => $row['alt'] ?? null,
                 'sort_order' => $row['sort_order'] ?? $i,
+                'width' => $meta['width'] ?? null,
+                'height' => $meta['height'] ?? null,
+                'variants' => $meta['variants'] ?? null,
             ]);
         }
     }

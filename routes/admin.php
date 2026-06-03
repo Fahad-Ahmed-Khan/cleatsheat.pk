@@ -26,7 +26,6 @@ use App\Http\Controllers\Web\Admin\PickupAdminController;
 use App\Http\Controllers\Web\Admin\ProductAdminController;
 use App\Http\Controllers\Web\Admin\ShippingSettingsAdminController;
 use App\Http\Controllers\Web\Admin\SizeChartAdminController;
-use App\Http\Controllers\Web\Admin\StorefrontAssistantSettingsAdminController;
 use App\Http\Controllers\Web\Admin\StorefrontSettingsAdminController;
 use App\Http\Controllers\Web\Admin\WhatsAppCampaignAdminController;
 use App\Http\Controllers\Web\Admin\WhatsAppInboxAdminController;
@@ -164,11 +163,6 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 
     Route::get('/storefront-settings', [StorefrontSettingsAdminController::class, 'edit'])->name('storefront-settings.edit');
     Route::patch('/storefront-settings', [StorefrontSettingsAdminController::class, 'update'])->name('storefront-settings.update');
-
-    Route::get('/storefront-assistant', [StorefrontAssistantSettingsAdminController::class, 'edit'])
-        ->name('storefront-assistant.edit');
-    Route::patch('/storefront-assistant', [StorefrontAssistantSettingsAdminController::class, 'update'])
-        ->name('storefront-assistant.update');
 
     Route::resource('content-posts', ContentPostAdminController::class)->except(['show']);
 

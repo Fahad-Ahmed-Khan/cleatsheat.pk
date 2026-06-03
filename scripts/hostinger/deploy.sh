@@ -40,6 +40,9 @@ fi
 
 php artisan migrate --force
 
+# Generate responsive WebP variants for any product images missing them (idempotent, non-fatal).
+php artisan products:generate-image-variants || true
+
 php artisan optimize:clear
 php artisan config:cache
 php artisan route:cache || true

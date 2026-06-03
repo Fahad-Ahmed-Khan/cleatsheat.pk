@@ -24,9 +24,20 @@ class CategoryController extends Controller
         $m = MarketingSetting::query()->first();
         $canonical = $seo->canonicalCategory($category->slug);
         $description = $seo->categoryIntentDescription($category);
-        $title = ($category->meta_title ?: $category->name).' — '.config('app.name');
+        $title = $seo->categoryTitle($category);
 
         $ogImage = $category->og_image_url ?: null;
+
+        $productList = ProductResource::collection($products->items())->resolve();
+
+        $schemas = [
+            $seo->collectionJsonLd($category->name, $description, $canonical, $productList),
+            $seo->breadcrumbJsonLd([
+                ['name' => 'Home', 'url' => $seo->canonicalHome()],
+                ['name' => 'Shop', 'url' => rtrim(config('app.url'), '/').'/shop'],
+                ['name' => $category->name, 'url' => $canonical],
+            ]),
+        ];
 
         $seoPayload = $seo->mergeSocialTags([
             'title' => $title,
@@ -36,6 +47,7 @@ class CategoryController extends Controller
             'og_description' => $description,
             'og_image' => $ogImage,
             'og_type' => 'website',
+            'schema_json' => $seo->encodeSchemas($schemas),
         ], $m?->default_og_image_url, $m?->twitter_site);
 
         return Inertia::render('Store/Category', [

@@ -16,6 +16,8 @@ class DatabaseSeeder extends Seeder
         $this->call(WhatsAppTemplateSeeder::class);
 
         $this->call(DemoCatalogSeeder::class);
+        $this->call(FootballShoesDemoSeeder::class);
+        $this->call(SeoCategoriesSeeder::class);
         $this->call(JournalBlogSeeder::class);
 
         User::factory()->create([

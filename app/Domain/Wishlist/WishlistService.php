@@ -100,7 +100,7 @@ final class WishlistService
 
         return Product::query()
             ->whereIn('id', $productIds)
-            ->with(['category', 'brand', 'variants' => fn ($q) => $q->orderBy('sort_order')])
+            ->with(['category', 'brand', 'variants' => fn ($q) => $q->orderBy('id')])
             ->orderByDesc('id')
             ->paginate($perPage);
     }

@@ -15,6 +15,9 @@ const tiles = computed(() => {
     const list = props.images.map((img) => ({
         kind: 'image',
         src: img.path,
+        srcset: img.srcset || null,
+        width: img.width || null,
+        height: img.height || null,
         alt: img.alt || props.productName,
     }));
     if (hasVideo.value) {
@@ -27,6 +30,9 @@ const tiles = computed(() => {
     }
     return list;
 });
+
+const mainImageSizes = '(min-width: 1024px) 42vw, (min-width: 640px) 55vw, 92vw';
+const thumbSizes = '80px';
 
 const active = ref(0);
 const lightboxOpen = ref(false);
@@ -42,6 +48,9 @@ watch(
 
 const imageTiles = computed(() => tiles.value.filter((t) => t.kind === 'image'));
 const mainSrc = computed(() => imageTiles.value[active.value]?.src ?? null);
+const mainSrcset = computed(() => imageTiles.value[active.value]?.srcset ?? null);
+const mainWidth = computed(() => imageTiles.value[active.value]?.width ?? null);
+const mainHeight = computed(() => imageTiles.value[active.value]?.height ?? null);
 const mainAlt = computed(() => imageTiles.value[active.value]?.alt || props.productName);
 const hasMultiple = computed(() => imageTiles.value.length > 1);
 
@@ -90,6 +99,10 @@ function openVideo() {
             >
                 <img
                     :src="img.src"
+                    :srcset="img.srcset || undefined"
+                    :sizes="img.srcset ? thumbSizes : undefined"
+                    loading="lazy"
+                    decoding="async"
                     :alt="img.alt"
                     class="h-full w-full object-contain"
                 >
@@ -129,6 +142,12 @@ function openVideo() {
                 <img
                     v-if="mainSrc"
                     :src="mainSrc"
+                    :srcset="mainSrcset || undefined"
+                    :sizes="mainSrcset ? mainImageSizes : undefined"
+                    :width="mainWidth || undefined"
+                    :height="mainHeight || undefined"
+                    fetchpriority="high"
+                    decoding="async"
                     :alt="mainAlt"
                     class="h-full w-full object-contain transition duration-200 group-hover:scale-[1.02]"
                 >
@@ -203,7 +222,15 @@ function openVideo() {
                     :aria-label="`View image ${i + 1}`"
                     @click="active = i"
                 >
-                    <img :src="img.src" :alt="img.alt" class="h-full w-full object-contain">
+                    <img
+                        :src="img.src"
+                        :srcset="img.srcset || undefined"
+                        :sizes="img.srcset ? '64px' : undefined"
+                        loading="lazy"
+                        decoding="async"
+                        :alt="img.alt"
+                        class="h-full w-full object-contain"
+                    >
                 </button>
                 <button
                     v-if="hasVideo"
@@ -242,9 +269,12 @@ function openVideo() {
                     <img
                         v-if="t.kind === 'image'"
                         :src="t.src"
+                        :srcset="t.srcset || undefined"
+                        :sizes="t.srcset ? '(min-width: 1024px) 25vw, 45vw' : undefined"
                         :alt="t.alt"
                         class="h-full w-full object-contain transition duration-200 group-hover:scale-[1.02]"
                         loading="lazy"
+                        decoding="async"
                     >
                     <template v-else>
                         <img

@@ -65,7 +65,6 @@ export function buildAdminMenu(route) {
             children: [
                 { label: 'Payments', href: route('admin.payment-settings.edit'), active: 'admin.payment-settings.*' },
                 { label: 'Storefront', href: route('admin.storefront-settings.edit'), active: 'admin.storefront-settings.*' },
-                { label: 'Storefront Assistant', href: route('admin.storefront-assistant.edit'), active: 'admin.storefront-assistant.*' },
                 { label: 'Marketing & SEO (robots)', href: route('admin.marketing-settings.edit'), active: 'admin.marketing-settings.*' },
             ],
         },

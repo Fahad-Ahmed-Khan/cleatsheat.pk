@@ -9,6 +9,7 @@ use App\Models\PaymentMethodConfig;
 use App\Models\Shipment;
 use App\Models\User;
 use App\Support\Bargain\PhoneNormalizer;
+use App\Support\Storage\PublicAssetUrl;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -21,7 +22,7 @@ final class CustomerOrderQueryService
     {
         return Order::query()
             ->where('user_id', $user->id)
-            ->with(['items', 'shipments.courier'])
+            ->with(['items.variant.product.images', 'shipments.courier'])
             ->latest()
             ->paginate($perPage);
     }
@@ -43,6 +44,8 @@ final class CustomerOrderQueryService
             'grand_total' => (float) $order->grand_total,
             'placed_at' => $order->created_at?->toIso8601String(),
             'item_count' => $order->relationLoaded('items') ? $order->items->count() : null,
+            'thumbnail_url' => $this->firstItemThumbnail($order),
+            'items_preview' => $this->itemsPreviewLine($order),
         ];
     }
 
@@ -333,8 +336,51 @@ final class CustomerOrderQueryService
             'quantity' => $i->quantity,
             'unit_price' => (float) $i->unit_price,
             'line_total' => (float) $i->line_total,
-            'image_url' => \App\Support\Storage\PublicAssetUrl::resolve($imagePath),
+            'image_url' => PublicAssetUrl::resolve($imagePath),
         ];
+    }
+
+    private function firstItemThumbnail(Order $order): ?string
+    {
+        if (! $order->relationLoaded('items')) {
+            return null;
+        }
+
+        $first = $order->items->first();
+        if ($first === null) {
+            return null;
+        }
+
+        if ($first->relationLoaded('variant') && $first->variant?->relationLoaded('product')) {
+            $imagePath = $first->variant->product->images
+                ->sortBy('sort_order')
+                ->first()
+                ?->path;
+
+            return PublicAssetUrl::resolve($imagePath);
+        }
+
+        return null;
+    }
+
+    private function itemsPreviewLine(Order $order): ?string
+    {
+        if (! $order->relationLoaded('items') || $order->items->isEmpty()) {
+            return null;
+        }
+
+        $first = $order->items->first();
+        $line = $first->product_name;
+        if ($first->size_label) {
+            $line .= ' · Size '.$first->size_label;
+        }
+
+        $extra = $order->items->count() - 1;
+        if ($extra > 0) {
+            $line .= ' +'.$extra.' more';
+        }
+
+        return $line;
     }
 
     /**

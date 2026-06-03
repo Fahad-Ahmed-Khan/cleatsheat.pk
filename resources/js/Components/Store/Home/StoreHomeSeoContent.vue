@@ -85,6 +85,18 @@ const { categoryHref } = useStoreCategoryHref(toRef(props, 'categories'));
                 </div>
 
                 <div>
+                    <h3 class="font-display text-lg font-bold text-white">Cleats, grippers, socks & accessories</h3>
+                    <p class="mt-2">
+                        Beyond boots, match-day grip matters. Shop
+                        <Link :href="route('store.category', 'football-cleats')" class="font-semibold text-stadium-lime hover:underline">football cleats</Link>,
+                        <Link :href="route('store.category', 'grippers')" class="font-semibold text-stadium-lime hover:underline">grippers</Link>,
+                        <Link :href="route('store.category', 'football-socks')" class="font-semibold text-stadium-lime hover:underline">football socks</Link>, and
+                        <Link :href="route('store.category', 'accessories')" class="font-semibold text-stadium-lime hover:underline">accessories</Link>
+                        with COD across Pakistan.
+                    </p>
+                </div>
+
+                <div>
                     <h3 class="font-display text-lg font-bold text-white">UK & EU sizing for Pakistani players</h3>
                     <p class="mt-2">
                         We list UK and EU sizes on every card. Unsure? Message us on WhatsApp before checkout or read our
@@ -96,6 +108,30 @@ const { categoryHref } = useStoreCategoryHref(toRef(props, 'categories'));
             </div>
 
             <nav class="mt-8 flex flex-wrap gap-3" aria-label="Related shop links">
+                <Link
+                    :href="route('store.category', 'football-shoes')"
+                    class="rounded-xl border border-white/20 px-4 py-2 text-xs font-bold uppercase tracking-wide text-white hover:border-stadium-lime"
+                >
+                    Football shoes
+                </Link>
+                <Link
+                    :href="route('store.category', 'football-cleats')"
+                    class="rounded-xl border border-white/20 px-4 py-2 text-xs font-bold uppercase tracking-wide text-white hover:border-stadium-lime"
+                >
+                    Cleats
+                </Link>
+                <Link
+                    :href="route('store.category', 'grippers')"
+                    class="rounded-xl border border-white/20 px-4 py-2 text-xs font-bold uppercase tracking-wide text-white hover:border-stadium-lime"
+                >
+                    Grippers
+                </Link>
+                <Link
+                    :href="route('store.category', 'football-socks')"
+                    class="rounded-xl border border-white/20 px-4 py-2 text-xs font-bold uppercase tracking-wide text-white hover:border-stadium-lime"
+                >
+                    Socks
+                </Link>
                 <Link
                     :href="route('store.shop')"
                     class="rounded-xl border border-white/20 px-4 py-2 text-xs font-bold uppercase tracking-wide text-white hover:border-stadium-lime"

@@ -49,14 +49,17 @@ class FootballShoesDemoSeeder extends Seeder
 
     public function run(): void
     {
+        $store = config('app.name', 'CleatSheat.pk');
         $parent = Category::query()->firstOrCreate(
             ['slug' => self::CATEGORY_PARENT_SLUG],
             [
                 'parent_id' => null,
                 'name' => 'Football Shoes',
-                'meta_title' => 'Football Shoes',
-                'meta_description' => 'Football boots and futsal shoes for every surface.',
+                'meta_title' => "Football Shoes in Pakistan | Buy Online at {$store}",
+                'meta_description' => 'Buy football shoes & boots online in Pakistan — FG, SG, AG & turf with UK/EU sizing, inspected condition, COD and fast delivery.',
+                'intro_html' => '<p>Shop <strong>football shoes</strong> for every surface in Pakistan — FG, SG, AG, turf & indoor. Clear UK/EU sizing, WhatsApp fit help, and COD nationwide.</p>',
                 'sort_order' => 10,
+                'is_active' => true,
             ]
         );
 

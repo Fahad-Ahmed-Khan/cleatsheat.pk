@@ -28,8 +28,25 @@ class ProductController extends Controller
         $description = $seo->productDescriptionForSeo($product);
         $m = MarketingSetting::query()->first();
 
+        $crumbs = [
+            ['name' => 'Home', 'url' => $seo->canonicalHome()],
+            ['name' => 'Shop', 'url' => rtrim(config('app.url'), '/').'/shop'],
+        ];
+        if ($product->category) {
+            $crumbs[] = [
+                'name' => $product->category->name,
+                'url' => $seo->canonicalCategory($product->category->slug),
+            ];
+        }
+        $crumbs[] = ['name' => $product->name, 'url' => $canonical];
+
+        $schemas = [
+            $seo->productJsonLd($product, $canonical),
+            $seo->breadcrumbJsonLd($crumbs),
+        ];
+
         $seoPayload = $seo->mergeSocialTags([
-            'title' => ($product->meta_title ?: $product->name).' — '.config('app.name'),
+            'title' => $seo->productTitle($product),
             'description' => $description,
             'og_title' => $product->meta_title ?: $product->name,
             'og_description' => $description,
@@ -37,7 +54,7 @@ class ProductController extends Controller
             'og_image' => $primaryImage,
             'og_type' => 'product',
             'twitter_card' => 'summary_large_image',
-            'schema_json' => json_encode($seo->productJsonLd($product, $canonical), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'schema_json' => $seo->encodeSchemas($schemas),
         ], $m?->default_og_image_url, $m?->twitter_site);
 
         $sizeChartPayload = null;

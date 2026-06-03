@@ -33,6 +33,12 @@ Route::post('/track-order', [OrderTrackingController::class, 'lookup'])->name('s
 Route::get('/privacy-policy', [PageController::class, 'privacyPolicy'])->name('store.pages.privacy');
 Route::get('/terms-and-conditions', [PageController::class, 'termsAndConditions'])->name('store.pages.terms');
 Route::get('/return-policy', [PageController::class, 'returnPolicy'])->name('store.pages.returns');
+Route::get('/payment-policy', [PageController::class, 'paymentPolicy'])->name('store.pages.payment');
+Route::get('/disclaimer', [PageController::class, 'disclaimer'])->name('store.pages.disclaimer');
+Route::get('/shipping-policy', [PageController::class, 'shippingPolicy'])->name('store.pages.shipping');
+Route::get('/about', [PageController::class, 'about'])->name('store.pages.about');
+Route::get('/faq', [PageController::class, 'faq'])->name('store.pages.faq');
+Route::get('/contact', [PageController::class, 'contact'])->name('store.pages.contact');
 
 Route::get('/c/{slug}', CategoryController::class)->name('store.category');
 Route::get('/p/{slug}', ProductController::class)->name('store.product');

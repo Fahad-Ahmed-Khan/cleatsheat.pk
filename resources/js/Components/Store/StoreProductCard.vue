@@ -39,17 +39,29 @@ const imageHover = ref(false);
 
 
 
+const cardImageSizes = '(min-width: 1024px) 23vw, (min-width: 640px) 31vw, 48vw';
+
 function primaryImage(p) {
 
     return p.images?.[0]?.path ?? null;
 
 }
 
+function primarySrcset(p) {
 
+    return p.images?.[0]?.srcset ?? null;
+
+}
 
 function hoverImage(p) {
 
     return p.images?.[1]?.path ?? null;
+
+}
+
+function hoverSrcset(p) {
+
+    return p.images?.[1]?.srcset ?? null;
 
 }
 
@@ -207,6 +219,14 @@ function onQuickAdd(e) {
 
                     :src="primaryImage(product)"
 
+                    :srcset="primarySrcset(product) || undefined"
+
+                    :sizes="primarySrcset(product) ? cardImageSizes : undefined"
+
+                    :width="product.images?.[0]?.width || undefined"
+
+                    :height="product.images?.[0]?.height || undefined"
+
                     :alt="product.name"
 
                     class="absolute inset-0 h-full w-full object-cover transition duration-500 ease-out"
@@ -228,6 +248,14 @@ function onQuickAdd(e) {
                     v-if="hoverImage(product)"
 
                     :src="hoverImage(product)"
+
+                    :srcset="hoverSrcset(product) || undefined"
+
+                    :sizes="hoverSrcset(product) ? cardImageSizes : undefined"
+
+                    :width="product.images?.[1]?.width || undefined"
+
+                    :height="product.images?.[1]?.height || undefined"
 
                     :alt="`${product.name} alternate view`"
 

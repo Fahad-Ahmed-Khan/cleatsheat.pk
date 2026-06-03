@@ -6,7 +6,6 @@ use App\Domain\Wishlist\WishlistService;
 use App\Models\CartItem;
 use App\Models\Category;
 use App\Models\MarketingSetting;
-use App\Models\StorefrontAssistantSetting;
 use App\Models\StorefrontSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
@@ -108,14 +107,6 @@ class HandleInertiaRequests extends Middleware
             }
         }
 
-        $storefrontAssistant = null;
-        if (Schema::hasTable('storefront_assistant_settings')) {
-            $row = StorefrontAssistantSetting::query()->first();
-            if ($row) {
-                $storefrontAssistant = $row->toPublicPayload();
-            }
-        }
-
         return [
             ...parent::share($request),
             'appName' => config('app.name'),
@@ -127,7 +118,6 @@ class HandleInertiaRequests extends Middleware
             'bargainEnabled' => (bool) config('bargain.enabled', true),
             'marketing' => $marketing,
             'storeBranding' => $storeBranding,
-            'storefrontAssistant' => $storefrontAssistant,
             'flashPaymentError' => $request->session()->pull('flash_payment_error'),
             'auth' => [
                 'user' => $request->user(),

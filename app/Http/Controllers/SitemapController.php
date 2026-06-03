@@ -16,9 +16,18 @@ class SitemapController extends Controller
 
         $urls = collect([
             ['loc' => $base.'/', 'changefreq' => 'daily', 'priority' => '1.0'],
+            ['loc' => $base.'/shop', 'changefreq' => 'daily', 'priority' => '0.9'],
         ]);
 
-        foreach (Category::query()->get(['slug', 'updated_at']) as $c) {
+        foreach (array_keys(config('pages', [])) as $slug) {
+            $urls->push([
+                'loc' => $base.'/'.$slug,
+                'changefreq' => 'monthly',
+                'priority' => '0.5',
+            ]);
+        }
+
+        foreach (Category::query()->active()->get(['slug', 'updated_at']) as $c) {
             $urls->push([
                 'loc' => $base.'/c/'.$c->slug,
                 'lastmod' => $c->updated_at?->toAtomString(),
