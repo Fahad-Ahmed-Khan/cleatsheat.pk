@@ -7,9 +7,12 @@ use App\Models\CartItem;
 use App\Models\Category;
 use App\Models\MarketingSetting;
 use App\Models\StorefrontSetting;
+use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Middleware;
+use Inertia\Support\Header;
+use Symfony\Component\HttpFoundation\Response;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -66,6 +69,22 @@ class HandleInertiaRequests extends Middleware
     public function version(Request $request): ?string
     {
         return parent::version($request);
+    }
+
+    /**
+     * Prevent CDNs from caching Inertia JSON at the same URL as the HTML document.
+     */
+    public function handle(Request $request, Closure $next): Response
+    {
+        $response = parent::handle($request, $next);
+
+        $response->headers->set('Vary', implode(', ', [Header::INERTIA, 'Accept']));
+
+        if ($request->header(Header::INERTIA)) {
+            $response->headers->set('Cache-Control', 'no-store, private');
+        }
+
+        return $response;
     }
 
     /**

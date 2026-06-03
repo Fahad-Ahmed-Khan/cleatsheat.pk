@@ -247,19 +247,19 @@ onUnmounted(() => {
                     <p class="text-label text-stadium-lime">Shop</p>
                     <ul class="mt-4 space-y-2 text-sm">
                         <li>
-                            <Link :href="route('store.category', 'football-shoes')" class="hover:text-stadium-lime">Football shoes</Link>
+                            <a :href="route('store.category', 'football-shoes')" class="hover:text-stadium-lime">Football shoes</a>
                         </li>
                         <li>
-                            <Link :href="route('store.category', 'football-cleats')" class="hover:text-stadium-lime">Cleats</Link>
+                            <a :href="route('store.category', 'football-cleats')" class="hover:text-stadium-lime">Cleats</a>
                         </li>
                         <li>
-                            <Link :href="route('store.category', 'grippers')" class="hover:text-stadium-lime">Grippers</Link>
+                            <a :href="route('store.category', 'grippers')" class="hover:text-stadium-lime">Grippers</a>
                         </li>
                         <li>
-                            <Link :href="route('store.category', 'football-socks')" class="hover:text-stadium-lime">Football socks</Link>
+                            <a :href="route('store.category', 'football-socks')" class="hover:text-stadium-lime">Football socks</a>
                         </li>
                         <li>
-                            <Link :href="route('store.category', 'accessories')" class="hover:text-stadium-lime">Accessories</Link>
+                            <a :href="route('store.category', 'accessories')" class="hover:text-stadium-lime">Accessories</a>
                         </li>
                         <li v-for="tile in SURFACE_TILES" :key="tile.short">
                             <Link
@@ -290,7 +290,7 @@ onUnmounted(() => {
                             <a :href="route('store.order-tracking')" class="hover:text-stadium-lime">Track order</a>
                         </li>
                         <li>
-                            <Link :href="route('store.pages.returns')" class="hover:text-stadium-lime">Returns</Link>
+                            <a :href="route('store.pages.returns')" class="hover:text-stadium-lime">Returns</a>
                         </li>
                         <li>
                             <Link :href="route('store.journal.index')" class="hover:text-stadium-lime">Size guides</Link>
@@ -312,19 +312,19 @@ onUnmounted(() => {
                     <p class="text-label text-stadium-lime">Legal</p>
                     <ul class="mt-4 space-y-2 text-sm">
                         <li>
-                            <Link :href="route('store.pages.payment')" class="hover:text-stadium-lime">Payment policy</Link>
+                            <a :href="route('store.pages.payment')" class="hover:text-stadium-lime">Payment policy</a>
                         </li>
                         <li>
-                            <Link :href="route('store.pages.shipping')" class="hover:text-stadium-lime">Shipping policy</Link>
+                            <a :href="route('store.pages.shipping')" class="hover:text-stadium-lime">Shipping policy</a>
                         </li>
                         <li>
-                            <Link :href="route('store.pages.privacy')" class="hover:text-stadium-lime">Privacy</Link>
+                            <a :href="route('store.pages.privacy')" class="hover:text-stadium-lime">Privacy</a>
                         </li>
                         <li>
-                            <Link :href="route('store.pages.terms')" class="hover:text-stadium-lime">Terms</Link>
+                            <a :href="route('store.pages.terms')" class="hover:text-stadium-lime">Terms</a>
                         </li>
                         <li>
-                            <Link :href="route('store.pages.disclaimer')" class="hover:text-stadium-lime">Disclaimer</Link>
+                            <a :href="route('store.pages.disclaimer')" class="hover:text-stadium-lime">Disclaimer</a>
                         </li>
                         <li>
                             <Link :href="route('store.cart')" class="hover:text-stadium-lime">Cart</Link>

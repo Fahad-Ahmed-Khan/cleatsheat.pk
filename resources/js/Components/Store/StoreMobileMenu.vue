@@ -106,33 +106,33 @@ function closeMenu() {
                                     class="mb-1 ml-2 space-y-0.5 border-l-2 border-stadium-lime/50 pl-2 dark:border-stadium-lime/40"
                                 >
                                     <li>
-                                        <Link
+                                        <a
                                             :href="route('store.category', parent.slug)"
                                             class="block rounded-lg px-3 py-2 text-sm font-semibold text-stadium-ink transition hover:bg-stadium-muted"
                                             @click="closeMenu"
                                         >
                                             All {{ parent.name }}
-                                        </Link>
+                                        </a>
                                     </li>
                                     <li v-for="child in parent.children" :key="child.id">
-                                        <Link
+                                        <a
                                             :href="route('store.category', child.slug)"
                                             class="block rounded-lg px-3 py-2 text-sm font-medium text-stadium-secondary transition hover:bg-stadium-muted hover:text-stadium-ink"
                                             @click="closeMenu"
                                         >
                                             {{ child.name }}
-                                        </Link>
+                                        </a>
                                     </li>
                                 </ul>
                             </template>
-                            <Link
+                            <a
                                 v-else
                                 :href="route('store.category', parent.slug)"
                                 class="block rounded-xl px-3 py-3 text-sm font-semibold text-stadium-ink transition hover:bg-stadium-muted"
                                 @click="closeMenu"
                             >
                                 {{ parent.name }}
-                            </Link>
+                            </a>
                         </li>
                     </ul>
 

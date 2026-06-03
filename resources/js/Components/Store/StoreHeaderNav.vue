@@ -1,6 +1,6 @@
 <script setup>
 import { useNavCategories } from '@/composables/useNavCategories';
-import { Link, usePage } from '@inertiajs/vue3';
+import { usePage } from '@inertiajs/vue3';
 import { computed, onMounted, onUnmounted, ref, toRef } from 'vue';
 
 const props = defineProps({
@@ -150,17 +150,17 @@ onUnmounted(() => {
                         role="menu"
                     >
                         <li role="none">
-                            <Link
+                            <a
                                 :href="route('store.category', parent.slug)"
                                 role="menuitem"
                                 class="block border-b border-stadium-outline-soft/30 px-4 py-2.5 text-sm font-bold text-stadium-ink transition hover:bg-stadium-muted hover:text-stadium-olive dark:border-white/10 dark:text-stadium-inverse-text dark:hover:bg-stadium-dim dark:hover:text-stadium-lime"
                                 @click="closeMenus"
                             >
                                 All {{ parent.name }}
-                            </Link>
+                            </a>
                         </li>
                         <li v-for="child in parent.children" :key="child.id" role="none">
-                            <Link
+                            <a
                                 :href="route('store.category', child.slug)"
                                 role="menuitem"
                                 class="block px-4 py-2.5 text-sm font-medium text-stadium-secondary transition hover:bg-stadium-muted hover:text-stadium-ink dark:text-stadium-inverse-text/85 dark:hover:bg-stadium-dim dark:hover:text-stadium-lime"
@@ -168,18 +168,18 @@ onUnmounted(() => {
                                 @click="closeMenus"
                             >
                                 {{ child.name }}
-                            </Link>
+                            </a>
                         </li>
                     </ul>
                 </Transition>
             </div>
-            <Link
+            <a
                 v-else
                 :href="route('store.category', parent.slug)"
                 :class="navClass(isActive(`/c/${parent.slug}`))"
             >
                 {{ parent.name }}
-            </Link>
+            </a>
         </template>
 
         <a
