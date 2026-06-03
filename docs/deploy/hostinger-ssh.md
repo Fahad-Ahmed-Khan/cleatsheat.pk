@@ -100,35 +100,29 @@ cat ~/.ssh/tryino_ecom_deploy
 
 ## 6) Build frontend assets (Vite) — required
 
-Laravel expects `public/build/manifest.json`. That folder is **not** in git (see `.gitignore`).
+Laravel expects `public/build/manifest.json`. **`public/build` is committed to git** so Hostinger `git pull` deploys it (Hostinger SSH has no `npm`).
 
-### Quick fix (one time, manual)
-
-On your PC (install deps first — fixes `'vite' is not recognized`):
+Before you push (when JS/CSS/Vue changed):
 
 ```bash
 npm install
-npm run build:store
+npm run build
+git add public/build
+git commit -m "Build frontend assets"
+git push
 ```
 
-`build:store` builds the **shop** only. `npm run build` builds shop + admin (admin assets live in `resources/vendor/admin-theme/`).
+`npm run build` builds shop + admin. `npm run build:store` is storefront-only (smaller, no admin bundle).
 
-Upload the entire `public/build/` folder to the server at:
-
-`.../public_html/public/build/`  
-(so `manifest.json` exists at `public_html/public/build/manifest.json`)
-
-### Automatic (recommended)
-
-GitHub Actions runs `npm run build` and copies `public/build` to Hostinger before `deploy.sh` runs. Ensure workflow secrets are set (section 5).
-
-### On-server build (only if Node is available over SSH)
+On the server after pull, confirm:
 
 ```bash
-cd ~/domains/your-domain/public_html
-npm ci
-npm run build
+ls -la public/build/manifest.json
 ```
+
+### Optional: GitHub Actions
+
+The workflow can still run `npm run build` and SCP `public/build` before SSH deploy (redundant if build is already in git). Ensure secrets are set (section 5).
 
 ## 7) Deploy
 
