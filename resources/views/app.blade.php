@@ -35,16 +35,7 @@
         @if ($isAdminPage)
             @routes
         @else
-            @routes(['only' => [
-                'store.*',
-                'login',
-                'register',
-                'logout',
-                'password.*',
-                'verification.*',
-                'profile.edit',
-                'dashboard',
-            ]])
+            @routes('store')
         @endif
         @if (! $isAdminPage)
         <script>
