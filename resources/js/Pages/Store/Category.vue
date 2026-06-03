@@ -6,8 +6,10 @@ import StoreShopHeader from '@/Components/Store/StoreShopHeader.vue';
 import StoreSeoHead from '@/Components/Store/StoreSeoHead.vue';
 import StoreLayout from '@/Layouts/StoreLayout.vue';
 import { useStoreQuickAdd } from '@/composables/useStoreQuickAdd';
-import { Link, router } from '@inertiajs/vue3';
+import { Link, router, usePage } from '@inertiajs/vue3';
 import { computed, onBeforeUnmount, onMounted, onUnmounted, provide, reactive, ref, watch } from 'vue';
+
+const page = usePage();
 
 const props = defineProps({
     category: { type: Object, required: true },
@@ -19,6 +21,13 @@ const props = defineProps({
 });
 
 const filterOpen = ref(false);
+
+watch(
+    () => page.url,
+    () => {
+        filterOpen.value = false;
+    },
+);
 
 const {
     sheetOpen,
@@ -456,7 +465,12 @@ const ukSizes = computed(() => props.filterOptions.sizes_uk || []);
             </button>
         </div>
 
-        <StoreBottomSheet :open="filterOpen" title="Filters" @close="filterOpen = false">
+        <StoreBottomSheet
+            :open="filterOpen"
+            title="Filters"
+            mobile-only
+            @close="filterOpen = false"
+        >
             <div class="mt-4 space-y-6">
                 <div v-if="ukSizes.length">
                     <p class="text-xs font-semibold uppercase text-stadium-secondary">

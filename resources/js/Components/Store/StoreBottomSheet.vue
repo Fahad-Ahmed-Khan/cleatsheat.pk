@@ -3,6 +3,8 @@ defineProps({
     open: { type: Boolean, required: true },
     title: { type: String, default: '' },
     zClass: { type: String, default: 'z-[60]' },
+    /** When true, overlay is hidden on lg+ (desktop uses inline filters). */
+    mobileOnly: { type: Boolean, default: false },
 });
 const emit = defineEmits(['close']);
 </script>
@@ -12,7 +14,11 @@ const emit = defineEmits(['close']);
         <Transition name="store-fade">
             <div
                 v-if="open"
-                :class="['fixed inset-0 flex flex-col justify-end bg-stadium-ink/50 backdrop-blur-[2px]', zClass]"
+                :class="[
+                    'fixed inset-0 flex flex-col justify-end bg-stadium-ink/50 backdrop-blur-[2px]',
+                    zClass,
+                    mobileOnly ? 'lg:hidden' : '',
+                ]"
                 @click.self="emit('close')"
             >
                 <Transition name="store-slide">

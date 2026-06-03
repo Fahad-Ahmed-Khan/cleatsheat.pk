@@ -66,16 +66,22 @@ function onFooterNewsletter(e) {
 
 watch(storeBranding, (b) => applyStoreBranding(b), { immediate: true, deep: true });
 
+function onInertiaNavigate() {
+    menuOpen.value = false;
+}
+
 onMounted(() => {
     initStoreTheme();
     applyStoreBranding(storeBranding.value);
     bindBargainHelper();
     analytics.trackPageView();
     document.addEventListener('inertia:finish', onInertiaFinish);
+    document.addEventListener('inertia:navigate', onInertiaNavigate);
 });
 
 onUnmounted(() => {
     document.removeEventListener('inertia:finish', onInertiaFinish);
+    document.removeEventListener('inertia:navigate', onInertiaNavigate);
     delete window.tryinoTrack;
 });
 </script>
@@ -196,7 +202,10 @@ onUnmounted(() => {
                 </div>
             </div>
         </header>
-        <main class="pb-[calc(5rem+env(safe-area-inset-bottom))] sm:pb-0">
+        <main
+            :key="page.component"
+            class="pb-[calc(5rem+env(safe-area-inset-bottom))] sm:pb-0"
+        >
             <slot />
         </main>
         <a

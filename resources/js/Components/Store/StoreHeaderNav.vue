@@ -102,12 +102,12 @@ onUnmounted(() => {
         <Link :href="route('store.home')" :class="navClass(isActive('/'))">
             Home
         </Link>
-        <Link
+        <a
             :href="route('store.shop')"
             :class="navClass(isActive((p) => p === '/shop' || p.startsWith('/c/') || p.startsWith('/p/')))"
         >
             Shop
-        </Link>
+        </a>
 
         <template v-for="parent in navParents" :key="parent.id">
             <div v-if="parent.children.length" class="relative">
