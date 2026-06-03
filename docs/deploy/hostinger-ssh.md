@@ -21,6 +21,8 @@ Clone/deploy the **full Laravel repo** into `public_html` (or your domain folder
 
 After deploy, open `https://your-domain/` (not `/public`). If you still see 403, confirm `mod_rewrite` is enabled and that `public/.htaccess` exists.
 
+If **product images** return 403 at `/storage/products/...`, ensure the root `.htaccess` does not forbid `/storage/` (uploaded files are served via `public/storage`). Run `php artisan storage:link` and confirm files exist under `storage/app/public/products/`.
+
 ## 2) Hostinger: allow GitHub repo access (deploy key)
 
 On Hostinger (SSH):
