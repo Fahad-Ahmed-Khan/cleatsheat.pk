@@ -131,7 +131,7 @@ class ProductAdminController extends Controller
                 'category' => $product->category ? ['id' => $product->category->id, 'name' => $product->category->name] : null,
                 'size_chart' => $product->sizeChart ? ['id' => $product->sizeChart->id, 'name' => $product->sizeChart->name] : null,
                 'images' => $product->images->map(fn ($img) => [
-                    'path' => $img->path,
+                    'path' => \App\Support\Storage\PublicAssetUrl::resolve($img->path),
                     'alt' => $img->alt,
                     'sort_order' => $img->sort_order,
                 ])->values()->all(),
@@ -332,7 +332,7 @@ class ProductAdminController extends Controller
             'features' => $product->features ?? [],
             'is_active' => $product->is_active,
             'images' => $product->images->map(fn ($img) => [
-                'path' => $img->path,
+                'path' => \App\Support\Storage\PublicAssetUrl::resolve($img->path),
                 'alt' => $img->alt,
                 'sort_order' => $img->sort_order,
             ])->values()->all(),

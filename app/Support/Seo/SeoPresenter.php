@@ -2,6 +2,7 @@
 
 namespace App\Support\Seo;
 
+use App\Support\Storage\PublicAssetUrl;
 use App\Models\Category;
 use App\Models\ContentPost;
 use App\Models\Product;
@@ -11,14 +12,7 @@ final class SeoPresenter
 {
     public function absoluteUrl(?string $url): ?string
     {
-        if ($url === null || $url === '') {
-            return null;
-        }
-        if (preg_match('#^https?://#i', $url) === 1) {
-            return $url;
-        }
-
-        return rtrim(config('app.url'), '/').'/'.ltrim($url, '/');
+        return PublicAssetUrl::resolve($url);
     }
 
     public function canonicalHome(): string

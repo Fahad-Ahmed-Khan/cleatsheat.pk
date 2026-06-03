@@ -333,20 +333,8 @@ final class CustomerOrderQueryService
             'quantity' => $i->quantity,
             'unit_price' => (float) $i->unit_price,
             'line_total' => (float) $i->line_total,
-            'image_url' => $this->absoluteAssetUrl($imagePath),
+            'image_url' => \App\Support\Storage\PublicAssetUrl::resolve($imagePath),
         ];
-    }
-
-    private function absoluteAssetUrl(?string $url): ?string
-    {
-        if ($url === null || $url === '') {
-            return null;
-        }
-        if (preg_match('#^https?://#i', $url) === 1) {
-            return $url;
-        }
-
-        return rtrim(config('app.url'), '/').'/'.ltrim($url, '/');
     }
 
     /**

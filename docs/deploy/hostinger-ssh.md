@@ -46,7 +46,16 @@ cd tryino-ecom
 
 Create `.env` on the server (do **not** commit):
 - Set `APP_ENV=production`, `APP_DEBUG=false`
-- Set `APP_URL`, DB credentials, mail, and any 3rd party keys.
+- Set **`APP_URL=https://tryinotech.cloud`** (no trailing slash; must match your live domain — wrong value breaks image URLs)
+- Set DB credentials, mail, and any 3rd party keys.
+
+After changing `APP_URL`:
+
+```bash
+php artisan config:clear
+php artisan config:cache
+php artisan storage:normalize-paths
+```
 
 Then:
 

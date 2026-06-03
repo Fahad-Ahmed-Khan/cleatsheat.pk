@@ -8,6 +8,7 @@ use App\Http\Requests\Store\AddToCartRequest;
 use App\Models\CartItem;
 use App\Models\MarketingSetting;
 use App\Support\Seo\SeoPresenter;
+use App\Support\Storage\PublicAssetUrl;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -45,7 +46,7 @@ class CartController extends Controller
                     'id' => $v->product->id,
                     'name' => $v->product->name,
                     'slug' => $v->product->slug,
-                    'image' => $img?->path,
+                    'image' => PublicAssetUrl::resolve($img?->path),
                 ],
             ];
         });

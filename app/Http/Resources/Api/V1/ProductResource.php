@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Api\V1;
 
 use App\Models\Product;
+use App\Support\Storage\PublicAssetUrl;
 use App\Support\Store\ProductCardMeta;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -25,8 +26,8 @@ class ProductResource extends JsonResource
             'meta_title' => $this->meta_title,
             'meta_description' => $this->meta_description,
             'canonical_url' => $this->canonical_url,
-            'video_url' => $this->video_url,
-            'video_poster' => $this->video_poster,
+            'video_url' => PublicAssetUrl::resolve($this->video_url),
+            'video_poster' => PublicAssetUrl::resolve($this->video_poster),
             'fit_guidance' => $this->fit_guidance?->value,
             'gender' => $this->gender?->value,
             'shoe_type' => $this->shoe_type?->value,
@@ -44,7 +45,7 @@ class ProductResource extends JsonResource
             ]),
             'images' => $this->whenLoaded('images', fn () => $this->images
                 ->map(fn ($img) => [
-                    'path' => $img->path,
+                    'path' => PublicAssetUrl::resolve($img->path),
                     'alt' => $img->alt,
                     'sort_order' => $img->sort_order,
                 ])

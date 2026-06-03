@@ -353,7 +353,7 @@ class OrderAdminController extends Controller
                         'quantity' => (int) $it->quantity,
                         'unit_price' => (float) $it->unit_price,
                         'line_total' => (float) $it->line_total,
-                        'image_url' => $img?->path,
+                        'image_url' => \App\Support\Storage\PublicAssetUrl::resolve($img?->path),
                         'image_alt' => $img?->alt,
                     ];
                 })->values()->all(),

@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\ProductVariant;
 use App\Models\VariantSize;
+use App\Support\Storage\PublicAssetUrl;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -82,7 +83,7 @@ class ProductManagementService
             /** @var FilesystemAdapter $disk */
             $disk = Storage::disk('public');
             $stored = $disk->putFile('products/videos', $videoFile);
-            $attrs['video_url'] = $disk->url($stored);
+            $attrs['video_url'] = $stored;
         }
 
         // Treat empty strings as null for video fields so the column stays clean.
@@ -110,12 +111,14 @@ class ProductManagementService
                 /** @var FilesystemAdapter $disk */
                 $disk = Storage::disk('public');
                 $stored = $disk->putFile('products', $file);
-                $path = $disk->url($stored);
+                $path = $stored;
             }
 
             if (! is_string($path) || trim($path) === '') {
                 continue;
             }
+
+            $path = PublicAssetUrl::normalizeForStorage($path);
 
             ProductImage::query()->create([
                 'product_id' => $product->id,

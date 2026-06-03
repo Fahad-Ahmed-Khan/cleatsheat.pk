@@ -11,6 +11,7 @@ use App\Models\ProductVariant;
 use App\Models\User;
 use App\Models\VariantSize;
 use App\Support\Bargain\PhoneNormalizer;
+use App\Support\Storage\PublicAssetUrl;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -297,7 +298,7 @@ class CartService
                     'id' => $v->product->id,
                     'name' => $v->product->name,
                     'slug' => $v->product->slug,
-                    'image' => $img?->path,
+                    'image' => PublicAssetUrl::resolve($img?->path),
                 ],
             ];
         })->values()->all();

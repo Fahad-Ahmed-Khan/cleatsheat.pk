@@ -228,7 +228,7 @@ final class ProductBulkImportService
         $paths = $this->parseImagePaths($productRow['image_paths'] ?? null);
         if ($paths !== null) {
             $payload['images'] = collect($paths)->values()->map(fn (string $p, int $i) => [
-                'path' => $p,
+                'path' => \App\Support\Storage\PublicAssetUrl::normalizeForStorage($p),
                 'alt' => null,
                 'sort_order' => $i,
             ])->all();

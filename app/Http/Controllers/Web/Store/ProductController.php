@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\ProductResource;
 use App\Models\MarketingSetting;
 use App\Support\Seo\SeoPresenter;
+use App\Support\Storage\PublicAssetUrl;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -62,7 +63,7 @@ class ProductController extends Controller
             'brand' => $p->brand ? ['name' => $p->brand->name, 'slug' => $p->brand->slug] : null,
             'category' => $p->category ? ['name' => $p->category->name, 'slug' => $p->category->slug] : null,
             'images' => $p->images->map(fn ($img) => [
-                'path' => $img->path,
+                'path' => PublicAssetUrl::resolve($img->path),
                 'alt' => $img->alt,
             ])->values()->all(),
             'variants' => $p->variants->map(fn ($v) => [
