@@ -1,4 +1,4 @@
-import { createInertiaApp } from '@inertiajs/vue3';
+import { createInertiaApp, router } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createApp, h } from 'vue';
 import { ZiggyVue } from '../../../vendor/tightenco/ziggy';
@@ -38,6 +38,22 @@ export function bootInertiaApp({
         progress: {
             color: progressColor,
         },
+    }).then(() => {
+        router.on('invalid', (event) => {
+            const response = event.detail?.response;
+            if (!response || response.status !== 409) {
+                return;
+            }
+
+            const headers = response.headers ?? {};
+            const location =
+                headers['x-inertia-location'] ??
+                headers['X-Inertia-Location'];
+
+            if (location) {
+                window.location.assign(location);
+            }
+        });
     });
 }
 

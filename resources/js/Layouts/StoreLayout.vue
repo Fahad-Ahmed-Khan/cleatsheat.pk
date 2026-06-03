@@ -70,6 +70,10 @@ function onInertiaNavigate() {
     menuOpen.value = false;
 }
 
+function onInertiaStart() {
+    menuOpen.value = false;
+}
+
 onMounted(() => {
     initStoreTheme();
     applyStoreBranding(storeBranding.value);
@@ -77,11 +81,13 @@ onMounted(() => {
     analytics.trackPageView();
     document.addEventListener('inertia:finish', onInertiaFinish);
     document.addEventListener('inertia:navigate', onInertiaNavigate);
+    document.addEventListener('inertia:start', onInertiaStart);
 });
 
 onUnmounted(() => {
     document.removeEventListener('inertia:finish', onInertiaFinish);
     document.removeEventListener('inertia:navigate', onInertiaNavigate);
+    document.removeEventListener('inertia:start', onInertiaStart);
     delete window.tryinoTrack;
 });
 </script>
@@ -114,7 +120,7 @@ onUnmounted(() => {
                     </svg>
                 </button>
 
-                <Link
+                <a
                     :href="route('store.home')"
                     class="flex flex-1 items-center justify-center gap-2 md:flex-none md:justify-start"
                 >
@@ -153,7 +159,7 @@ onUnmounted(() => {
                             {{ appName }}
                         </span>
                     </template>
-                </Link>
+                </a>
 
                 <StoreHeaderNav :categories="navCategories" />
 
@@ -272,16 +278,16 @@ onUnmounted(() => {
                     <p class="text-label text-stadium-lime">Support</p>
                     <ul class="mt-4 space-y-2 text-sm">
                         <li>
-                            <Link :href="route('store.pages.about')" class="hover:text-stadium-lime">About us</Link>
+                            <a :href="route('store.pages.about')" class="hover:text-stadium-lime">About us</a>
                         </li>
                         <li>
-                            <Link :href="route('store.pages.faq')" class="hover:text-stadium-lime">FAQ</Link>
+                            <a :href="route('store.pages.faq')" class="hover:text-stadium-lime">FAQ</a>
                         </li>
                         <li>
-                            <Link :href="route('store.pages.contact')" class="hover:text-stadium-lime">Contact</Link>
+                            <a :href="route('store.pages.contact')" class="hover:text-stadium-lime">Contact</a>
                         </li>
                         <li>
-                            <Link :href="route('store.order-tracking')" class="hover:text-stadium-lime">Track order</Link>
+                            <a :href="route('store.order-tracking')" class="hover:text-stadium-lime">Track order</a>
                         </li>
                         <li>
                             <Link :href="route('store.pages.returns')" class="hover:text-stadium-lime">Returns</Link>

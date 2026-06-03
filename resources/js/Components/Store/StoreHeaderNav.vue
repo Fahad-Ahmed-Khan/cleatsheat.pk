@@ -99,9 +99,9 @@ onUnmounted(() => {
 
 <template>
     <nav ref="navMenusRef" class="hidden flex-1 items-center justify-center gap-5 lg:gap-6 md:flex" aria-label="Main">
-        <Link :href="route('store.home')" :class="navClass(isActive('/'))">
+        <a :href="route('store.home')" :class="navClass(isActive('/'))">
             Home
-        </Link>
+        </a>
         <a
             :href="route('store.shop')"
             :class="navClass(isActive((p) => p === '/shop' || p.startsWith('/c/') || p.startsWith('/p/')))"
@@ -182,18 +182,18 @@ onUnmounted(() => {
             </Link>
         </template>
 
-        <Link
+        <a
             :href="route('store.order-tracking')"
             :class="navClass(isActive((p) => p.startsWith('/track-order')))"
         >
             Track Order
-        </Link>
-        <Link
+        </a>
+        <a
             :href="route('store.journal.index')"
             :class="navClass(isActive((p) => p.startsWith('/journal')))"
         >
             Blog
-        </Link>
+        </a>
         <div class="relative">
             <button
                 type="button"
@@ -246,14 +246,14 @@ onUnmounted(() => {
                     role="menu"
                 >
                     <li v-for="item in pageLinks" :key="item.href" role="none">
-                        <Link
+                        <a
                             :href="route(item.href)"
                             role="menuitem"
                             class="block px-4 py-2.5 text-sm font-medium text-stadium-ink transition hover:bg-stadium-muted hover:text-stadium-olive dark:text-stadium-inverse-text dark:hover:bg-stadium-dim dark:hover:text-stadium-lime"
                             @click="closeMenus"
                         >
                             {{ item.label }}
-                        </Link>
+                        </a>
                     </li>
                 </ul>
             </Transition>

@@ -62,22 +62,22 @@ function closeMenu() {
                     </p>
                     <ul class="mt-3 space-y-1">
                         <li>
-                            <Link
+                            <a
                                 :href="route('store.home')"
                                 class="block rounded-xl px-3 py-3 text-sm font-semibold text-stadium-ink transition hover:bg-stadium-muted"
                                 @click="closeMenu"
                             >
                                 Home
-                            </Link>
+                            </a>
                         </li>
                         <li>
-                            <Link
+                            <a
                                 :href="route('store.shop')"
                                 class="block rounded-xl px-3 py-3 text-sm font-semibold text-stadium-ink transition hover:bg-stadium-muted"
                                 @click="closeMenu"
                             >
                                 Shop all
-                            </Link>
+                            </a>
                         </li>
 
                         <li v-for="parent in navParents" :key="parent.id">
@@ -150,22 +150,22 @@ function closeMenu() {
                             </Link>
                         </li>
                         <li>
-                            <Link
+                            <a
                                 :href="route('store.order-tracking')"
                                 class="block rounded-xl px-3 py-3 text-sm font-semibold text-stadium-ink transition hover:bg-stadium-muted"
                                 @click="closeMenu"
                             >
                                 Track order
-                            </Link>
+                            </a>
                         </li>
                         <li>
-                            <Link
+                            <a
                                 :href="route('store.journal.index')"
                                 class="block rounded-xl px-3 py-3 text-sm font-semibold text-stadium-ink transition hover:bg-stadium-muted"
                                 @click="closeMenu"
                             >
                                 Blog
-                            </Link>
+                            </a>
                         </li>
                     </ul>
                     <p class="mt-6 px-2 text-[11px] font-bold uppercase tracking-widest text-stadium-outline">
@@ -173,76 +173,76 @@ function closeMenu() {
                     </p>
                     <ul class="mt-3 space-y-1">
                         <li>
-                            <Link
+                            <a
                                 :href="route('store.pages.about')"
                                 class="block rounded-xl px-3 py-3 text-sm font-medium text-stadium-secondary transition hover:bg-stadium-muted hover:text-stadium-ink"
                                 @click="closeMenu"
                             >
                                 About us
-                            </Link>
+                            </a>
                         </li>
                         <li>
-                            <Link
+                            <a
                                 :href="route('store.pages.faq')"
                                 class="block rounded-xl px-3 py-3 text-sm font-medium text-stadium-secondary transition hover:bg-stadium-muted hover:text-stadium-ink"
                                 @click="closeMenu"
                             >
                                 FAQ
-                            </Link>
+                            </a>
                         </li>
                         <li>
-                            <Link
+                            <a
                                 :href="route('store.pages.contact')"
                                 class="block rounded-xl px-3 py-3 text-sm font-medium text-stadium-secondary transition hover:bg-stadium-muted hover:text-stadium-ink"
                                 @click="closeMenu"
                             >
                                 Contact
-                            </Link>
+                            </a>
                         </li>
                         <li>
-                            <Link
+                            <a
                                 :href="route('store.pages.payment')"
                                 class="block rounded-xl px-3 py-3 text-sm font-medium text-stadium-secondary transition hover:bg-stadium-muted hover:text-stadium-ink"
                                 @click="closeMenu"
                             >
                                 Payment policy
-                            </Link>
+                            </a>
                         </li>
                         <li>
-                            <Link
+                            <a
                                 :href="route('store.pages.shipping')"
                                 class="block rounded-xl px-3 py-3 text-sm font-medium text-stadium-secondary transition hover:bg-stadium-muted hover:text-stadium-ink"
                                 @click="closeMenu"
                             >
                                 Shipping policy
-                            </Link>
+                            </a>
                         </li>
                         <li>
-                            <Link
+                            <a
                                 :href="route('store.pages.privacy')"
                                 class="block rounded-xl px-3 py-3 text-sm font-medium text-stadium-secondary transition hover:bg-stadium-muted hover:text-stadium-ink"
                                 @click="closeMenu"
                             >
                                 Privacy policy
-                            </Link>
+                            </a>
                         </li>
                         <li>
-                            <Link
+                            <a
                                 :href="route('store.pages.terms')"
                                 class="block rounded-xl px-3 py-3 text-sm font-medium text-stadium-secondary transition hover:bg-stadium-muted hover:text-stadium-ink"
                                 @click="closeMenu"
                             >
                                 Terms &amp; conditions
-                            </Link>
+                            </a>
                         </li>
                         <li>
-                            <Link
+                            <a
                                 :href="route('store.pages.returns')"
                                 class="block rounded-xl px-3 py-3 text-sm font-medium text-stadium-secondary transition hover:bg-stadium-muted hover:text-stadium-ink"
                                 @click="closeMenu"
                             >
                                 Return policy
-                            </Link>
+                            </a>
                         </li>
                     </ul>
                 </nav>

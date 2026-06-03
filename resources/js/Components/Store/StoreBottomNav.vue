@@ -1,5 +1,5 @@
 <script setup>
-import { Link, usePage } from '@inertiajs/vue3';
+import { usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
 const page = usePage();
@@ -76,8 +76,7 @@ const items = computed(() => [
     >
         <ul class="mx-auto flex max-w-lg items-stretch justify-around px-1 pt-1">
             <li v-for="item in items" :key="item.key" class="flex-1">
-                <component
-                    :is="item.key === 'shop' ? 'a' : Link"
+                <a
                     :href="item.href"
                     :aria-current="item.active ? 'page' : undefined"
                     class="relative mb-1 flex min-h-[4.25rem] flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1 text-[10px] font-bold uppercase tracking-wide transition active:scale-[0.97]"
@@ -177,7 +176,7 @@ const items = computed(() => [
                         </span>
                     </span>
                     <span>{{ item.label }}</span>
-                </component>
+                </a>
             </li>
         </ul>
     </nav>
