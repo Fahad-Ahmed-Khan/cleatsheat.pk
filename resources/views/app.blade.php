@@ -24,16 +24,28 @@
             $fontCss = 'https://fonts.bunny.net/css?family=figtree:400,500,600|inter:400,500,700|sora:700,800&display=swap';
         @endphp
         <link rel="preconnect" href="https://fonts.bunny.net" crossorigin>
-        <link rel="preload" as="style" href="{{ $fontCss }}">
         <link href="{{ $fontCss }}" rel="stylesheet" media="print" onload="this.media='all'">
         <noscript><link href="{{ $fontCss }}" rel="stylesheet"></noscript>
 
         <!-- Scripts -->
-        @routes
         @php
             $isAdminPage = str_starts_with($page['component'] ?? '', 'Admin/');
             $entry = $isAdminPage ? 'resources/js/admin.js' : 'resources/js/app.js';
         @endphp
+        @if ($isAdminPage)
+            @routes
+        @else
+            @routes(['only' => [
+                'store.*',
+                'login',
+                'register',
+                'logout',
+                'password.*',
+                'verification.*',
+                'profile.edit',
+                'dashboard',
+            ]])
+        @endif
         @if (! $isAdminPage)
         <script>
             (function () {

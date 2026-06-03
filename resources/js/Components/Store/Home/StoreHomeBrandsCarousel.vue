@@ -1,18 +1,10 @@
 <script setup>
 import { Link } from '@inertiajs/vue3';
-import { computed, onMounted, onUnmounted, ref } from 'vue';
-import { useReducedMotion } from '@/composables/useReducedMotion';
+import { computed } from 'vue';
 
 const props = defineProps({
     brands: { type: Array, default: () => [] },
 });
-
-const { prefersReducedMotion } = useReducedMotion();
-
-const trackRef = ref(null);
-let scrollTimer = null;
-/** Cached scroll step to avoid layout reads on every auto-scroll tick. */
-let cachedScrollStep = 120;
 
 const items = computed(() =>
     (props.brands ?? []).filter((b) => b?.slug && (b.logo_url || b.name)),
@@ -25,43 +17,6 @@ function brandHref(brand) {
 function brandInitial(name) {
     return String(name ?? '?').trim().charAt(0).toUpperCase();
 }
-
-function measureScrollStep() {
-    const el = trackRef.value;
-    if (!el) return;
-    const card = el.querySelector('[data-brand-card]');
-    cachedScrollStep = card ? card.offsetWidth + 12 : 120;
-}
-
-function scrollStep() {
-    const el = trackRef.value;
-    if (!el || prefersReducedMotion.value) return;
-    const step = cachedScrollStep;
-    const max = el.scrollWidth - el.clientWidth;
-    if (max <= 0) return;
-    const next = el.scrollLeft + step;
-    el.scrollTo({ left: next >= max - 2 ? 0 : next, behavior: 'smooth' });
-}
-
-function startAutoScroll() {
-    if (scrollTimer || prefersReducedMotion.value || items.value.length < 4) return;
-    scrollTimer = window.setInterval(scrollStep, 4000);
-}
-
-function stopAutoScroll() {
-    if (!scrollTimer) return;
-    window.clearInterval(scrollTimer);
-    scrollTimer = null;
-}
-
-onMounted(() => {
-    requestAnimationFrame(() => {
-        measureScrollStep();
-        startAutoScroll();
-    });
-});
-
-onUnmounted(() => stopAutoScroll());
 </script>
 
 <template>
@@ -89,10 +44,7 @@ onUnmounted(() => stopAutoScroll());
             </div>
 
             <div
-                ref="trackRef"
                 class="no-scrollbar relative mt-6 flex gap-3 overflow-x-auto pb-2 snap-x sm:mt-8 sm:gap-4"
-                @mouseenter="stopAutoScroll"
-                @mouseleave="startAutoScroll"
             >
                 <Link
                     v-for="brand in items"
@@ -112,7 +64,7 @@ onUnmounted(() => stopAutoScroll());
                             class="max-h-full max-w-full object-contain"
                             loading="lazy"
                             decoding="async"
-                        />
+                        >
                         <span
                             v-else
                             class="font-display text-xl font-bold text-stadium-olive"

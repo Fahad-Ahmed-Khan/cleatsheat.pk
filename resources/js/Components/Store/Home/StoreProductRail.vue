@@ -3,9 +3,7 @@ import StoreProductCard from '@/Components/Store/StoreProductCard.vue';
 import StoreProductCardSkeleton from '@/Components/Store/StoreProductCardSkeleton.vue';
 import StoreProductRailCta from '@/Components/Store/Home/StoreProductRailCta.vue';
 import StoreSectionHeader from '@/Components/Store/StoreSectionHeader.vue';
-import { motion } from 'motion-v';
 import { computed } from 'vue';
-import { useReducedMotion } from '@/composables/useReducedMotion';
 
 const props = defineProps({
     id: { type: String, default: '' },
@@ -20,22 +18,9 @@ const props = defineProps({
     showViewAllCta: { type: Boolean, default: true },
 });
 
-const { prefersReducedMotion } = useReducedMotion();
-
 const shopHref = computed(() => props.viewAllHref || route('store.shop'));
 const ctaLabel = computed(() => props.viewAllLabel || 'View all cleats');
 const showCta = computed(() => props.showViewAllCta && props.products.length > 0 && !props.loading);
-
-const motionProps = computed(() =>
-    prefersReducedMotion.value
-        ? {}
-        : {
-              initial: { opacity: 0, y: 16 },
-              whileInView: { opacity: 1, y: 0 },
-              viewport: { once: true, margin: '-40px' },
-              transition: { duration: 0.4 },
-          },
-);
 </script>
 
 <template>
@@ -51,7 +36,7 @@ const motionProps = computed(() =>
                 </template>
             </StoreSectionHeader>
 
-            <motion.div v-bind="motionProps" class="mt-8">
+            <div class="mt-8">
                 <div
                     v-if="loading"
                     class="store-product-grid"
@@ -90,7 +75,7 @@ const motionProps = computed(() =>
                         :label="ctaLabel"
                     />
                 </div>
-            </motion.div>
+            </div>
         </div>
     </section>
 </template>

@@ -120,8 +120,40 @@ html.dark {
         box-shadow: 0 10px 30px -10px rgba(26, 28, 28, 0.08);
     }
 
+    @keyframes store-rise-in {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .store-hero-stagger > .store-hero-item {
+        animation: store-rise-in 0.4s ease both;
+    }
+
+    .store-hero-stagger > .store-hero-item:nth-child(1) {
+        animation-delay: 0s;
+    }
+    .store-hero-stagger > .store-hero-item:nth-child(2) {
+        animation-delay: 0.06s;
+    }
+    .store-hero-stagger > .store-hero-item:nth-child(3) {
+        animation-delay: 0.12s;
+    }
+    .store-hero-stagger > .store-hero-item:nth-child(4) {
+        animation-delay: 0.18s;
+    }
+    .store-hero-stagger > .store-hero-item:nth-child(5) {
+        animation-delay: 0.24s;
+    }
+
     @media (prefers-reduced-motion: reduce) {
-        .motion-safe-only {
+        .motion-safe-only,
+        .store-hero-stagger > .store-hero-item {
             transform: none !important;
             opacity: 1 !important;
             animation: none !important;

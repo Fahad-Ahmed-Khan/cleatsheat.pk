@@ -20,8 +20,6 @@ import StoreHomeTrust from '@/Components/Store/Home/StoreHomeTrust.vue';
 
 import StoreProductRail from '@/Components/Store/Home/StoreProductRail.vue';
 
-import StoreProductQuickAddSheet from '@/Components/Store/StoreProductQuickAddSheet.vue';
-
 import StoreSeoHead from '@/Components/Store/StoreSeoHead.vue';
 
 import StoreLayout from '@/Layouts/StoreLayout.vue';
@@ -30,7 +28,11 @@ import { useStoreQuickAdd } from '@/composables/useStoreQuickAdd';
 
 import { Link } from '@inertiajs/vue3';
 
-import { computed, onUnmounted, provide } from 'vue';
+import { computed, defineAsyncComponent, onUnmounted, provide } from 'vue';
+
+const StoreProductQuickAddSheet = defineAsyncComponent(
+    () => import('@/Components/Store/StoreProductQuickAddSheet.vue'),
+);
 
 const props = defineProps({
 

@@ -6,11 +6,7 @@ import { useStoreWishlist } from '@/composables/useStoreWishlist';
 
 import { Link } from '@inertiajs/vue3';
 
-import { motion } from 'motion-v';
-
 import { computed, inject, ref } from 'vue';
-
-import { useReducedMotion } from '@/composables/useReducedMotion';
 import { isSizeInStock } from '@/composables/useStoreQuickAdd';
 
 
@@ -20,8 +16,6 @@ const { formatPKR } = useStoreFormat();
 const { toggle, isWishlisted } = useStoreWishlist();
 
 const quickAddApi = inject('storeQuickAdd', null);
-
-const { prefersReducedMotion } = useReducedMotion();
 
 
 
@@ -156,24 +150,6 @@ const conditionBadge = computed(
 );
 const isBrandNew = computed(() => conditionKind.value === 'new');
 
-const cardMotion = computed(() =>
-
-    prefersReducedMotion.value
-
-        ? {}
-
-        : {
-
-              whileHover: { y: -4 },
-
-              transition: { type: 'spring', stiffness: 400, damping: 28 },
-
-          },
-
-);
-
-
-
 function onWishlistClick(e) {
 
     e.preventDefault();
@@ -202,11 +178,9 @@ function onQuickAdd(e) {
 
 <template>
 
-    <motion.article
+    <article
 
-        v-bind="cardMotion"
-
-        class="group relative flex flex-col overflow-hidden rounded-3xl border border-stadium-outline-soft/30 bg-stadium-white stadium-ambient-shadow transition-shadow duration-200 hover:shadow-stadium-lg md:hover:-translate-y-0"
+        class="group relative flex flex-col overflow-hidden rounded-3xl border border-stadium-outline-soft/30 bg-stadium-white stadium-ambient-shadow transition-shadow duration-200 hover:shadow-stadium-lg md:transition-transform md:hover:-translate-y-1"
 
         :style="{ animationDelay: `${Math.min(props.index * 40, 400)}ms` }"
 
@@ -406,7 +380,7 @@ function onQuickAdd(e) {
 
         </Link>
 
-    </motion.article>
+    </article>
 
 </template>
 

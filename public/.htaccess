@@ -46,3 +46,10 @@
 <IfModule mod_deflate.c>
     AddOutputFilterByType DEFLATE text/html text/plain text/css application/javascript application/json image/svg+xml
 </IfModule>
+
+# Product and brand images under /storage/ (symlinked public disk).
+<IfModule mod_headers.c>
+    <LocationMatch "^/storage/.+\.(?:avif|webp|jpe?g|png|gif|svg)$">
+        Header set Cache-Control "public, max-age=2592000"
+    </LocationMatch>
+</IfModule>
