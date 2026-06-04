@@ -54,8 +54,13 @@
 </IfModule>
 
 # Product and brand images under /storage/ (symlinked public disk).
-<IfModule mod_headers.c>
-    <LocationMatch "^/storage/.+\.(?:avif|webp|jpe?g|png|gif|svg)$">
-        Header set Cache-Control "public, max-age=2592000"
-    </LocationMatch>
+# <LocationMatch> is invalid in .htaccess on Apache (Laragon) and triggers a 500.
+# LiteSpeed (Hostinger) honours it, so scope it to LiteSpeed only. Apache skips
+# unknown-module blocks, keeping local dev working without changing production.
+<IfModule LiteSpeed>
+    <IfModule mod_headers.c>
+        <LocationMatch "^/storage/.+\.(?:avif|webp|jpe?g|png|gif|svg)$">
+            Header set Cache-Control "public, max-age=2592000"
+        </LocationMatch>
+    </IfModule>
 </IfModule>
