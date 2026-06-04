@@ -1,1 +1,0 @@
-function e(e){let t=Number(e);return Number.isNaN(t)?`—`:new Intl.NumberFormat(`en-PK`,{style:`currency`,currency:`PKR`,maximumFractionDigits:0}).format(t)}function t(){return{formatPKR:e}}export{t};

@@ -70,28 +70,31 @@ jobs:
           SSH_TARGET="${SSH_USER}@${SSH_HOST}"
           REMOTE_BUILD="${APP_PATH}/public/build/"
 
-          upload_ok=0
-          for attempt in 1 2 3; do
-            echo "rsync public/build → ${REMOTE_BUILD} (attempt ${attempt}/3)"
-            if rsync -az --delete public/build/ "${SSH_TARGET}:${REMOTE_BUILD}"; then
-              upload_ok=1
-              break
-            fi
-            sleep 60
-          done
+          run_remote() {
+            local label="$1"; shift
+            for attempt in 1 2 3; do
+              echo "${label} (attempt ${attempt}/3)"
+              if "$@"; then
+                return 0
+              fi
+              sleep 60
+            done
+            echo "::error::${label} failed after 3 attempts."
+            return 1
+          }
 
-          if [ "$upload_ok" -ne 1 ]; then
-            echo "::error::Upload failed after 3 attempts (check HOSTINGER_SSH_* secrets and firewall)."
-            exit 1
-          fi
+          # 1) Sync code + run migrations FIRST (this does `git reset --hard`,
+          #    which would otherwise clobber freshly-uploaded build assets).
+          run_remote "deploy.sh prepare" \
+            "${SSH_CMD[@]}" "$SSH_TARGET" "set -euo pipefail; cd '${APP_PATH}' && bash ./deploy.sh prepare"
 
-          for attempt in 1 2 3; do
-            echo "Running deploy.sh (attempt ${attempt}/3)"
-            if "${SSH_CMD[@]}" "$SSH_TARGET" "set -euo pipefail; cd '${APP_PATH}' && bash ./deploy.sh"; then
-              exit 0
-            fi
-            sleep 60
-          done
+          # 2) Upload freshly-built assets. public/build is gitignored, so the
+          #    git reset above never touches it.
+          run_remote "rsync public/build → ${REMOTE_BUILD}" \
+            rsync -az --delete public/build/ "${SSH_TARGET}:${REMOTE_BUILD}"
 
-          echo "::error::Deploy failed after 3 attempts."
-          exit 1
+          # 3) Rebuild caches and bring the app back up now that assets are in place.
+          run_remote "deploy.sh finalize" \
+            "${SSH_CMD[@]}" "$SSH_TARGET" "set -euo pipefail; cd '${APP_PATH}' && bash ./deploy.sh finalize"
+
+          echo "Deploy succeeded."
