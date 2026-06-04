@@ -52,6 +52,7 @@ run_finalize() {
     fi
   fi
 
+
   # Generate responsive WebP variants for any product images missing them (idempotent, non-fatal).
   php artisan products:generate-image-variants || true
 
