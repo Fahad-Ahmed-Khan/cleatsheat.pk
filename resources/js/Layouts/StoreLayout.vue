@@ -9,7 +9,7 @@ import { useStoreAnalytics } from '@/composables/useStoreAnalytics';
 import { useStoreWhatsApp } from '@/composables/useStoreWhatsApp';
 import { applyStoreBranding } from '@/store/applyStoreBranding';
 import { initStoreTheme } from '@/store/storeTheme';
-import { Link, usePage } from '@inertiajs/vue3';
+import { usePage } from '@inertiajs/vue3';
 import { computed, onMounted, onUnmounted, ref, toRef, watch } from 'vue';
 
 const page = usePage();
@@ -175,7 +175,7 @@ onUnmounted(() => {
 
                 <div class="flex items-center gap-1 text-stadium-ink-variant sm:gap-2">
                     <StoreThemeToggle />
-                    <Link
+                    <a
                         :href="route('store.shop')"
                         class="flex items-center justify-center rounded-xl p-2 transition hover:bg-stadium-muted active:scale-95"
                         aria-label="Search catalogue"
@@ -184,8 +184,8 @@ onUnmounted(() => {
                             <circle cx="11" cy="11" r="7" />
                             <path d="M20 20l-3-3" stroke-linecap="round" />
                         </svg>
-                    </Link>
-                    <Link
+                    </a>
+                    <a
                         :href="route('store.cart')"
                         class="relative flex items-center justify-center rounded-xl p-2 transition hover:bg-stadium-muted active:scale-95"
                         aria-label="Shopping bag"
@@ -200,7 +200,7 @@ onUnmounted(() => {
                         >
                             {{ cartCount > 99 ? '99+' : cartCount }}
                         </span>
-                    </Link>
+                    </a>
                     <a
                         v-if="!authUser"
                         :href="route('login')"
@@ -242,10 +242,10 @@ onUnmounted(() => {
         <footer class="mt-12 border-t-4 border-stadium-lime bg-stadium-inverse py-12 text-stadium-inverse-text">
             <div class="store-container grid gap-10 lg:grid-cols-12 lg:gap-8">
                 <div class="lg:col-span-4">
-                    <Link :href="route('store.home')" class="inline-flex items-center gap-2 font-display text-xl font-extrabold tracking-tighter text-white">
+                    <a :href="route('store.home')" class="inline-flex items-center gap-2 font-display text-xl font-extrabold tracking-tighter text-white">
                         <span class="text-2xl leading-none text-stadium-lime" aria-hidden="true">⚽</span>
                         {{ appName }}
-                    </Link>
+                    </a>
                     <p class="mt-4 max-w-sm text-sm leading-relaxed text-stadium-inverse-text/80">
                         Original used football boots for Pakistani players — inspected condition, UK/EU sizing, COD nationwide.
                     </p>
@@ -272,15 +272,15 @@ onUnmounted(() => {
                             <a :href="route('store.category', 'accessories')" class="hover:text-stadium-lime">Accessories</a>
                         </li>
                         <li v-for="tile in SURFACE_TILES" :key="tile.short">
-                            <Link
+                            <a
                                 :href="categoryHref(tile.fragments)"
                                 class="hover:text-stadium-lime"
                             >
                                 {{ tile.title }}
-                            </Link>
+                            </a>
                         </li>
                         <li>
-                            <Link :href="route('store.shop')" class="hover:text-stadium-lime">All boots</Link>
+                            <a :href="route('store.shop')" class="hover:text-stadium-lime">All boots</a>
                         </li>
                     </ul>
                 </div>
@@ -303,7 +303,7 @@ onUnmounted(() => {
                             <a :href="route('store.pages.returns')" class="hover:text-stadium-lime">Returns</a>
                         </li>
                         <li>
-                            <Link :href="route('store.journal.index')" class="hover:text-stadium-lime">Size guides</Link>
+                            <a :href="route('store.journal.index')" class="hover:text-stadium-lime">Size guides</a>
                         </li>
                         <li>
                             <a
@@ -337,7 +337,7 @@ onUnmounted(() => {
                             <a :href="route('store.pages.disclaimer')" class="hover:text-stadium-lime">Disclaimer</a>
                         </li>
                         <li>
-                            <Link :href="route('store.cart')" class="hover:text-stadium-lime">Cart</Link>
+                            <a :href="route('store.cart')" class="hover:text-stadium-lime">Cart</a>
                         </li>
                         <li>
                             <a v-if="!authUser" :href="route('login')" class="hover:text-stadium-lime">

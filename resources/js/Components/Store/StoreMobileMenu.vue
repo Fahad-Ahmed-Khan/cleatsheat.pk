@@ -1,6 +1,5 @@
 <script setup>
 import { useNavCategories } from '@/composables/useNavCategories';
-import { Link } from '@inertiajs/vue3';
 import { ref, toRef } from 'vue';
 
 const props = defineProps({
@@ -141,13 +140,13 @@ function closeMenu() {
                     </p>
                     <ul class="mt-3 space-y-1">
                         <li>
-                            <Link
+                            <a
                                 :href="route('store.cart')"
                                 class="block rounded-xl px-3 py-3 text-sm font-semibold text-stadium-ink transition hover:bg-stadium-muted"
                                 @click="closeMenu"
                             >
                                 Cart
-                            </Link>
+                            </a>
                         </li>
                         <li>
                             <a
