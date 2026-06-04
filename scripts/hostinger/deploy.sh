@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BRANCH="${DEPLOY_BRANCH:-master}"
+BRANCH="${DEPLOY_BRANCH:-production}"
 
 # Stage to run:
-#   prepare  -> maintenance mode, sync code, composer, migrate (run BEFORE uploading public/build)
-#   finalize -> rebuild caches, generate image variants, leave maintenance mode (run AFTER uploading public/build)
-#   all      -> prepare + finalize in one go (default; assumes public/build is already present locally)
+#   prepare  -> maintenance mode, sync code from origin/$BRANCH, composer, migrate
+#   finalize -> rebuild caches, generate image variants, leave maintenance mode
+#   all      -> prepare + finalize (used by cron-deploy.sh on Hostinger)
+#
+# CI pushes the `production` branch with Vite build artifacts (no npm on Hostinger).
+# Set DEPLOY_BRANCH=master only for manual deploys from a machine that builds assets locally.
 STAGE="${1:-all}"
 
 if [ ! -f artisan ]; then
@@ -36,7 +39,7 @@ run_prepare() {
 }
 
 run_finalize() {
-  # public/build is deployed via rsync (it is gitignored), so it must exist by now.
+  # public/build is committed on the `production` branch by GitHub Actions (gitignored on master).
   if [ ! -f public/build/manifest.json ]; then
     if command -v npm >/dev/null 2>&1; then
       echo "public/build/manifest.json missing — building frontend assets (Vite) as a fallback..."
@@ -44,7 +47,7 @@ run_finalize() {
       npm run build
     else
       echo "ERROR: public/build/manifest.json is missing and npm is unavailable."
-      echo "Upload public/build to the server (CI rsync) or build it locally first."
+      echo "Deploy the production branch from CI, or build assets locally before running deploy.sh."
       exit 1
     fi
   fi

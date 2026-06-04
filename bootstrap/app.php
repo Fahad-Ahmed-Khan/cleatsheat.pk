@@ -28,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'webhooks/safepay',
             'webhooks/shipping/*',
             'webhooks/whatsapp',
+            'webhooks/github/deploy',
         ]);
 
         $middleware->web(append: [

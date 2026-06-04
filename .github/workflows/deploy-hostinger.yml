@@ -1,4 +1,4 @@
-name: Deploy to Hostinger (SSH)
+name: Deploy to Hostinger (production branch)
 
 on:
   push:
@@ -8,6 +8,9 @@ on:
 concurrency:
   group: hostinger-deploy-master
   cancel-in-progress: true
+
+permissions:
+  contents: write
 
 jobs:
   ci:
@@ -49,52 +52,19 @@ jobs:
           APP_ENV: testing
         run: composer test
 
-      # Native rsync/ssh with retries — appleboy/docker SCP often hits Hostinger SSH rate limits / timeouts.
-      - name: Upload build and deploy on Hostinger
-        env:
-          SSH_HOST: ${{ secrets.HOSTINGER_SSH_HOST }}
-          SSH_PORT: ${{ secrets.HOSTINGER_SSH_PORT }}
-          SSH_USER: ${{ secrets.HOSTINGER_SSH_USER }}
-          SSH_KEY: ${{ secrets.HOSTINGER_SSH_KEY }}
-          APP_PATH: ${{ secrets.HOSTINGER_APP_PATH }}
+      # Hostinger blocks SSH from GitHub Actions IPs. CI builds assets and pushes
+      # the `production` branch; GitHub webhook triggers pull-deploy on the server.
+      - name: Push production branch with built assets
         run: |
           set -euo pipefail
 
-          install -m 700 -d ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/hostinger_deploy
-          chmod 600 ~/.ssh/hostinger_deploy
-          trap 'rm -f ~/.ssh/hostinger_deploy' EXIT
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          export RSYNC_RSH="ssh -i ~/.ssh/hostinger_deploy -p ${SSH_PORT} -o BatchMode=yes -o ConnectTimeout=120 -o ServerAliveInterval=30 -o StrictHostKeyChecking=accept-new"
-          SSH_CMD=(ssh -i ~/.ssh/hostinger_deploy -p "$SSH_PORT" -o BatchMode=yes -o ConnectTimeout=120 -o ServerAliveInterval=30 -o StrictHostKeyChecking=accept-new)
-          SSH_TARGET="${SSH_USER}@${SSH_HOST}"
-          REMOTE_BUILD="${APP_PATH}/public/build/"
+          git checkout -B production
+          git add -f public/build
+          git commit -m "deploy: ${GITHUB_SHA} [${GITHUB_REF_NAME}]"
 
-          run_remote() {
-            local label="$1"; shift
-            for attempt in 1 2 3; do
-              echo "${label} (attempt ${attempt}/3)"
-              if "$@"; then
-                return 0
-              fi
-              sleep 60
-            done
-            echo "::error::${label} failed after 3 attempts."
-            return 1
-          }
+          git push origin production --force
 
-          # 1) Sync code + run migrations FIRST (this does `git reset --hard`,
-          #    which would otherwise clobber freshly-uploaded build assets).
-          run_remote "deploy.sh prepare" \
-            "${SSH_CMD[@]}" "$SSH_TARGET" "set -euo pipefail; cd '${APP_PATH}' && bash ./deploy.sh prepare"
-
-          # 2) Upload freshly-built assets. public/build is gitignored, so the
-          #    git reset above never touches it.
-          run_remote "rsync public/build → ${REMOTE_BUILD}" \
-            rsync -az --delete public/build/ "${SSH_TARGET}:${REMOTE_BUILD}"
-
-          # 3) Rebuild caches and bring the app back up now that assets are in place.
-          run_remote "deploy.sh finalize" \
-            "${SSH_CMD[@]}" "$SSH_TARGET" "set -euo pipefail; cd '${APP_PATH}' && bash ./deploy.sh finalize"
-
-          echo "Deploy succeeded."
+          echo "Pushed production branch. GitHub webhook will pull and run deploy.sh on the server."

@@ -9,6 +9,7 @@ require __DIR__.'/storefront.php';
 require __DIR__.'/payments.php';
 require __DIR__.'/shipping.php';
 require __DIR__.'/whatsapp.php';
+require __DIR__.'/deploy.php';
 
 Route::get('/robots.txt', RobotsController::class)->name('robots');
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
