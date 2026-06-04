@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Inertia\Response;
+use Inertia\Support\Header;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class AuthenticatedSessionController extends Controller
 {
@@ -27,11 +29,23 @@ class AuthenticatedSessionController extends Controller
     /**
      * Handle an incoming authentication request.
      */
-    public function store(LoginRequest $request): RedirectResponse
+    public function store(LoginRequest $request): RedirectResponse|SymfonyResponse
     {
         $request->authenticate();
 
         $request->session()->regenerate();
+
+        $user = $request->user();
+
+        if ($user?->isAdmin()) {
+            $destination = $this->resolveAdminLoginDestination($request);
+
+            if ($request->header(Header::INERTIA)) {
+                return Inertia::location($destination);
+            }
+
+            return redirect()->to($destination);
+        }
 
         return redirect()->intended(route('store.account.dashboard', absolute: false));
     }
@@ -39,7 +53,7 @@ class AuthenticatedSessionController extends Controller
     /**
      * Destroy an authenticated session.
      */
-    public function destroy(Request $request): RedirectResponse
+    public function destroy(Request $request): RedirectResponse|SymfonyResponse
     {
         Auth::guard('web')->logout();
 
@@ -47,6 +61,25 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerateToken();
 
-        return redirect('/');
+        if ($request->header(Header::INERTIA)) {
+            return Inertia::location(route('store.home'));
+        }
+
+        return redirect()->route('store.home');
+    }
+
+    private function resolveAdminLoginDestination(Request $request): string
+    {
+        $intended = $request->session()->pull('url.intended');
+
+        if (is_string($intended)) {
+            $path = parse_url($intended, PHP_URL_PATH) ?? '';
+
+            if (str_starts_with($path, '/admin')) {
+                return $intended;
+            }
+        }
+
+        return route('admin.dashboard', absolute: false);
     }
 }

@@ -1,6 +1,4 @@
 <script setup>
-import { Link } from '@inertiajs/vue3';
-
 const links = [
     { label: 'Overview', route: 'store.account.dashboard', match: 'store.account.dashboard' },
     { label: 'Orders', route: 'store.account.orders.index', match: ['store.account.orders.index', 'store.account.orders.show'] },
@@ -25,25 +23,30 @@ function linkClass(active) {
             : 'text-stadium-secondary hover:bg-stadium-muted hover:text-stadium-ink',
     ];
 }
+
+function csrfToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+}
 </script>
 
 <template>
     <nav class="space-y-1" aria-label="Account">
-        <Link
+        <a
             v-for="item in links"
             :key="item.route"
             :href="route(item.route)"
             :class="linkClass(isActive(item.match))"
         >
             {{ item.label }}
-        </Link>
-        <Link
-            :href="route('logout')"
-            method="post"
-            as="button"
-            class="mt-4 block w-full rounded-xl px-4 py-3 text-left text-sm font-semibold text-stadium-secondary transition hover:bg-stadium-muted hover:text-stadium-ink"
-        >
-            Sign out
-        </Link>
+        </a>
+        <form method="post" :action="route('logout')" class="mt-4">
+            <input type="hidden" name="_token" :value="csrfToken()">
+            <button
+                type="submit"
+                class="block w-full rounded-xl px-4 py-3 text-left text-sm font-semibold text-stadium-secondary transition hover:bg-stadium-muted hover:text-stadium-ink"
+            >
+                Sign out
+            </button>
+        </form>
     </nav>
 </template>

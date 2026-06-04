@@ -15,6 +15,7 @@ return [
     'groups' => [
         'store' => [
             'store.*',
+            'admin.dashboard',
             'login',
             'register',
             'logout',

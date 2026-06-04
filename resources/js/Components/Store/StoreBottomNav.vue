@@ -5,7 +5,9 @@ import { computed } from 'vue';
 const page = usePage();
 
 const cartCount = computed(() => Number(page.props.cartCount ?? 0));
-const isLoggedIn = computed(() => !!page.props.auth?.user);
+const authUser = computed(() => page.props.auth?.user ?? null);
+const isLoggedIn = computed(() => !!authUser.value);
+const isAdminUser = computed(() => authUser.value?.role === 'admin');
 
 const shopHref = computed(() => route('store.shop'));
 
@@ -26,7 +28,13 @@ function isActive(predicate) {
     return path === predicate;
 }
 
-const accountHref = computed(() => (isLoggedIn.value ? route('store.account.dashboard') : route('login')));
+const accountHref = computed(() => {
+    if (!isLoggedIn.value) {
+        return route('login');
+    }
+
+    return isAdminUser.value ? route('admin.dashboard') : route('store.account.dashboard');
+});
 
 const items = computed(() => [
     {

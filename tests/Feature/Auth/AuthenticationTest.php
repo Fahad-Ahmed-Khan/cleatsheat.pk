@@ -30,6 +30,34 @@ class AuthenticationTest extends TestCase
         $response->assertRedirect(route('store.account.dashboard', absolute: false));
     }
 
+    public function test_admin_users_are_redirected_to_admin_dashboard_after_login(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $response = $this->post('/login', [
+            'email' => $admin->email,
+            'password' => 'password',
+        ]);
+
+        $this->assertAuthenticated();
+        $response->assertRedirect(route('admin.dashboard', absolute: false));
+    }
+
+    public function test_admin_login_from_admin_area_uses_intended_url(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->get('/admin/products');
+
+        $response = $this->post('/login', [
+            'email' => $admin->email,
+            'password' => 'password',
+        ]);
+
+        $this->assertAuthenticated();
+        $response->assertRedirect('/admin/products');
+    }
+
     public function test_users_can_not_authenticate_with_invalid_password(): void
     {
         $user = User::factory()->create();
@@ -49,6 +77,6 @@ class AuthenticationTest extends TestCase
         $response = $this->actingAs($user)->post('/logout');
 
         $this->assertGuest();
-        $response->assertRedirect('/');
+        $response->assertRedirect(route('store.home', absolute: false));
     }
 }

@@ -23,6 +23,16 @@ const hasLogo = computed(() => {
     return !!(b?.logo_url || b?.logo_dark_url);
 });
 const cartCount = computed(() => Number(page.props.cartCount ?? 0));
+const authUser = computed(() => page.props.auth?.user ?? null);
+const isAdminUser = computed(() => authUser.value?.role === 'admin');
+const accountNavHref = computed(() => {
+    if (!authUser.value) {
+        return route('login');
+    }
+
+    return isAdminUser.value ? route('admin.dashboard') : route('store.account.dashboard');
+});
+const accountNavLabel = computed(() => (isAdminUser.value ? 'Admin' : 'Account'));
 
 const { orderSupportUrl } = useStoreWhatsApp();
 const floatingWhatsAppUrl = computed(() => {
@@ -191,20 +201,20 @@ onUnmounted(() => {
                             {{ cartCount > 99 ? '99+' : cartCount }}
                         </span>
                     </Link>
-                    <Link
-                        v-if="!$page.props.auth.user"
+                    <a
+                        v-if="!authUser"
                         :href="route('login')"
                         class="hidden text-sm font-medium text-stadium-secondary transition hover:text-stadium-ink sm:inline"
                     >
                         Log in
-                    </Link>
-                    <Link
+                    </a>
+                    <a
                         v-else
-                        :href="route('store.account.dashboard')"
+                        :href="accountNavHref"
                         class="hidden text-sm font-medium text-stadium-secondary transition hover:text-stadium-ink sm:inline"
                     >
-                        Account
-                    </Link>
+                        {{ accountNavLabel }}
+                    </a>
                 </div>
             </div>
         </header>
@@ -330,10 +340,10 @@ onUnmounted(() => {
                             <Link :href="route('store.cart')" class="hover:text-stadium-lime">Cart</Link>
                         </li>
                         <li>
-                            <Link v-if="!$page.props.auth.user" :href="route('login')" class="hover:text-stadium-lime">
+                            <a v-if="!authUser" :href="route('login')" class="hover:text-stadium-lime">
                                 Log in
-                            </Link>
-                            <Link v-else :href="route('store.account.dashboard')" class="hover:text-stadium-lime">Account</Link>
+                            </a>
+                            <a v-else :href="accountNavHref" class="hover:text-stadium-lime">{{ accountNavLabel }}</a>
                         </li>
                     </ul>
                 </div>
