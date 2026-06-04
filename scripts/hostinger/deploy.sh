@@ -38,7 +38,22 @@ ensure_site_up() {
   fi
 }
 
-trap ensure_site_up EXIT
+send_deploy_notification() {
+  local status="$1"
+  local detail="$2"
+  php artisan deploy:notify "$status" --source=production --detail="$detail" 2>/dev/null || true
+}
+
+on_exit() {
+  local exit_code=$?
+  ensure_site_up
+  if [ "$exit_code" -ne 0 ]; then
+    send_deploy_notification failed "Branch ${BRANCH}, stage ${STAGE}. Exit code ${exit_code}."
+  fi
+  exit "$exit_code"
+}
+
+trap on_exit EXIT
 
 is_in_maintenance() {
   [ -f storage/framework/maintenance.php ] || [ -f storage/framework/down ]
@@ -89,16 +104,23 @@ run_finalize() {
   echo "Deploy complete."
 }
 
+notify_success() {
+  send_deploy_notification success "Branch ${BRANCH}, stage ${STAGE} completed."
+}
+
 case "$STAGE" in
   prepare)
     run_prepare
+    notify_success
     ;;
   finalize)
     run_finalize
+    notify_success
     ;;
   all)
     run_prepare
     run_finalize
+    notify_success
     ;;
   *)
     echo "ERROR: unknown stage '${STAGE}'. Use: prepare | finalize | all"

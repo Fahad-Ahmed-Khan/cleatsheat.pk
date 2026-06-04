@@ -24,4 +24,24 @@ return [
 
     'branch' => env('DEPLOY_BRANCH', 'production'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Deploy email notifications
+    |--------------------------------------------------------------------------
+    |
+    | Uses Laravel mail (MAIL_* in .env). Hostinger deploy.sh calls
+    | `php artisan deploy:notify` on success/failure. GitHub Actions can
+    | email the same inbox via workflow secrets (see deploy-hostinger.yml).
+    |
+    | DEPLOY_NOTIFY_EMAIL may be a single address or comma-separated list.
+    |
+    */
+
+    'notify_enabled' => (bool) env('DEPLOY_NOTIFY_ENABLED', false),
+
+    'notify_emails' => array_values(array_filter(array_map(
+        trim(...),
+        explode(',', (string) env('DEPLOY_NOTIFY_EMAIL', '')),
+    ))),
+
 ];
