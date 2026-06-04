@@ -12,7 +12,7 @@ concurrency:
 jobs:
   ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
 
     steps:
       - name: Checkout
@@ -49,31 +49,49 @@ jobs:
           APP_ENV: testing
         run: composer test
 
-      - name: Upload Vite build to Hostinger
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.HOSTINGER_SSH_HOST }}
-          username: ${{ secrets.HOSTINGER_SSH_USER }}
-          key: ${{ secrets.HOSTINGER_SSH_KEY }}
-          port: ${{ secrets.HOSTINGER_SSH_PORT }}
-          timeout: 120s
-          command_timeout: 30m
-          source: "public/build"
-          target: ${{ secrets.HOSTINGER_APP_PATH }}/public/
-          strip_components: 0
-          overwrite: true
+      # Native rsync/ssh with retries — appleboy/docker SCP often hits Hostinger SSH rate limits / timeouts.
+      - name: Upload build and deploy on Hostinger
+        env:
+          SSH_HOST: ${{ secrets.HOSTINGER_SSH_HOST }}
+          SSH_PORT: ${{ secrets.HOSTINGER_SSH_PORT }}
+          SSH_USER: ${{ secrets.HOSTINGER_SSH_USER }}
+          SSH_KEY: ${{ secrets.HOSTINGER_SSH_KEY }}
+          APP_PATH: ${{ secrets.HOSTINGER_APP_PATH }}
+        run: |
+          set -euo pipefail
 
-      - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.HOSTINGER_SSH_HOST }}
-          username: ${{ secrets.HOSTINGER_SSH_USER }}
-          key: ${{ secrets.HOSTINGER_SSH_KEY }}
-          port: ${{ secrets.HOSTINGER_SSH_PORT }}
-          timeout: 120s
-          command_timeout: 30m
-          script_stop: true
-          script: |
-            set -euo pipefail
-            cd "${{ secrets.HOSTINGER_APP_PATH }}"
-            bash ./deploy.sh
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/hostinger_deploy
+          chmod 600 ~/.ssh/hostinger_deploy
+          trap 'rm -f ~/.ssh/hostinger_deploy' EXIT
+
+          export RSYNC_RSH="ssh -i ~/.ssh/hostinger_deploy -p ${SSH_PORT} -o BatchMode=yes -o ConnectTimeout=120 -o ServerAliveInterval=30 -o StrictHostKeyChecking=accept-new"
+          SSH_CMD=(ssh -i ~/.ssh/hostinger_deploy -p "$SSH_PORT" -o BatchMode=yes -o ConnectTimeout=120 -o ServerAliveInterval=30 -o StrictHostKeyChecking=accept-new)
+          SSH_TARGET="${SSH_USER}@${SSH_HOST}"
+          REMOTE_BUILD="${APP_PATH}/public/build/"
+
+          upload_ok=0
+          for attempt in 1 2 3; do
+            echo "rsync public/build → ${REMOTE_BUILD} (attempt ${attempt}/3)"
+            if rsync -az --delete public/build/ "${SSH_TARGET}:${REMOTE_BUILD}"; then
+              upload_ok=1
+              break
+            fi
+            sleep 60
+          done
+
+          if [ "$upload_ok" -ne 1 ]; then
+            echo "::error::Upload failed after 3 attempts (check HOSTINGER_SSH_* secrets and firewall)."
+            exit 1
+          fi
+
+          for attempt in 1 2 3; do
+            echo "Running deploy.sh (attempt ${attempt}/3)"
+            if "${SSH_CMD[@]}" "$SSH_TARGET" "set -euo pipefail; cd '${APP_PATH}' && bash ./deploy.sh"; then
+              exit 0
+            fi
+            sleep 60
+          done
+
+          echo "::error::Deploy failed after 3 attempts."
+          exit 1
