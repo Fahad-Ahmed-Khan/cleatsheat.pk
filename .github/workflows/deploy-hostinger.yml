@@ -21,11 +21,12 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.2"
+          php-version: "8.3"
           tools: composer:v2
+          coverage: none
 
       - name: Install PHP dependencies
-        run: composer install --no-interaction --no-progress --prefer-dist --optimize-autoloader --no-dev --ignore-platform-reqs
+        run: composer install --no-interaction --no-progress --prefer-dist --optimize-autoloader --ignore-platform-reqs
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -38,10 +39,15 @@ jobs:
           npm ci --no-audit --no-fund
           npm run build
 
+      - name: Prepare test environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate --ansi --no-interaction
+
       - name: Run tests
         env:
           APP_ENV: testing
-        run: php artisan test
+        run: composer test
 
       - name: Upload Vite build to Hostinger
         uses: appleboy/scp-action@v0.1.7
