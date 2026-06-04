@@ -25,13 +25,7 @@ const user = computed(() => page.props.auth?.user);
             </li>
             <li><hr class="dropdown-divider" /></li>
             <li>
-                <Link class="dropdown-item" :href="route('profile.edit')">
-                    <i class="icon-base ti tabler-user me-2"></i>
-                    Profile
-                </Link>
-            </li>
-            <li>
-                <Link class="dropdown-item" :href="route('logout')" method="post" as="button">
+                <Link class="dropdown-item" :href="route('admin.logout')" method="post" as="button">
                     <i class="icon-base ti tabler-logout me-2"></i>
                     Logout
                 </Link>

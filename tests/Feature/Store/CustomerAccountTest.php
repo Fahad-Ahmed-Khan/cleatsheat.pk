@@ -172,4 +172,22 @@ class CustomerAccountTest extends TestCase
             ->get('/dashboard')
             ->assertRedirect('/account');
     }
+
+    public function test_dashboard_redirects_admins_to_admin_panel(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)
+            ->get('/dashboard')
+            ->assertRedirect('/admin');
+    }
+
+    public function test_admins_are_redirected_from_customer_account(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)
+            ->get(route('store.account.dashboard'))
+            ->assertRedirect(route('admin.dashboard'));
+    }
 }

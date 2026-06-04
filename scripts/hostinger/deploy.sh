@@ -27,8 +27,26 @@ if ! command -v composer >/dev/null 2>&1; then
   exit 1
 fi
 
+# If prepare/finalize fails after `artisan down`, always bring the site back up.
+MAINTENANCE_ENABLED=0
+
+ensure_site_up() {
+  if [ "${MAINTENANCE_ENABLED}" -eq 1 ]; then
+    echo "Deploy failed or was interrupted — running php artisan up..."
+    php artisan up 2>/dev/null || true
+    MAINTENANCE_ENABLED=0
+  fi
+}
+
+trap ensure_site_up EXIT
+
+is_in_maintenance() {
+  [ -f storage/framework/maintenance.php ] || [ -f storage/framework/down ]
+}
+
 run_prepare() {
   php artisan down --render="errors::503" --retry=60 || true
+  MAINTENANCE_ENABLED=1
 
   git fetch --all --prune
   git reset --hard "origin/${BRANCH}"
@@ -61,10 +79,12 @@ run_finalize() {
 
   php artisan optimize:clear
   php artisan config:cache
-  php artisan route:cache || true
+  # Do not route:cache — Ziggy @routes('store') breaks with cached routes on Hostinger.
+  php artisan route:clear
   php artisan view:cache
 
   php artisan up || true
+  MAINTENANCE_ENABLED=0
 
   echo "Deploy complete."
 }

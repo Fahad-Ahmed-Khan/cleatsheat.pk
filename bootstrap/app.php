@@ -3,6 +3,7 @@
 use App\Http\Middleware\EnsureUserIsAdmin;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\LiteSpeedGuestCache;
+use App\Http\Middleware\RedirectAdminsFromCustomerAccount;
 use App\Support\Api\ApiResponder;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
@@ -39,10 +40,21 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'admin' => EnsureUserIsAdmin::class,
+            'customer-account' => RedirectAdminsFromCustomerAccount::class,
         ]);
+
+        $middleware->redirectGuestsTo(function (Request $request): string {
+            if ($request->is('admin', 'admin/*') && ! $request->routeIs('admin.login')) {
+                return route('admin.login');
+            }
+
+            return route('login');
+        });
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        Integration::handles($exceptions);
+        if (class_exists(Integration::class)) {
+            Integration::handles($exceptions);
+        }
 
         $exceptions->render(function (ValidationException $e, Request $request) {
             if ($request->is('api/*')) {

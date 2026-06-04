@@ -49,6 +49,10 @@ function submit() {
             <Link v-if="canResetPassword" :href="route('password.request')" class="font-semibold text-store-primary underline">Forgot password?</Link>
             <span class="mx-2">·</span>
             <Link :href="route('register')" class="font-semibold text-store-primary underline">Create account</Link>
+            <p class="mt-4 text-center text-xs text-stadium-secondary">
+                Staff?
+                <a :href="route('admin.login')" class="font-semibold text-store-primary underline">Admin sign in</a>
+            </p>
         </template>
     </StoreAuthCard>
 </template>

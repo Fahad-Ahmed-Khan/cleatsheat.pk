@@ -18,7 +18,13 @@ Route::get('/welcome-skeleton', function () {
     return Inertia::render('Welcome');
 })->name('welcome.skeleton');
 
-Route::redirect('/dashboard', '/account')->middleware('auth')->name('dashboard');
+Route::get('/dashboard', function () {
+    $user = auth()->user();
+
+    return redirect($user?->isAdmin()
+        ? route('admin.dashboard', absolute: false)
+        : route('store.account.dashboard', absolute: false));
+})->middleware('auth')->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::redirect('/profile', '/account/profile')->name('profile.edit');

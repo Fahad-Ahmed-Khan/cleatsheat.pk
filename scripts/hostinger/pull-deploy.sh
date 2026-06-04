@@ -11,6 +11,7 @@ LOG_FILE="${DEPLOY_LOG_FILE:-${APP_ROOT}/storage/logs/deploy.log}"
 BRANCH="${DEPLOY_BRANCH:-production}"
 
 mkdir -p "$(dirname "$LOG_FILE")"
+echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] pull-deploy invoked (pwd=${PWD}, branch=${BRANCH})" >>"$LOG_FILE" 2>&1
 
 log() {
   echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] $*"
@@ -26,6 +27,10 @@ if [ ! -f artisan ]; then
   exit 1
 fi
 
+is_in_maintenance() {
+  [ -f storage/framework/maintenance.php ] || [ -f storage/framework/down ]
+}
+
 run_locked() {
   git fetch origin "$BRANCH" --prune
 
@@ -33,6 +38,17 @@ run_locked() {
   LOCAL="$(git rev-parse HEAD 2>/dev/null || true)"
 
   if [ "${LOCAL}" = "${REMOTE}" ]; then
+    if is_in_maintenance; then
+      log "Recovery: at origin/${BRANCH} but site is still in maintenance — running finalize."
+      export DEPLOY_BRANCH="$BRANCH"
+      bash "${SCRIPT_DIR}/deploy.sh" finalize || {
+        log "finalize failed; forcing php artisan up."
+        php artisan up 2>/dev/null || true
+        return 1
+      }
+      return 0
+    fi
+
     log "Already at origin/${BRANCH} (${REMOTE}); nothing to do."
     return 0
   fi

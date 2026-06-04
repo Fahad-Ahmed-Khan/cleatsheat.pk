@@ -16,6 +16,8 @@ return [
         'store' => [
             'store.*',
             'admin.dashboard',
+            'admin.login',
+            'admin.logout',
             'login',
             'register',
             'logout',

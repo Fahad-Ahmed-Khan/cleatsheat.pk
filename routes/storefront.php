@@ -46,7 +46,7 @@ Route::get('/p/{slug}', ProductController::class)->name('store.product');
 Route::get('/journal', [JournalController::class, 'index'])->name('store.journal.index');
 Route::get('/journal/{slug}', [JournalController::class, 'show'])->name('store.journal.show');
 
-Route::middleware('auth')->prefix('account')->name('store.account.')->group(function (): void {
+Route::middleware(['auth', 'customer-account'])->prefix('account')->name('store.account.')->group(function (): void {
     Route::get('/', AccountDashboardController::class)->name('dashboard');
     Route::get('/orders', [AccountOrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/{order_number}', [AccountOrderController::class, 'show'])->name('orders.show');

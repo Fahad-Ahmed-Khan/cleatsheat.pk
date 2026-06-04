@@ -54,6 +54,42 @@ class LoginRequest extends FormRequest
     }
 
     /**
+     * Storefront login: customer accounts only.
+     *
+     * @throws ValidationException
+     */
+    public function authenticateForStorefront(): void
+    {
+        $this->authenticate();
+
+        if (Auth::user()?->isAdmin()) {
+            Auth::logout();
+
+            throw ValidationException::withMessages([
+                'email' => 'Staff accounts must sign in at /admin/login.',
+            ]);
+        }
+    }
+
+    /**
+     * Admin panel login: staff accounts only.
+     *
+     * @throws ValidationException
+     */
+    public function authenticateForAdmin(): void
+    {
+        $this->authenticate();
+
+        if (! Auth::user()?->isAdmin()) {
+            Auth::logout();
+
+            throw ValidationException::withMessages([
+                'email' => 'This login is for staff only. Use the store login page for customer accounts.',
+            ]);
+        }
+    }
+
+    /**
      * Ensure the login request is not rate limited.
      *
      * @throws ValidationException
