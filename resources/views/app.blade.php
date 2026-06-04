@@ -16,7 +16,14 @@
             <link rel="preconnect" href="{{ $appOrigin }}" crossorigin>
         @endif
         @if ($lcpImage)
-            <link rel="preload" as="image" href="{{ $lcpImage }}" fetchpriority="high">
+            <link
+                rel="preload"
+                as="image"
+                href="{{ $lcpImage['href'] }}"
+                @if (!empty($lcpImage['srcset'])) imagesrcset="{{ $lcpImage['srcset'] }}" @endif
+                @if (!empty($lcpImage['sizes'])) imagesizes="{{ $lcpImage['sizes'] }}" @endif
+                fetchpriority="high"
+            >
         @endif
 
         <!-- Fonts (loaded async so they don't block first render; text uses fallback then swaps) -->

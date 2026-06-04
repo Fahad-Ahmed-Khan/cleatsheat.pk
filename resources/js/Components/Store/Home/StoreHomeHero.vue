@@ -33,6 +33,9 @@ const primaryLabel = computed(() => {
 });
 
 const heroImageUrl = computed(() => props.hero?.image_url || null);
+const heroImageSrcset = computed(() => props.hero?.image_srcset || null);
+const heroImageWidth = computed(() => props.hero?.image_width || 1920);
+const heroImageHeight = computed(() => props.hero?.image_height || 1080);
 </script>
 
 <template>
@@ -41,10 +44,12 @@ const heroImageUrl = computed(() => props.hero?.image_url || null);
             <img
                 v-if="heroImageUrl"
                 :src="heroImageUrl"
+                :srcset="heroImageSrcset || undefined"
+                :sizes="heroImageSrcset ? '100vw' : undefined"
                 alt=""
                 aria-hidden="true"
-                width="1920"
-                height="1080"
+                :width="heroImageWidth"
+                :height="heroImageHeight"
                 class="h-full w-full object-cover object-center"
                 fetchpriority="high"
                 decoding="async"

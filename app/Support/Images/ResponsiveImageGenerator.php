@@ -14,8 +14,11 @@ use Illuminate\Support\Facades\Storage;
  */
 class ResponsiveImageGenerator
 {
-    /** Target widths in pixels. Only ever downscales (never upscales). */
+    /** Target widths in pixels for product cards. Only ever downscales (never upscales). */
     public const WIDTHS = [320, 640, 960];
+
+    /** Larger widths for the full-bleed hero/LCP image. */
+    public const HERO_WIDTHS = [640, 960, 1280, 1920];
 
     private const WEBP_QUALITY = 78;
 
@@ -27,9 +30,10 @@ class ResponsiveImageGenerator
     /**
      * Generate WebP variants for the given stored path (relative, /storage/... or full URL).
      *
+     * @param  list<int>|null  $widths  Target widths; defaults to product-card WIDTHS.
      * @return array{width:int,height:int,variants:list<array{w:int,path:string}>}|null
      */
-    public function generate(?string $storedPath): ?array
+    public function generate(?string $storedPath, ?array $widths = null): ?array
     {
         if (! $this->isSupported() || $storedPath === null) {
             return null;
@@ -74,7 +78,9 @@ class ResponsiveImageGenerator
         $variants = [];
         $seenWidths = [];
 
-        foreach (self::WIDTHS as $targetW) {
+        $targetWidths = $widths ?? self::WIDTHS;
+
+        foreach ($targetWidths as $targetW) {
             $width = min($targetW, $origW);
             if (in_array($width, $seenWidths, true)) {
                 continue; // skip duplicate when original is smaller than a target
@@ -110,8 +116,10 @@ class ResponsiveImageGenerator
 
     /**
      * Remove all variant files previously generated for a stored path.
+     *
+     * @param  list<int>|null  $widths  Target widths to purge; defaults to product-card WIDTHS.
      */
-    public function purge(?string $storedPath): void
+    public function purge(?string $storedPath, ?array $widths = null): void
     {
         $relative = PublicAssetUrl::normalizeForStorage($storedPath);
         if ($relative === null || $relative === '') {
@@ -119,7 +127,7 @@ class ResponsiveImageGenerator
         }
 
         $disk = Storage::disk('public');
-        foreach (self::WIDTHS as $targetW) {
+        foreach ($widths ?? self::WIDTHS as $targetW) {
             $path = $this->variantPath($relative, $targetW);
             if ($disk->exists($path)) {
                 $disk->delete($path);

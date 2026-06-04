@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Web\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UpdateStorefrontSettingsRequest;
 use App\Models\StorefrontSetting;
+use App\Support\Images\ResponsiveImageGenerator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -56,9 +57,11 @@ class StorefrontSettingsAdminController extends Controller
         ]);
     }
 
-    public function update(UpdateStorefrontSettingsRequest $request): RedirectResponse
+    public function update(UpdateStorefrontSettingsRequest $request, ResponsiveImageGenerator $images): RedirectResponse
     {
         $s = StorefrontSetting::current();
+        $previousHeroUrl = $s->hero_image_url;
+
         $data = collect($request->validated())
             ->except(['logo', 'logo_dark', 'favicon', 'hero_image', 'promo_banner_image', 'default_og_image'])
             ->all();
@@ -73,7 +76,39 @@ class StorefrontSettingsAdminController extends Controller
         $s->fill($data);
         $s->save();
 
+        $this->syncHeroVariants($s, $previousHeroUrl, $images);
+
         return redirect()->route('admin.storefront-settings.edit')->with('success', 'Storefront settings saved.');
+    }
+
+    /**
+     * Regenerate the responsive WebP variants used by the LCP hero image whenever
+     * the hero image changes, and clear stale metadata when it is removed/swapped.
+     */
+    private function syncHeroVariants(
+        StorefrontSetting $s,
+        ?string $previousHeroUrl,
+        ResponsiveImageGenerator $images,
+    ): void {
+        $heroUrl = $s->hero_image_url;
+
+        if ($heroUrl === $previousHeroUrl && filled($s->hero_image_variants)) {
+            return;
+        }
+
+        if ($previousHeroUrl && $previousHeroUrl !== $heroUrl) {
+            $images->purge($previousHeroUrl, ResponsiveImageGenerator::HERO_WIDTHS);
+        }
+
+        $meta = filled($heroUrl) && $images->isSupported()
+            ? $images->generate($heroUrl, ResponsiveImageGenerator::HERO_WIDTHS)
+            : null;
+
+        $s->forceFill([
+            'hero_image_width' => $meta['width'] ?? null,
+            'hero_image_height' => $meta['height'] ?? null,
+            'hero_image_variants' => $meta['variants'] ?? null,
+        ])->save();
     }
 
     /**

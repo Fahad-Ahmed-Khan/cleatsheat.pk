@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 
@@ -32,6 +33,8 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->normalizeSnappyBinariesOnWindows();
 
+        $this->forceHttpsWhenCanonicalIsSecure();
+
         Vite::prefetch(concurrency: 3);
 
         Order::observe(OrderObserver::class);
@@ -42,6 +45,26 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('api', function (Request $request) {
             return Limit::perMinute(120)->by($request->user()?->id ?: $request->ip());
         });
+    }
+
+    /**
+     * Force every generated URL (canonical, asset, preconnect, LCP preload) to use https
+     * when APP_URL is https. Hostinger terminates TLS at a proxy, so without this Laravel
+     * may emit http:// links that the browser then 301s to https — adding a redirect hop
+     * and turning the same-origin LCP preload into a cross-origin one.
+     */
+    private function forceHttpsWhenCanonicalIsSecure(): void
+    {
+        $appUrl = (string) config('app.url');
+
+        if (str_starts_with(strtolower($appUrl), 'https://')) {
+            URL::forceScheme('https');
+
+            $host = parse_url($appUrl, PHP_URL_HOST);
+            if (is_string($host) && $host !== '') {
+                URL::forceRootUrl($appUrl);
+            }
+        }
     }
 
     /**

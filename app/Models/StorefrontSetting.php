@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Storage\PublicAssetUrl;
 use Illuminate\Database\Eloquent\Model;
 
 class StorefrontSetting extends Model
@@ -18,6 +19,9 @@ class StorefrontSetting extends Model
         'hero_subtitle',
         'hero_badge',
         'hero_image_url',
+        'hero_image_width',
+        'hero_image_height',
+        'hero_image_variants',
         'hero_cta_label',
         'hero_cta_url',
         'promo_banner_image_url',
@@ -53,6 +57,7 @@ class StorefrontSetting extends Model
             'home_testimonials' => 'array',
             'home_social_posts' => 'array',
             'newsletter_enabled' => 'boolean',
+            'hero_image_variants' => 'array',
         ];
     }
 
@@ -130,14 +135,46 @@ class StorefrontSetting extends Model
      */
     public function toHeroPayload(): array
     {
+        $usingStoredImage = filled($this->hero_image_url);
+
         return [
             'title' => $this->hero_title ?: config('store.hero_title'),
             'subtitle' => $this->hero_subtitle ?: config('store.hero_subtitle'),
             'badge' => $this->hero_badge ?: config('store.hero_badge'),
             'image_url' => $this->hero_image_url ?: config('store.hero_image_url'),
+            'image_srcset' => $usingStoredImage ? self::buildSrcset($this->hero_image_variants) : null,
+            'image_width' => $usingStoredImage ? $this->hero_image_width : null,
+            'image_height' => $usingStoredImage ? $this->hero_image_height : null,
             'cta_label' => $this->hero_cta_label,
             'cta_url' => $this->hero_cta_url,
         ];
+    }
+
+    /**
+     * Build a responsive srcset string from stored WebP variant metadata.
+     *
+     * @param  mixed  $variants  list of ['w' => int, 'path' => string]
+     */
+    public static function buildSrcset($variants): ?string
+    {
+        if (! is_array($variants) || $variants === []) {
+            return null;
+        }
+
+        $entries = [];
+        foreach ($variants as $variant) {
+            $path = is_array($variant) ? ($variant['path'] ?? null) : null;
+            $width = is_array($variant) ? ($variant['w'] ?? null) : null;
+            if (! is_string($path) || ! is_numeric($width)) {
+                continue;
+            }
+            $url = PublicAssetUrl::resolve($path);
+            if ($url !== null) {
+                $entries[] = $url.' '.(int) $width.'w';
+            }
+        }
+
+        return $entries === [] ? null : implode(', ', $entries);
     }
 
     /**

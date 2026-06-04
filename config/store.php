@@ -12,6 +12,13 @@ return [
     'hero_image_url' => env('STORE_HERO_IMAGE_URL'),
 
     /**
+     * Edge-cache TTL (seconds) for guest, non-Inertia storefront HTML when LiteSpeed
+     * Cache is active. Short by design so catalog/price changes surface quickly.
+     * Set to 0 to disable emitting public cache headers.
+     */
+    'guest_cache_ttl' => (int) env('STORE_GUEST_CACHE_TTL', 300),
+
+    /**
      * Parent category slug whose children power the home "Choose your surface" tiles.
      * Demo/default: football-shoes (FG, SG, AG, Turf children).
      */

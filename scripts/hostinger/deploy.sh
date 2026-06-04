@@ -43,6 +43,9 @@ php artisan migrate --force
 # Generate responsive WebP variants for any product images missing them (idempotent, non-fatal).
 php artisan products:generate-image-variants || true
 
+# Generate responsive WebP variants for the hero/LCP image (idempotent, non-fatal).
+php artisan storefront:generate-hero-variants || true
+
 php artisan optimize:clear
 php artisan config:cache
 php artisan route:cache || true

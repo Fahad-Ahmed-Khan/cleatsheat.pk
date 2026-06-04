@@ -1,26 +1,15 @@
 <script setup>
 
-import StoreHomeBuyingGuides from '@/Components/Store/Home/StoreHomeBuyingGuides.vue';
-
-import StoreHomeBrandsCarousel from '@/Components/Store/Home/StoreHomeBrandsCarousel.vue';
-
+// Above-the-fold: eager so the hero/LCP + first rail render immediately.
 import StoreHomeHero from '@/Components/Store/Home/StoreHomeHero.vue';
 
-import StoreHomeNewsletter from '@/Components/Store/Home/StoreHomeNewsletter.vue';
-
-import StoreHomeSeoContent from '@/Components/Store/Home/StoreHomeSeoContent.vue';
-
-import StoreHomeSocialProof from '@/Components/Store/Home/StoreHomeSocialProof.vue';
-
 import StoreHomeCategoryBrowser from '@/Components/Store/Home/StoreHomeCategoryBrowser.vue';
-
-import StoreHomeTestimonials from '@/Components/Store/Home/StoreHomeTestimonials.vue';
-
-import StoreHomeTrust from '@/Components/Store/Home/StoreHomeTrust.vue';
 
 import StoreProductRail from '@/Components/Store/Home/StoreProductRail.vue';
 
 import StoreSeoHead from '@/Components/Store/StoreSeoHead.vue';
+
+import StoreLazySection from '@/Components/Store/StoreLazySection.vue';
 
 import StoreLayout from '@/Layouts/StoreLayout.vue';
 
@@ -29,6 +18,15 @@ import { useStoreQuickAdd } from '@/composables/useStoreQuickAdd';
 import { Link } from '@inertiajs/vue3';
 
 import { computed, defineAsyncComponent, onUnmounted, provide } from 'vue';
+
+// Below-the-fold: split into their own chunks so the initial Home bundle stays small.
+const StoreHomeTrust = defineAsyncComponent(() => import('@/Components/Store/Home/StoreHomeTrust.vue'));
+const StoreHomeTestimonials = defineAsyncComponent(() => import('@/Components/Store/Home/StoreHomeTestimonials.vue'));
+const StoreHomeBuyingGuides = defineAsyncComponent(() => import('@/Components/Store/Home/StoreHomeBuyingGuides.vue'));
+const StoreHomeBrandsCarousel = defineAsyncComponent(() => import('@/Components/Store/Home/StoreHomeBrandsCarousel.vue'));
+const StoreHomeSocialProof = defineAsyncComponent(() => import('@/Components/Store/Home/StoreHomeSocialProof.vue'));
+const StoreHomeNewsletter = defineAsyncComponent(() => import('@/Components/Store/Home/StoreHomeNewsletter.vue'));
+const StoreHomeSeoContent = defineAsyncComponent(() => import('@/Components/Store/Home/StoreHomeSeoContent.vue'));
 
 const StoreProductQuickAddSheet = defineAsyncComponent(
     () => import('@/Components/Store/StoreProductQuickAddSheet.vue'),
@@ -201,30 +199,42 @@ function onSheetSelect({ variantId, sizeLabel }) {
 
 
 
-        <StoreHomeTrust />
+        <StoreLazySection min-height="260px">
+            <StoreHomeTrust />
+        </StoreLazySection>
 
 
 
-        <StoreHomeTestimonials :testimonials="homeContent.testimonials ?? []" />
+        <StoreLazySection min-height="420px">
+            <StoreHomeTestimonials :testimonials="homeContent.testimonials ?? []" />
+        </StoreLazySection>
 
 
 
+        <!-- Journal links carry internal-linking SEO value: split chunk but render eagerly. -->
         <StoreHomeBuyingGuides :journal-posts="journalPosts" />
 
 
 
-        <StoreHomeBrandsCarousel :brands="brands" />
+        <StoreLazySection min-height="220px">
+            <StoreHomeBrandsCarousel :brands="brands" />
+        </StoreLazySection>
 
 
 
-        <StoreHomeSocialProof :social="homeContent.social ?? {}" />
+        <StoreLazySection min-height="420px">
+            <StoreHomeSocialProof :social="homeContent.social ?? {}" />
+        </StoreLazySection>
 
 
 
-        <StoreHomeNewsletter :enabled="homeContent.newsletter_enabled !== false" />
+        <StoreLazySection min-height="320px">
+            <StoreHomeNewsletter :enabled="homeContent.newsletter_enabled !== false" />
+        </StoreLazySection>
 
 
 
+        <!-- SEO HTML block: split chunk but render eagerly so crawlers always see it. -->
         <StoreHomeSeoContent
 
             :categories="categories"
