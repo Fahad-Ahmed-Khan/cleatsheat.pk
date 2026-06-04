@@ -40,9 +40,9 @@ class CheckoutFlowTest extends TestCase
 
         $this->assertDatabaseHas('notification_logs', [
             'channel' => 'whatsapp',
-            'template_key' => 'order_placed',
+            'template_key' => 'order_placed_cod_confirm',
             'status' => 'sent',
         ]);
-        $this->assertSame(1, NotificationLog::query()->where('template_key', 'order_placed')->count());
+        $this->assertSame(1, NotificationLog::query()->where('template_key', 'order_placed_cod_confirm')->count());
     }
 }

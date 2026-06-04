@@ -2,8 +2,6 @@
 
 namespace App\Support\Storage;
 
-use Illuminate\Support\Facades\Storage;
-
 /**
  * Resolve public-disk asset paths for the current APP_URL.
  *
@@ -35,7 +33,7 @@ final class PublicAssetUrl
             return rtrim(config('app.url'), '/').'/'.ltrim($path, '/');
         }
 
-        return Storage::disk('public')->url(ltrim($path, '/'));
+        return self::publicUrl(ltrim($path, '/'));
     }
 
     /**
