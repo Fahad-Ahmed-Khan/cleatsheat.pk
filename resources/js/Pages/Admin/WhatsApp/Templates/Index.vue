@@ -9,6 +9,7 @@ import { ref } from 'vue';
 const props = defineProps({
     templates: { type: Object, required: true },
     filters: { type: Object, default: () => ({}) },
+    cloud_enabled: { type: Boolean, default: false },
 });
 
 const search = ref(props.filters.search ?? '');
@@ -22,7 +23,9 @@ function applySearch() {
 }
 
 const testForm = useForm({ recipient: '' });
+const syncAllForm = useForm({ force: false });
 const testingId = ref(null);
+const syncingId = ref(null);
 
 function sendTest(template) {
     if (!testForm.recipient) return;
@@ -30,6 +33,25 @@ function sendTest(template) {
     testForm.post(route('admin.whatsapp-templates.send-test', template.id), {
         preserveScroll: true,
         onFinish: () => { testingId.value = null; },
+    });
+}
+
+function syncAll() {
+    if (!props.cloud_enabled) return;
+    if (!confirm('Push all active templates to Meta? New submissions require Meta approval.')) return;
+    syncAllForm.post(route('admin.whatsapp-templates.sync-meta-all'), { preserveScroll: true });
+}
+
+function syncOne(template, force = false) {
+    if (!props.cloud_enabled) return;
+    const msg = force
+        ? 'Force re-sync this template? Approved Meta templates will be deleted and recreated.'
+        : 'Push this template to Meta? New submissions require Meta approval.';
+    if (!confirm(msg)) return;
+    syncingId.value = template.id;
+    router.post(route('admin.whatsapp-templates.sync-meta', template.id), { force }, {
+        preserveScroll: true,
+        onFinish: () => { syncingId.value = null; },
     });
 }
 
@@ -54,6 +76,15 @@ function destroyTemplate(template) {
             ]"
         >
             <template #actions>
+                <button
+                    v-if="cloud_enabled"
+                    type="button"
+                    class="btn btn-outline-primary me-2"
+                    :disabled="syncAllForm.processing"
+                    @click="syncAll"
+                >
+                    {{ syncAllForm.processing ? 'Syncing…' : 'Sync all to Meta' }}
+                </button>
                 <Link :href="route('admin.whatsapp-templates.create')" class="btn btn-primary">
                     <i class="ti tabler-plus me-1" /> New template
                 </Link>
@@ -84,6 +115,13 @@ function destroyTemplate(template) {
                 <code>{name}</code>, <code>{order}</code>, <code>{total}</code>, <code>{status}</code>, <code>{payment}</code>, <code>{phone}</code>, <code>{city}</code>.
                 Rider templates also support <code>{parcels}</code>, <code>{cod_total}</code>, <code>{tracking_list}</code>, <code>{courier}</code>.
                 Buttons use <code>{order_id}</code> in payload IDs.
+                <span v-if="cloud_enabled" class="d-block mt-2">
+                    After editing copy, use <strong>Sync to Meta</strong> or run <code>php artisan whatsapp:sync-templates</code>.
+                    Interactive button templates are not synced (they use session messages).
+                </span>
+                <span v-else class="d-block mt-2 text-warning">
+                    Enable Cloud API (<code>WHATSAPP_CLOUD_ENABLED=true</code>) to sync templates to Meta.
+                </span>
             </div>
         </div>
 
@@ -93,6 +131,7 @@ function destroyTemplate(template) {
                 <th>Audience</th>
                 <th>Category</th>
                 <th>Preview</th>
+                <th>Meta</th>
                 <th>Active</th>
                 <th>Test send</th>
                 <th></th>
@@ -114,6 +153,15 @@ function destroyTemplate(template) {
                             <span v-for="b in t.button_payloads" :key="b.id" class="badge bg-label-primary me-1">{{ b.title }}</span>
                         </div>
                     </td>
+                    <td>
+                        <div v-if="t.cloud_template_name" class="small font-monospace">{{ t.cloud_template_name }}</div>
+                        <div v-else class="text-muted small">(uses key)</div>
+                        <div v-if="t.meta_sync_status" class="mt-1">
+                            <StatusBadge :status="t.meta_sync_status" />
+                        </div>
+                        <div v-if="t.meta_last_synced_at" class="text-muted small">{{ t.meta_last_synced_at }}</div>
+                        <div v-if="t.meta_sync_error" class="text-danger small">{{ t.meta_sync_error }}</div>
+                    </td>
                     <td><StatusBadge :status="t.is_active ? 'active' : 'inactive'" /></td>
                     <td>
                         <div class="d-flex gap-1" v-if="t.audience !== 'admin'">
@@ -134,7 +182,17 @@ function destroyTemplate(template) {
                         </div>
                         <div v-else class="text-muted small">N/A</div>
                     </td>
-                    <td class="text-end">
+                    <td class="text-end text-nowrap">
+                        <button
+                            v-if="cloud_enabled && !t.has_buttons"
+                            type="button"
+                            class="btn btn-sm btn-outline-primary me-1"
+                            :disabled="syncingId === t.id"
+                            title="Sync to Meta"
+                            @click="syncOne(t)"
+                        >
+                            {{ syncingId === t.id ? '…' : 'Sync' }}
+                        </button>
                         <Link :href="route('admin.whatsapp-templates.edit', t.id)" class="btn btn-sm btn-outline-secondary">
                             Edit
                         </Link>

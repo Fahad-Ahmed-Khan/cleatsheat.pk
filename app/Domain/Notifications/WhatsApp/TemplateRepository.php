@@ -14,7 +14,7 @@ use App\Models\WhatsAppTemplate;
 class TemplateRepository
 {
     /**
-     * @return array{short:string, body:string, has_buttons:bool, button_payloads:array<int,array<string,string>>, cloud_template_name:?string, cloud_template_language:string, key:string}
+     * @return array{short:string, body:string, has_buttons:bool, button_payloads:array<int,array<string,string>>, cloud_template_name:?string, cloud_template_language:string, meta_parameter_order:?array, key:string}
      */
     public function resolve(string $key, ?Order $order = null): array
     {
@@ -32,6 +32,9 @@ class TemplateRepository
                 $cloudName = (string) (config("whatsapp.cloud.templates.{$key}.name") ?? '');
             }
             $cloudLang = $row->cloud_template_language ?: (string) (config("whatsapp.cloud.templates.{$key}.language") ?? 'en_US');
+            $paramOrder = is_array($row->meta_parameter_order) && $row->meta_parameter_order !== []
+                ? array_values(array_map(static fn (mixed $v): string => (string) $v, $row->meta_parameter_order))
+                : null;
 
             return [
                 'short' => $short,
@@ -40,6 +43,7 @@ class TemplateRepository
                 'button_payloads' => $this->normalizeButtonPayloads($row->button_payloads, $order),
                 'cloud_template_name' => $cloudName !== '' ? $cloudName : null,
                 'cloud_template_language' => $cloudLang !== '' ? $cloudLang : 'en_US',
+                'meta_parameter_order' => $paramOrder,
                 'key' => $key,
             ];
         }
@@ -60,6 +64,7 @@ class TemplateRepository
             'button_payloads' => [],
             'cloud_template_name' => $cloudName !== '' ? $cloudName : null,
             'cloud_template_language' => $cloudLang !== '' ? $cloudLang : 'en_US',
+            'meta_parameter_order' => null,
             'key' => $key,
         ];
     }

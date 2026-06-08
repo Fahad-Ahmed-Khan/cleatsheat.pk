@@ -144,7 +144,7 @@ class WhatsAppNotifier
     }
 
     /**
-     * @return array{short:string, body:string, has_buttons:bool, button_payloads:array, cloud_template_name:?string, cloud_template_language:string, key:string}
+     * @return array{short:string, body:string, has_buttons:bool, button_payloads:array, cloud_template_name:?string, cloud_template_language:string, meta_parameter_order:?array, key:string}
      */
     private function resolveAdminTemplate(Order $order): array
     {
@@ -221,6 +221,7 @@ class WhatsAppNotifier
                 $template['cloud_template_language'],
                 $order,
                 $template['short'],
+                is_array($template['meta_parameter_order'] ?? null) ? $template['meta_parameter_order'] : null,
             );
         }
 

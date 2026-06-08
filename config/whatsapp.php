@@ -12,6 +12,8 @@ return [
         'enabled' => env('WHATSAPP_CLOUD_ENABLED', false),
         'token' => env('WHATSAPP_CLOUD_TOKEN'),
         'phone_number_id' => env('WHATSAPP_CLOUD_PHONE_NUMBER_ID'),
+        /** Optional — resolved automatically from phone_number_id when empty */
+        'waba_id' => env('WHATSAPP_CLOUD_WABA_ID'),
         'api_version' => env('WHATSAPP_CLOUD_API_VERSION', 'v21.0'),
         /**
          * Webhook signature secret (App Secret from the Meta App Dashboard) and

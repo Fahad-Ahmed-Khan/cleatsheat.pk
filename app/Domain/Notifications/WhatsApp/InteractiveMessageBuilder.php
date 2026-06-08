@@ -57,16 +57,27 @@ final class InteractiveMessageBuilder
      *
      * @return array<string, mixed>
      */
+    /**
+     * @param  list<string>|null  $parameterOrder  Placeholder keys in Meta {{1}}..{{n}} order
+     */
     public static function cloudTemplatePayload(
         string $toE164,
         string $templateName,
         string $language,
         Order $order,
         string $shortStatus,
+        ?array $parameterOrder = null,
     ): array {
-        $nameVal = (string) ($order->shipping_address_snapshot['full_name'] ?? 'Customer');
-        $orderNo = (string) $order->order_number;
-        $total = (string) $order->grand_total;
+        $keys = $parameterOrder !== null && $parameterOrder !== []
+            ? $parameterOrder
+            : ['name', 'order', 'total', 'status'];
+
+        $values = MetaTemplateBodyConverter::resolveParameterValues($keys, $order, $shortStatus);
+
+        $parameters = array_map(
+            static fn (string $text): array => ['type' => 'text', 'text' => $text],
+            $values,
+        );
 
         return [
             'messaging_product' => 'whatsapp',
@@ -79,12 +90,7 @@ final class InteractiveMessageBuilder
                 'components' => [
                     [
                         'type' => 'body',
-                        'parameters' => [
-                            ['type' => 'text', 'text' => $nameVal],
-                            ['type' => 'text', 'text' => $orderNo],
-                            ['type' => 'text', 'text' => $total],
-                            ['type' => 'text', 'text' => $shortStatus],
-                        ],
+                        'parameters' => $parameters,
                     ],
                 ],
             ],

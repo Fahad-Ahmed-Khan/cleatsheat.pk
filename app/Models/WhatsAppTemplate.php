@@ -16,6 +16,10 @@ class WhatsAppTemplate extends Model
         'body',
         'cloud_template_name',
         'cloud_template_language',
+        'meta_parameter_order',
+        'meta_sync_status',
+        'meta_sync_error',
+        'meta_last_synced_at',
         'has_buttons',
         'button_payloads',
         'is_active',
@@ -30,6 +34,8 @@ class WhatsAppTemplate extends Model
             'is_active' => 'boolean',
             'is_system' => 'boolean',
             'button_payloads' => 'array',
+            'meta_parameter_order' => 'array',
+            'meta_last_synced_at' => 'datetime',
         ];
     }
 

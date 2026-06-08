@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\AdminAuthenticatedSessionController;
 use App\Http\Controllers\Web\Admin\AbandonedCartAdminController;
 use App\Http\Controllers\Web\Admin\BargainSessionAdminController;
 use App\Http\Controllers\Web\Admin\BrandAdminController;
@@ -31,7 +32,6 @@ use App\Http\Controllers\Web\Admin\WhatsAppCampaignAdminController;
 use App\Http\Controllers\Web\Admin\WhatsAppInboxAdminController;
 use App\Http\Controllers\Web\Admin\WhatsAppManualMessageController;
 use App\Http\Controllers\Web\Admin\WhatsAppSettingsAdminController;
-use App\Http\Controllers\Auth\AdminAuthenticatedSessionController;
 use App\Http\Controllers\Web\Admin\WhatsAppTemplateAdminController;
 use Illuminate\Support\Facades\Route;
 
@@ -145,6 +145,10 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         ->except(['show']);
     Route::post('/whatsapp-templates/{whatsapp_template}/send-test', [WhatsAppTemplateAdminController::class, 'sendTest'])
         ->name('whatsapp-templates.send-test');
+    Route::post('/whatsapp-templates/{whatsapp_template}/sync-meta', [WhatsAppTemplateAdminController::class, 'syncToMeta'])
+        ->name('whatsapp-templates.sync-meta');
+    Route::post('/whatsapp-templates/sync-meta', [WhatsAppTemplateAdminController::class, 'syncAllToMeta'])
+        ->name('whatsapp-templates.sync-meta-all');
 
     Route::resource('whatsapp-campaigns', WhatsAppCampaignAdminController::class)
         ->parameters(['whatsapp-campaigns' => 'whatsapp_campaign']);

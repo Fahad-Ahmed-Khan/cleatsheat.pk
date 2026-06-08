@@ -1,16 +1,19 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import AdminPageHeader from '@/Components/Admin/AdminPageHeader.vue';
 import FormSection from '@/Components/Admin/FormSection.vue';
 import FormField from '@/Components/Admin/FormField.vue';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 
 const props = defineProps({
     template: { type: Object, required: true },
     audiences: { type: Array, default: () => [] },
     categories: { type: Array, default: () => [] },
+    cloud_enabled: { type: Boolean, default: false },
 });
+
+const syncing = ref(false);
 
 const isEdit = computed(() => !!props.template.id);
 
@@ -45,6 +48,19 @@ function addButton() {
 
 function removeButton(idx) {
     form.button_payloads.splice(idx, 1);
+}
+
+function syncToMeta(force = false) {
+    if (!isEdit.value || !props.cloud_enabled || form.has_buttons) return;
+    const msg = force
+        ? 'Force re-sync? Approved Meta templates will be deleted and recreated.'
+        : 'Push this template to Meta? New submissions require Meta approval.';
+    if (!confirm(msg)) return;
+    syncing.value = true;
+    router.post(route('admin.whatsapp-templates.sync-meta', props.template.id), { force }, {
+        preserveScroll: true,
+        onFinish: () => { syncing.value = false; },
+    });
 }
 </script>
 
@@ -180,8 +196,8 @@ function removeButton(idx) {
             </FormSection>
 
             <FormSection
-                title="WhatsApp Cloud API template (optional)"
-                description="If you have a Meta-approved template, paste its exact name here. We'll send it as a template message (4 body parameters: name, order#, total, status) instead of free text. Free text is only allowed inside the 24-hour customer-service window."
+                title="WhatsApp Cloud API template"
+                description="Set a Meta template name (or leave blank to use the template key). After saving body changes, click Sync to Meta or run php artisan whatsapp:sync-templates. Placeholders become Meta variables {{1}}, {{2}}, … in order of appearance."
             >
                 <div class="row g-3">
                     <div class="col-md-8">
@@ -200,8 +216,23 @@ function removeButton(idx) {
                     </div>
                 </div>
 
+                <div v-if="isEdit && template.meta_sync_status" class="alert alert-secondary small py-2">
+                    <strong>Meta sync:</strong> {{ template.meta_sync_status }}
+                    <span v-if="template.meta_last_synced_at"> · {{ template.meta_last_synced_at }}</span>
+                    <span v-if="template.meta_sync_error" class="text-danger d-block">{{ template.meta_sync_error }}</span>
+                </div>
+
                 <template #actions>
                     <Link :href="route('admin.whatsapp-templates.index')" class="btn btn-outline-secondary">Cancel</Link>
+                    <button
+                        v-if="isEdit && cloud_enabled && !form.has_buttons"
+                        type="button"
+                        class="btn btn-outline-primary"
+                        :disabled="syncing"
+                        @click="syncToMeta(false)"
+                    >
+                        {{ syncing ? 'Syncing…' : 'Sync to Meta' }}
+                    </button>
                     <button type="submit" class="btn btn-primary" :disabled="form.processing">
                         {{ isEdit ? 'Save changes' : 'Create template' }}
                     </button>

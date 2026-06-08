@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web\Admin;
 
 use App\Domain\Notifications\WhatsApp\TemplateRepository;
 use App\Domain\Notifications\WhatsApp\WhatsAppClient;
+use App\Domain\Notifications\WhatsApp\WhatsAppTemplateSyncService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UpsertWhatsAppTemplateRequest;
 use App\Models\NotificationLog;
@@ -40,6 +41,7 @@ class WhatsAppTemplateAdminController extends Controller
         return Inertia::render('Admin/WhatsApp/Templates/Index', [
             'templates' => $templates,
             'filters' => ['search' => $search],
+            'cloud_enabled' => (bool) config('whatsapp.cloud.enabled', false),
         ]);
     }
 
@@ -49,6 +51,7 @@ class WhatsAppTemplateAdminController extends Controller
             'template' => $this->emptyTemplatePayload(),
             'audiences' => $this->audiences(),
             'categories' => $this->categories(),
+            'cloud_enabled' => (bool) config('whatsapp.cloud.enabled', false),
         ]);
     }
 
@@ -69,6 +72,7 @@ class WhatsAppTemplateAdminController extends Controller
             'template' => $this->serialize($whatsappTemplate),
             'audiences' => $this->audiences(),
             'categories' => $this->categories(),
+            'cloud_enabled' => (bool) config('whatsapp.cloud.enabled', false),
         ]);
     }
 
@@ -96,6 +100,46 @@ class WhatsAppTemplateAdminController extends Controller
         return redirect()
             ->route('admin.whatsapp-templates.index')
             ->with('status', 'Template deleted.');
+    }
+
+    public function syncToMeta(Request $request, WhatsAppTemplate $whatsappTemplate, WhatsAppTemplateSyncService $sync): RedirectResponse
+    {
+        $force = $request->boolean('force');
+
+        try {
+            $result = $sync->sync($whatsappTemplate, $force);
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Meta sync failed: '.$e->getMessage());
+        }
+
+        if ($result['ok']) {
+            return back()->with('status', $result['message']);
+        }
+
+        if ($result['action'] === 'skipped') {
+            return back()->with('error', $result['message']);
+        }
+
+        return back()->with('error', $result['message']);
+    }
+
+    public function syncAllToMeta(Request $request, WhatsAppTemplateSyncService $sync): RedirectResponse
+    {
+        $force = $request->boolean('force');
+
+        try {
+            $summary = $sync->syncAll(onlyActive: true, force: $force);
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Meta sync failed: '.$e->getMessage());
+        }
+
+        $message = "Meta sync finished — created: {$summary['created']}, updated: {$summary['updated']}, unchanged: {$summary['unchanged']}, skipped: {$summary['skipped']}, failed: {$summary['failed']}.";
+
+        if ($summary['failed'] > 0) {
+            return back()->with('error', $message.' '.implode(' ', $summary['errors']));
+        }
+
+        return back()->with('status', $message);
     }
 
     public function sendTest(Request $request, WhatsAppTemplate $whatsappTemplate, WhatsAppClient $client, TemplateRepository $templates): RedirectResponse
@@ -182,6 +226,9 @@ class WhatsAppTemplateAdminController extends Controller
             'is_active' => (bool) $t->is_active,
             'is_system' => (bool) $t->is_system,
             'description' => $t->description,
+            'meta_sync_status' => $t->meta_sync_status,
+            'meta_sync_error' => $t->meta_sync_error,
+            'meta_last_synced_at' => $t->meta_last_synced_at?->format('M j, Y H:i'),
             'updated_at' => $t->updated_at?->format('M j, Y H:i'),
         ];
     }
