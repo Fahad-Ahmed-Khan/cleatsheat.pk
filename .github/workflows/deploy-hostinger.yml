@@ -74,8 +74,21 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
+      # secrets.* cannot be used in step `if:` expressions — gate via a shell step instead.
+      - name: Check CI notify secrets
+        id: mail
+        env:
+          DEPLOY_NOTIFY_EMAIL: ${{ secrets.DEPLOY_NOTIFY_EMAIL }}
+          MAIL_HOST: ${{ secrets.MAIL_HOST }}
+        run: |
+          if [ -n "$DEPLOY_NOTIFY_EMAIL" ] && [ -n "$MAIL_HOST" ]; then
+            echo "send=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "send=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Send CI deploy email
-        if: ${{ secrets.DEPLOY_NOTIFY_EMAIL != '' && secrets.MAIL_HOST != '' }}
+        if: steps.mail.outputs.send == 'true'
         uses: dawidd6/action-send-mail@v4
         with:
           server_address: ${{ secrets.MAIL_HOST }}
