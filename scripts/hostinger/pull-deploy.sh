@@ -32,9 +32,11 @@ is_in_maintenance() {
 }
 
 run_locked() {
-  git fetch origin "$BRANCH" --prune
+  # Explicit refspec: `git fetch origin production` alone may only update FETCH_HEAD
+  # (no refs/remotes/origin/production), which breaks `git rev-parse origin/production`.
+  git fetch origin "+refs/heads/${BRANCH}:refs/remotes/origin/${BRANCH}" --prune
 
-  REMOTE="$(git rev-parse "origin/${BRANCH}")"
+  REMOTE="$(git rev-parse "origin/${BRANCH}^{commit}")"
   LOCAL="$(git rev-parse HEAD 2>/dev/null || true)"
 
   if [ "${LOCAL}" = "${REMOTE}" ]; then

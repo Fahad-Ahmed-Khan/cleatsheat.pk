@@ -78,7 +78,7 @@ run_prepare() {
   php artisan down --render="errors::503" --retry=60 || true
   MAINTENANCE_ENABLED=1
 
-  git fetch --all --prune
+  git fetch origin "+refs/heads/${BRANCH}:refs/remotes/origin/${BRANCH}" --prune
   git reset --hard "origin/${BRANCH}"
 
   composer install --no-dev --optimize-autoloader --no-interaction --no-progress --ignore-platform-reqs
