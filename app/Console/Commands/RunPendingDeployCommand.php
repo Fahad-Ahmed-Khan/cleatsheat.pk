@@ -33,9 +33,23 @@ class RunPendingDeployCommand extends Command
 
         $this->appendDeployLog($logFile, 'deploy:run-pending starting pull-deploy (branch='.$branch.')');
 
+        $home = getenv('HOME') ?: null;
+        if (! is_string($home) || $home === '') {
+            $user = get_current_user();
+            $candidate = '/home/'.$user;
+            $home = is_dir($candidate) ? $candidate : sys_get_temp_dir();
+        }
+
+        $composerHome = getenv('COMPOSER_HOME') ?: $home.'/.composer';
+        if (! is_dir($composerHome)) {
+            @mkdir($composerHome, 0755, true);
+        }
+
         $command = sprintf(
-            'cd %s && env DEPLOY_BRANCH=%s bash %s',
+            'cd %s && env HOME=%s COMPOSER_HOME=%s DEPLOY_BRANCH=%s bash %s',
             escapeshellarg(base_path()),
+            escapeshellarg($home),
+            escapeshellarg($composerHome),
             escapeshellarg($branch),
             escapeshellarg($script),
         );

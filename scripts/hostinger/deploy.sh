@@ -27,6 +27,21 @@ if ! command -v composer >/dev/null 2>&1; then
   exit 1
 fi
 
+# Cron / webhook / `deploy:run-pending` often run without HOME; Composer 2.x requires it.
+if [ -z "${HOME:-}" ]; then
+  _home_from_passwd="$(getent passwd "$(id -un)" 2>/dev/null | cut -d: -f6 || true)"
+  if [ -n "${_home_from_passwd}" ] && [ -d "${_home_from_passwd}" ]; then
+    export HOME="${_home_from_passwd}"
+  elif [ -d "/home/$(id -un)" ]; then
+    export HOME="/home/$(id -un)"
+  else
+    export HOME="/tmp"
+  fi
+  unset _home_from_passwd
+fi
+export COMPOSER_HOME="${COMPOSER_HOME:-${HOME}/.composer}"
+mkdir -p "${COMPOSER_HOME}"
+
 # If prepare/finalize fails after `artisan down`, always bring the site back up.
 MAINTENANCE_ENABLED=0
 

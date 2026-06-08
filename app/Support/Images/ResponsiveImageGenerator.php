@@ -28,6 +28,70 @@ class ResponsiveImageGenerator
     }
 
     /**
+     * True when every stored variant path exists on the public disk.
+     *
+     * @param  mixed  $variants  list of ['w' => int, 'path' => string]
+     */
+    public function variantsComplete(mixed $variants): bool
+    {
+        if (! is_array($variants) || $variants === []) {
+            return false;
+        }
+
+        $disk = Storage::disk('public');
+
+        foreach ($variants as $variant) {
+            $path = is_array($variant) ? ($variant['path'] ?? null) : null;
+            if (! is_string($path)) {
+                return false;
+            }
+
+            $relative = PublicAssetUrl::normalizeForStorage($path);
+            if ($relative === null || ! $disk->exists($relative)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Build a responsive srcset string from stored WebP variant metadata.
+     * Skips variants whose files are missing on the public disk.
+     *
+     * @param  mixed  $variants  list of ['w' => int, 'path' => string]
+     */
+    public static function buildSrcset(mixed $variants): ?string
+    {
+        if (! is_array($variants) || $variants === []) {
+            return null;
+        }
+
+        $disk = Storage::disk('public');
+        $entries = [];
+
+        foreach ($variants as $variant) {
+            $path = is_array($variant) ? ($variant['path'] ?? null) : null;
+            $width = is_array($variant) ? ($variant['w'] ?? null) : null;
+            if (! is_string($path) || ! is_numeric($width)) {
+                continue;
+            }
+
+            $relative = PublicAssetUrl::normalizeForStorage($path);
+            if ($relative === null || ! $disk->exists($relative)) {
+                continue;
+            }
+
+            $url = PublicAssetUrl::resolve($path);
+            if ($url !== null) {
+                $entries[] = $url.' '.(int) $width.'w';
+            }
+        }
+
+        return $entries === [] ? null : implode(', ', $entries);
+    }
+
+    /**
      * Generate WebP variants for the given stored path (relative, /storage/... or full URL).
      *
      * @param  list<int>|null  $widths  Target widths; defaults to product-card WIDTHS.

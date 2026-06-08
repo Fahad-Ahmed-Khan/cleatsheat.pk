@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Api\V1;
 
 use App\Models\Product;
+use App\Support\Images\ResponsiveImageGenerator;
 use App\Support\Storage\PublicAssetUrl;
 use App\Support\Store\ProductCardMeta;
 use Illuminate\Http\Request;
@@ -46,7 +47,7 @@ class ProductResource extends JsonResource
             'images' => $this->whenLoaded('images', fn () => $this->images
                 ->map(fn ($img) => [
                     'path' => PublicAssetUrl::resolve($img->path),
-                    'srcset' => self::buildSrcset($img->variants),
+                    'srcset' => ResponsiveImageGenerator::buildSrcset($img->variants),
                     'width' => $img->width,
                     'height' => $img->height,
                     'alt' => $img->alt,
@@ -72,29 +73,10 @@ class ProductResource extends JsonResource
     }
 
     /**
-     * Build a responsive srcset string from stored WebP variant metadata.
-     *
      * @param  mixed  $variants  list of ['w' => int, 'path' => string]
      */
     public static function buildSrcset($variants): ?string
     {
-        if (! is_array($variants) || $variants === []) {
-            return null;
-        }
-
-        $entries = [];
-        foreach ($variants as $variant) {
-            $path = $variant['path'] ?? null;
-            $width = $variant['w'] ?? null;
-            if (! is_string($path) || ! is_numeric($width)) {
-                continue;
-            }
-            $url = PublicAssetUrl::resolve($path);
-            if ($url !== null) {
-                $entries[] = $url.' '.(int) $width.'w';
-            }
-        }
-
-        return $entries === [] ? null : implode(', ', $entries);
+        return ResponsiveImageGenerator::buildSrcset($variants);
     }
 }

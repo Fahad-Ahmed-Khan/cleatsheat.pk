@@ -26,26 +26,29 @@ class GenerateProductImageVariants extends Command
         $chunk = max(1, (int) $this->option('chunk'));
 
         $query = ProductImage::query();
-        if (! $force) {
-            $query->whereNull('variants');
-        }
-
         $total = (clone $query)->count();
         if ($total === 0) {
-            $this->info('No product images need processing.');
+            $this->info('No product images to check.');
 
             return self::SUCCESS;
         }
 
-        $this->info("Processing {$total} product image(s)...");
+        $this->info("Checking {$total} product image(s)...");
         $bar = $this->output->createProgressBar($total);
         $bar->start();
 
         $generated = 0;
         $skipped = 0;
 
-        $query->chunkById($chunk, function ($images) use ($generator, &$generated, &$skipped, $bar) {
+        $query->chunkById($chunk, function ($images) use ($generator, $force, &$generated, &$skipped, $bar) {
             foreach ($images as $image) {
+                if (! $force && $generator->variantsComplete($image->variants)) {
+                    $skipped++;
+                    $bar->advance();
+
+                    continue;
+                }
+
                 $meta = $generator->generate($image->path);
 
                 if ($meta === null) {

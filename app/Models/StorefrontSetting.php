@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Images\ResponsiveImageGenerator;
 use App\Support\Storage\PublicAssetUrl;
 use Illuminate\Database\Eloquent\Model;
 
@@ -157,24 +158,7 @@ class StorefrontSetting extends Model
      */
     public static function buildSrcset($variants): ?string
     {
-        if (! is_array($variants) || $variants === []) {
-            return null;
-        }
-
-        $entries = [];
-        foreach ($variants as $variant) {
-            $path = is_array($variant) ? ($variant['path'] ?? null) : null;
-            $width = is_array($variant) ? ($variant['w'] ?? null) : null;
-            if (! is_string($path) || ! is_numeric($width)) {
-                continue;
-            }
-            $url = PublicAssetUrl::resolve($path);
-            if ($url !== null) {
-                $entries[] = $url.' '.(int) $width.'w';
-            }
-        }
-
-        return $entries === [] ? null : implode(', ', $entries);
+        return ResponsiveImageGenerator::buildSrcset($variants);
     }
 
     /**

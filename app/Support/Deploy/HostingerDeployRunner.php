@@ -26,6 +26,13 @@ class HostingerDeployRunner
         $logFile = storage_path('logs/deploy.log');
         $branch = (string) config('deploy.branch', 'production');
         $path = getenv('PATH') ?: '/usr/local/bin:/usr/bin:/bin:/opt/alt/php83/usr/bin';
+        $home = getenv('HOME') ?: null;
+        if (! is_string($home) || $home === '') {
+            $user = get_current_user();
+            $candidate = '/home/'.$user;
+            $home = is_dir($candidate) ? $candidate : sys_get_temp_dir();
+        }
+        $composerHome = getenv('COMPOSER_HOME') ?: $home.'/.composer';
 
         DeployPendingMarker::set($meta);
         $this->appendDeployLog(
@@ -34,9 +41,12 @@ class HostingerDeployRunner
         );
 
         $command = sprintf(
-            'cd %s && mkdir -p %s && nohup env DEPLOY_BRANCH=%s PATH=%s bash %s >> %s 2>&1 &',
+            'cd %s && mkdir -p %s %s && nohup env HOME=%s COMPOSER_HOME=%s DEPLOY_BRANCH=%s PATH=%s bash %s >> %s 2>&1 &',
             escapeshellarg(base_path()),
             escapeshellarg(dirname($logFile)),
+            escapeshellarg($composerHome),
+            escapeshellarg($home),
+            escapeshellarg($composerHome),
             escapeshellarg($branch),
             escapeshellarg($path),
             escapeshellarg($script),
