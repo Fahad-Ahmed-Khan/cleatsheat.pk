@@ -183,7 +183,25 @@ If `deploy.log` is missing after a push:
 
 Check `storage/logs/deploy.log` and `storage/logs/laravel.log` for `deploy.run_pending.*` entries.
 
-## 9) Rollback (manual, basic)
+## 9) Production admin login
+
+Deploy runs `migrate` only — it does **not** seed users. There is no default production password in the repo.
+
+Create or reset a staff account over SSH:
+
+```bash
+cd ~/apps/tryino-ecom
+php artisan admin:create-user you@yourdomain.com --name="Your Name"
+# Enter a strong password when prompted (min 8 characters)
+```
+
+Sign in at `https://tryinotech.cloud/admin/login` (not the customer `/login` page).
+
+Local/dev only (after `php artisan db:seed`): `admin@tryino.test` / `password`.
+
+If sign-in fails silently or shows “Page Expired”, hard-refresh the login page (stale CSRF from browser cache) and try again.
+
+## 10) Rollback (manual, basic)
 
 On Hostinger:
 

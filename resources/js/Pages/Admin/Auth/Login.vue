@@ -1,10 +1,13 @@
 <script setup>
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
 defineProps({
     canResetPassword: { type: Boolean, default: true },
     status: { type: String, default: '' },
 });
+
+const page = usePage();
 
 const form = useForm({
     email: '',
@@ -12,8 +15,28 @@ const form = useForm({
     remember: false,
 });
 
+const emailError = computed(() => form.errors.email || page.props.errors?.email);
+const passwordError = computed(() => form.errors.password || page.props.errors?.password);
+
+const loginAlert = computed(() => {
+    if (emailError.value) {
+        return emailError.value;
+    }
+
+    const messages = Object.values(form.errors);
+    if (messages.length > 0) {
+        return messages[0];
+    }
+
+    const pageErrors = Object.values(page.props.errors ?? {});
+    return pageErrors.length > 0 ? pageErrors[0] : '';
+});
+
 function submit() {
-    form.post(route('admin.login'), { onFinish: () => form.reset('password') });
+    form.post(route('admin.login'), {
+        preserveScroll: true,
+        onFinish: () => form.reset('password'),
+    });
 }
 </script>
 
@@ -27,6 +50,7 @@ function submit() {
                     <p class="mb-4 text-muted">Admin panel — not for customer accounts.</p>
 
                     <p v-if="status" class="alert alert-success mb-4">{{ status }}</p>
+                    <p v-if="loginAlert" class="alert alert-danger mb-4" role="alert">{{ loginAlert }}</p>
 
                     <form class="mb-4" @submit.prevent="submit">
                         <div class="mb-4">
@@ -36,11 +60,12 @@ function submit() {
                                 v-model="form.email"
                                 type="email"
                                 class="form-control"
+                                :class="{ 'is-invalid': !!emailError }"
                                 required
                                 autofocus
                                 autocomplete="username"
                             >
-                            <div v-if="form.errors.email" class="form-text text-danger">{{ form.errors.email }}</div>
+                            <div v-if="emailError" class="invalid-feedback d-block">{{ emailError }}</div>
                         </div>
                         <div class="mb-4">
                             <label for="password" class="form-label">Password</label>
@@ -49,10 +74,11 @@ function submit() {
                                 v-model="form.password"
                                 type="password"
                                 class="form-control"
+                                :class="{ 'is-invalid': !!passwordError }"
                                 required
                                 autocomplete="current-password"
                             >
-                            <div v-if="form.errors.password" class="form-text text-danger">{{ form.errors.password }}</div>
+                            <div v-if="passwordError" class="invalid-feedback d-block">{{ passwordError }}</div>
                         </div>
                         <div class="mb-4 form-check">
                             <input id="remember" v-model="form.remember" type="checkbox" class="form-check-input">

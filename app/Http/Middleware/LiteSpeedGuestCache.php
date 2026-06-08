@@ -48,6 +48,7 @@ class LiteSpeedGuestCache
         } else {
             // Be explicit so authed/dynamic responses are never edge-cached.
             $response->headers->set('X-LiteSpeed-Cache-Control', 'no-cache, esi=off');
+            $response->headers->set('Cache-Control', 'no-store, private');
         }
 
         return $response;

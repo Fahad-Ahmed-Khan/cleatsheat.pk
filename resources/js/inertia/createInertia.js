@@ -41,7 +41,19 @@ export function bootInertiaApp({
     }).then(() => {
         router.on('invalid', (event) => {
             const response = event.detail?.response;
-            if (!response || response.status !== 409) {
+            if (!response) {
+                return;
+            }
+
+            if (response.status === 419) {
+                event.preventDefault();
+                window.alert('Your session expired. The page will reload — please sign in again.');
+                window.location.reload();
+
+                return;
+            }
+
+            if (response.status !== 409) {
                 return;
             }
 
