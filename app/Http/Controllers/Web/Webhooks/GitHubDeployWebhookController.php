@@ -60,7 +60,9 @@ class GitHubDeployWebhookController extends Controller
         }
 
         try {
-            $this->deployRunner->runInBackground();
+            $this->deployRunner->runInBackground([
+                'after' => $payload['after'] ?? null,
+            ]);
         } catch (\Throwable $e) {
             Log::error('deploy.github.webhook.start_failed', [
                 'message' => $e->getMessage(),

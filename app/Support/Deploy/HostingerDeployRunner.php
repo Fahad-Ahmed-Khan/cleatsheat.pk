@@ -7,12 +7,15 @@ use Illuminate\Support\Facades\Log;
 /**
  * Starts the Hostinger pull-and-deploy shell script without blocking the HTTP response.
  *
- * Uses nohup + exec() because Hostinger PHP-FPM often disables proc_open, which breaks
- * Symfony Process::start().
+ * Also writes a pending marker + deploy.log line synchronously so deploy still
+ * runs via `deploy:run-pending` (scheduler) when shared hosting kills nohup children.
  */
 class HostingerDeployRunner
 {
-    public function runInBackground(): void
+    /**
+     * @param  array<string, mixed>  $meta
+     */
+    public function runInBackground(array $meta = []): void
     {
         $script = base_path('scripts/hostinger/pull-deploy.sh');
 
@@ -23,6 +26,12 @@ class HostingerDeployRunner
         $logFile = storage_path('logs/deploy.log');
         $branch = (string) config('deploy.branch', 'production');
         $path = getenv('PATH') ?: '/usr/local/bin:/usr/bin:/bin:/opt/alt/php83/usr/bin';
+
+        DeployPendingMarker::set($meta);
+        $this->appendDeployLog(
+            $logFile,
+            'webhook queued deploy (branch='.$branch.', after='.($meta['after'] ?? 'unknown').'); pending marker set'
+        );
 
         $command = sprintf(
             'cd %s && mkdir -p %s && nohup env DEPLOY_BRANCH=%s PATH=%s bash %s >> %s 2>&1 &',
@@ -35,7 +44,12 @@ class HostingerDeployRunner
         );
 
         if (! function_exists('exec')) {
-            throw new \RuntimeException('PHP exec() is disabled; cannot start deploy script.');
+            Log::warning('deploy.github.webhook.exec_disabled', [
+                'log' => $logFile,
+                'hint' => 'Deploy will run on next schedule via deploy:run-pending',
+            ]);
+
+            return;
         }
 
         $output = [];
@@ -46,14 +60,26 @@ class HostingerDeployRunner
             Log::error('deploy.github.webhook.exec_failed', [
                 'exit_code' => $exitCode,
                 'output' => $output,
+                'hint' => 'Deploy will run on next schedule via deploy:run-pending',
             ]);
 
-            throw new \RuntimeException('Failed to start deploy script (exec exit '.$exitCode.').');
+            return;
         }
 
         Log::info('deploy.github.webhook.spawned', [
             'branch' => $branch,
             'log' => $logFile,
         ]);
+    }
+
+    private function appendDeployLog(string $logFile, string $message): void
+    {
+        $dir = dirname($logFile);
+        if (! is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+
+        $line = '['.gmdate('Y-m-d\TH:i:s\Z').'] '.$message.PHP_EOL;
+        file_put_contents($logFile, $line, FILE_APPEND | LOCK_EX);
     }
 }

@@ -154,6 +154,7 @@ Set **one** Hostinger cron entry (adjust the path):
 
 | What | How often |
 |------|-----------|
+| GitHub deploy (`deploy:run-pending` when webhook queued) | Every minute |
 | Queue worker (`queue:work --stop-when-empty`) | Every minute |
 | Shipping tracking sync | Every 30 minutes |
 | Search index backfill (`--missing` only) | Daily 03:30 |
@@ -169,6 +170,18 @@ Set **one** Hostinger cron entry (adjust the path):
 Do **not** add separate cron lines for these commands — only `schedule:run`.
 
 Full deploy still runs `catalog:rebuild-search-index` (all products) via `deploy.sh`.
+
+### Deploy troubleshooting
+
+The GitHub webhook only **queues** deploy (writes `storage/framework/deploy-pending.json` and a line to `storage/logs/deploy.log`). The actual `pull-deploy.sh` runs from **`deploy:run-pending`** via the scheduler (every minute).
+
+If `deploy.log` is missing after a push:
+
+1. Confirm cron runs `php artisan schedule:run` every minute.
+2. SSH: `php artisan deploy:run-pending` (runs deploy immediately if pending).
+3. Or: `bash scripts/hostinger/pull-deploy.sh`
+
+Check `storage/logs/deploy.log` and `storage/logs/laravel.log` for `deploy.run_pending.*` entries.
 
 ## 9) Rollback (manual, basic)
 

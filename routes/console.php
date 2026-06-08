@@ -35,6 +35,12 @@ Artisan::command('inspire', function () {
 |--------------------------------------------------------------------------
 */
 
+// --- Deploy (webhook sets a pending marker; cron runs the shell script) --------
+Schedule::command('deploy:run-pending')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->runInBackground();
+
 // --- Queue worker (database driver; no Supervisor on shared hosting) -----------
 // Drains jobs dispatched by webhooks, shipping sync, WhatsApp, payments, etc.
 // Scheduled jobs below also enqueue work — this must run every minute.
