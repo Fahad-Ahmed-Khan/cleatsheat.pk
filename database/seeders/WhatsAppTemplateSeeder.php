@@ -102,7 +102,7 @@ class WhatsAppTemplateSeeder extends Seeder
                 'label' => 'Admin — new order alert',
                 'audience' => 'admin',
                 'category' => 'utility',
-                'body' => "New order {order} · PKR {total}\nCustomer: {name} ({phone})\nCity: {city}\nPayment: {payment}\nStatus: {status}",
+                'body' => 'New order alert: {order} for PKR {total}. Customer {name} ({phone}) in {city}. Payment: {payment}. Status: {status}. Please process in admin.',
                 'is_system' => true,
             ],
             [
@@ -110,7 +110,7 @@ class WhatsAppTemplateSeeder extends Seeder
                 'label' => 'Courier rider — pickup notice',
                 'audience' => 'rider',
                 'category' => 'utility',
-                'body' => "Salaam, please pick {parcels} parcel(s) from our warehouse today. Total COD: PKR {cod_total}. Tracking #s:\n{tracking_list}",
+                'body' => 'Salaam, please pick {parcels} parcel(s) from our warehouse today. Total COD: PKR {cod_total}. Tracking numbers: {tracking_list}. Thank you.',
                 'is_system' => true,
                 'description' => 'Sent daily to the primary rider per courier company. Placeholders: {parcels}, {cod_total}, {tracking_list}, {courier}.',
             ],

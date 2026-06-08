@@ -30,4 +30,26 @@ class MetaTemplateBodyConverterTest extends TestCase
 
         MetaTemplateBodyConverter::convert('Hello {unknown}');
     }
+
+    #[Test]
+    public function test_normalizes_trailing_variable_for_pickup_notice(): void
+    {
+        $result = MetaTemplateBodyConverter::convert(
+            "Salaam, please pick {parcels} parcel(s) from our warehouse today. Total COD: PKR {cod_total}. Tracking #s:\n{tracking_list}"
+        );
+
+        $this->assertStringEndsWith('— Tryino.', $result['body']);
+        $this->assertStringContainsString('{{3}} — Tryino.', $result['body']);
+    }
+
+    #[Test]
+    public function test_normalizes_high_variable_ratio_for_admin_new_order(): void
+    {
+        $result = MetaTemplateBodyConverter::convert(
+            "New order {order} · PKR {total}\nCustomer: {name} ({phone})\nCity: {city}\nPayment: {payment}\nStatus: {status}"
+        );
+
+        $this->assertStringContainsString('automated notification from Tryino', $result['body']);
+        $this->assertStringContainsString('Status: {{7}} — Tryino.', $result['body']);
+    }
 }

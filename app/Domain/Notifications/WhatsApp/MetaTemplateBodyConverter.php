@@ -64,6 +64,8 @@ final class MetaTemplateBodyConverter
             $index++;
         }
 
+        $metaBody = self::normalizeMetaBody($metaBody, count($parameterOrder));
+
         if (mb_strlen($metaBody) > 1024) {
             throw new \InvalidArgumentException('Meta template body exceeds 1024 characters.');
         }
@@ -78,6 +80,59 @@ final class MetaTemplateBodyConverter
             'parameter_order' => $parameterOrder,
             'examples' => $examples,
         ];
+    }
+
+    /**
+     * Meta rejects templates when variables start/end the body or outnumber static words.
+     * Padding is added only to the Meta submission — the admin-editable body is unchanged.
+     */
+    private static function normalizeMetaBody(string $metaBody, int $variableCount): string
+    {
+        if ($variableCount === 0) {
+            return trim($metaBody);
+        }
+
+        $body = trim($metaBody);
+
+        if (preg_match('/^\{\{\d+\}\}/', $body)) {
+            $body = 'Hello, '.$body;
+        }
+
+        if (preg_match('/\{\{\d+\}\}\s*$/', $body)) {
+            $body = rtrim($body).' — Tryino.';
+        }
+
+        $fillers = [
+            ' This is an automated notification from Tryino.',
+            ' Please review and action this promptly.',
+            ' Contact us on WhatsApp if you need assistance.',
+        ];
+
+        foreach ($fillers as $filler) {
+            if (self::staticWordCount($body) / $variableCount >= 3) {
+                break;
+            }
+
+            $body .= $filler;
+
+            if (mb_strlen($body) > 1020) {
+                break;
+            }
+        }
+
+        return trim($body);
+    }
+
+    private static function staticWordCount(string $metaBody): int
+    {
+        $static = trim(preg_replace('/\{\{\d+\}\}/', ' ', $metaBody) ?? '');
+        if ($static === '') {
+            return 0;
+        }
+
+        $parts = preg_split('/\s+/u', $static, -1, PREG_SPLIT_NO_EMPTY);
+
+        return is_array($parts) ? count($parts) : 0;
     }
 
     /**
