@@ -139,8 +139,8 @@ function copy(value, field) {
 
                 <div v-if="!cloud_enabled" class="alert alert-warning small mt-2">
                     Cloud API is currently disabled. Set <code>WHATSAPP_CLOUD_ENABLED=true</code> in <code>.env</code> and provide
-                    <code>WHATSAPP_CLOUD_TOKEN</code>, <code>WHATSAPP_CLOUD_PHONE_NUMBER_ID</code>, and <code>WHATSAPP_CLOUD_APP_SECRET</code>
-                    to enable interactive buttons and webhook signature verification.
+                    <code>WHATSAPP_CLOUD_TOKEN</code>, <code>WHATSAPP_CLOUD_PHONE_NUMBER_ID</code>, <code>WHATSAPP_CLOUD_WABA_ID</code> (for template sync),
+                    and <code>WHATSAPP_CLOUD_APP_SECRET</code> to enable interactive buttons and webhook signature verification.
                 </div>
             </FormSection>
 

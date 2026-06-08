@@ -121,32 +121,146 @@ class WhatsAppCloudTemplateClient
 
         return Cache::remember('whatsapp.cloud.waba_id', now()->addDay(), function (): string {
             $phoneNumberId = trim((string) config('whatsapp.cloud.phone_number_id', ''));
-            $token = $this->token();
-            $version = $this->apiVersion();
 
-            if ($phoneNumberId === '') {
-                throw new \RuntimeException('WHATSAPP_CLOUD_PHONE_NUMBER_ID is not configured.');
+            $wabaId = $this->resolveWabaIdFromBusinesses($phoneNumberId)
+                ?? $this->resolveWabaIdFromDebugToken();
+
+            if ($wabaId === null || $wabaId === '') {
+                throw new \RuntimeException(
+                    'Could not resolve WhatsApp Business Account ID automatically. '
+                    .'Set WHATSAPP_CLOUD_WABA_ID in .env (Meta Developer Console → WhatsApp → API Setup → WhatsApp Business Account ID), '
+                    .'then run: php artisan config:clear'
+                );
             }
 
-            /** @var array<string, mixed> $json */
-            $json = Http::timeout((int) config('whatsapp.retry.timeout_seconds', 30))
-                ->withToken($token)
-                ->acceptJson()
-                ->get("https://graph.facebook.com/{$version}/{$phoneNumberId}", [
-                    'fields' => 'whatsapp_business_account',
-                ])
-                ->throw()
-                ->json();
-
-            $waba = $json['whatsapp_business_account'] ?? null;
-            $id = is_array($waba) ? (string) ($waba['id'] ?? '') : '';
-
-            if ($id === '') {
-                throw new \RuntimeException('Could not resolve WhatsApp Business Account ID from phone number.');
-            }
-
-            return $id;
+            return $wabaId;
         });
+    }
+
+    private function resolveWabaIdFromBusinesses(string $phoneNumberId): ?string
+    {
+        try {
+            /** @var array<string, mixed> $businesses */
+            $businesses = $this->graphGet('me/businesses', ['fields' => 'id']);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        $rows = is_array($businesses['data'] ?? null) ? $businesses['data'] : [];
+        $candidateWabaIds = [];
+
+        foreach ($rows as $business) {
+            if (! is_array($business)) {
+                continue;
+            }
+
+            $businessId = (string) ($business['id'] ?? '');
+            if ($businessId === '') {
+                continue;
+            }
+
+            foreach (['owned_whatsapp_business_accounts', 'client_whatsapp_business_accounts'] as $edge) {
+                try {
+                    /** @var array<string, mixed> $wabas */
+                    $wabas = $this->graphGet("{$businessId}/{$edge}", ['fields' => 'id']);
+                } catch (\Throwable) {
+                    continue;
+                }
+
+                $wabaRows = is_array($wabas['data'] ?? null) ? $wabas['data'] : [];
+                foreach ($wabaRows as $waba) {
+                    if (! is_array($waba)) {
+                        continue;
+                    }
+
+                    $wabaId = (string) ($waba['id'] ?? '');
+                    if ($wabaId === '') {
+                        continue;
+                    }
+
+                    $candidateWabaIds[] = $wabaId;
+
+                    if ($phoneNumberId === '') {
+                        continue;
+                    }
+
+                    try {
+                        /** @var array<string, mixed> $phones */
+                        $phones = $this->graphGet("{$wabaId}/phone_numbers", ['fields' => 'id']);
+                    } catch (\Throwable) {
+                        continue;
+                    }
+
+                    $phoneRows = is_array($phones['data'] ?? null) ? $phones['data'] : [];
+                    foreach ($phoneRows as $phone) {
+                        if (is_array($phone) && (string) ($phone['id'] ?? '') === $phoneNumberId) {
+                            return $wabaId;
+                        }
+                    }
+                }
+            }
+        }
+
+        $unique = array_values(array_unique($candidateWabaIds));
+
+        // Single WABA on the token — safe default when phone_number_id is not set or not listed.
+        if (count($unique) === 1) {
+            return $unique[0];
+        }
+
+        return null;
+    }
+
+    private function resolveWabaIdFromDebugToken(): ?string
+    {
+        try {
+            /** @var array<string, mixed> $json */
+            $json = $this->graphGet('debug_token', ['input_token' => $this->token()]);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        $data = is_array($json['data'] ?? null) ? $json['data'] : [];
+        $scopes = is_array($data['granular_scopes'] ?? null) ? $data['granular_scopes'] : [];
+
+        foreach ($scopes as $scope) {
+            if (! is_array($scope)) {
+                continue;
+            }
+
+            $name = (string) ($scope['scope'] ?? '');
+            if (! in_array($name, ['whatsapp_business_management', 'whatsapp_business_messaging'], true)) {
+                continue;
+            }
+
+            $targetIds = is_array($scope['target_ids'] ?? null) ? $scope['target_ids'] : [];
+            if (count($targetIds) === 1) {
+                return (string) $targetIds[0];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $query
+     * @return array<string, mixed>
+     */
+    private function graphGet(string $path, array $query = []): array
+    {
+        $version = $this->apiVersion();
+        $timeout = (int) config('whatsapp.retry.timeout_seconds', 30);
+
+        /** @var array<string, mixed> $json */
+        $json = Http::timeout($timeout)
+            ->retry(2, 250)
+            ->withToken($this->token())
+            ->acceptJson()
+            ->get("https://graph.facebook.com/{$version}/{$path}", $query)
+            ->throw()
+            ->json();
+
+        return $json;
     }
 
     public function assertConfigured(): void

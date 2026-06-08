@@ -72,6 +72,36 @@ class WhatsAppTemplateSyncTest extends TestCase
         $this->assertSame('skipped', $template->meta_sync_status);
     }
 
+    public function test_resolves_waba_id_from_business_hierarchy_when_not_configured(): void
+    {
+        Config::set('whatsapp.cloud.waba_id', '');
+
+        Http::fake(function ($request) {
+            $url = (string) $request->url();
+
+            if (str_contains($url, '/me/businesses')) {
+                return Http::response(['data' => [['id' => 'biz-1']]], 200);
+            }
+            if (str_contains($url, '/biz-1/owned_whatsapp_business_accounts')) {
+                return Http::response(['data' => [['id' => 'waba-resolved']]], 200);
+            }
+            if (str_contains($url, '/waba-resolved/phone_numbers')) {
+                return Http::response(['data' => [['id' => 'phone-123']]], 200);
+            }
+            if (str_contains($url, '/waba-resolved/message_templates') && $request->method() === 'GET') {
+                return Http::response(['data' => []], 200);
+            }
+            if (str_contains($url, '/waba-resolved/message_templates') && $request->method() === 'POST') {
+                return Http::response(['id' => 'tpl-new'], 200);
+            }
+
+            return Http::response([], 404);
+        });
+
+        $this->artisan('whatsapp:sync-templates', ['--template' => 'order_placed'])
+            ->assertSuccessful();
+    }
+
     public function test_admin_can_sync_single_template(): void
     {
         Http::fake(function ($request) {
