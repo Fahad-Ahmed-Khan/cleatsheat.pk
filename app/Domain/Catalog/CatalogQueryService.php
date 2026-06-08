@@ -2,8 +2,8 @@
 
 namespace App\Domain\Catalog;
 
+use App\Domain\Catalog\Contracts\ProductSearchEngine;
 use App\Enums\Gender;
-use App\Enums\ShoeType;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Color;
@@ -17,6 +17,12 @@ use Illuminate\Support\Facades\DB;
 
 class CatalogQueryService
 {
+    public function __construct(
+        private ProductSearchEngine $searchEngine,
+        private ProductListFilterApplicator $filterApplicator,
+        private SearchQueryLogger $searchLogger,
+    ) {}
+
     /**
      * @return array<int, string>
      */
@@ -288,75 +294,8 @@ class CatalogQueryService
             ->where('is_active', true)
             ->with(['brand', 'category', 'images', 'variants.color', 'variants.sizes']);
 
-        $brandIds = array_values(array_filter(array_map('intval', (array) ($filters['brand_ids'] ?? []))));
-        if ($brandIds !== []) {
-            $query->whereIn('brand_id', $brandIds);
-        }
-
-        $colorIds = array_values(array_filter(array_map('intval', (array) ($filters['color_ids'] ?? []))));
-        if ($colorIds !== []) {
-            $query->whereHas('variants', fn (Builder $vq) => $vq->whereIn('color_id', $colorIds));
-        }
-
-        $gender = $filters['gender'] ?? null;
-        if (is_string($gender) && $gender !== '') {
-            $query->where('gender', $gender);
-        }
-
-        $type = $filters['type'] ?? null;
-        $typeList = $this->normalizeStringList($type);
-        if ($typeList !== []) {
-            $allowed = array_map(static fn (ShoeType $c): string => $c->value, ShoeType::cases());
-            $typeList = array_values(array_intersect($typeList, $allowed));
-            if ($typeList !== []) {
-                $query->whereIn('shoe_type', $typeList);
-            }
-        }
-
-        $priceMin = $filters['price_min'] ?? null;
-        if ($priceMin !== null && $priceMin !== '') {
-            $query->whereHas('variants', fn (Builder $vq) => $vq->where('price', '>=', (float) $priceMin));
-        }
-
-        $priceMax = $filters['price_max'] ?? null;
-        if ($priceMax !== null && $priceMax !== '') {
-            $query->whereHas('variants', fn (Builder $vq) => $vq->where('price', '<=', (float) $priceMax));
-        }
-
-        $sizeLabel = $filters['size'] ?? null;
-        if (is_string($sizeLabel) && $sizeLabel !== '') {
-            $query->whereHas('variants.sizes', fn (Builder $sq) => $sq
-                ->where('size_label', $sizeLabel)
-                ->where('stock_qty', '>', 0));
-        }
-
-        $sizeUk = $filters['size_uk'] ?? null;
-        $sizeUkList = $this->normalizeStringList($sizeUk);
-        if ($sizeUkList !== []) {
-            $query->whereHas('variants.sizes', fn (Builder $sq) => $sq
-                ->whereIn('uk_size', $sizeUkList)
-                ->where('stock_qty', '>', 0));
-        }
-
-        $availability = $filters['availability'] ?? null;
-        if ($availability === 'in_stock') {
-            $query->whereHas('variants.sizes', fn (Builder $sq) => $sq->where('stock_qty', '>', 0));
-        }
-
-        $sort = $filters['sort'] ?? null;
-        if ($sort === 'price_asc') {
-            $query->orderBy(
-                ProductVariant::query()->select('price')->whereColumn('product_id', 'products.id')->orderBy('price')->limit(1),
-                'asc'
-            );
-        } elseif ($sort === 'price_desc') {
-            $query->orderBy(
-                ProductVariant::query()->select('price')->whereColumn('product_id', 'products.id')->orderBy('price')->limit(1),
-                'desc'
-            );
-        } else {
-            $query->latest();
-        }
+        $this->filterApplicator->apply($query, $filters, includeCategoryIds: false);
+        $this->applyProductSort($query, $filters);
 
         return $query
             ->paginate($perPage)
@@ -460,84 +399,84 @@ class CatalogQueryService
             ->where('is_active', true)
             ->with(['brand', 'category', 'images', 'variants.color', 'variants.sizes']);
 
-        $categoryIds = array_values(array_filter(array_map('intval', (array) ($filters['category_ids'] ?? []))));
-        if ($categoryIds !== []) {
-            $query->whereIn('category_id', $categoryIds);
-        }
-
-        $brandIds = array_values(array_filter(array_map('intval', (array) ($filters['brand_ids'] ?? []))));
-        if ($brandIds !== []) {
-            $query->whereIn('brand_id', $brandIds);
-        }
-
-        $colorIds = array_values(array_filter(array_map('intval', (array) ($filters['color_ids'] ?? []))));
-        if ($colorIds !== []) {
-            $query->whereHas('variants', fn (Builder $vq) => $vq->whereIn('color_id', $colorIds));
-        }
-
-        $gender = $filters['gender'] ?? null;
-        if (is_string($gender) && $gender !== '') {
-            $query->where('gender', $gender);
-        }
-
-        $type = $filters['type'] ?? null;
-        $typeList = $this->normalizeStringList($type);
-        if ($typeList !== []) {
-            $allowed = array_map(static fn (ShoeType $c): string => $c->value, ShoeType::cases());
-            $typeList = array_values(array_intersect($typeList, $allowed));
-            if ($typeList !== []) {
-                $query->whereIn('shoe_type', $typeList);
-            }
-        }
-
-        $priceMin = $filters['price_min'] ?? null;
-        if ($priceMin !== null && $priceMin !== '') {
-            $query->whereHas('variants', fn (Builder $vq) => $vq->where('price', '>=', (float) $priceMin));
-        }
-
-        $priceMax = $filters['price_max'] ?? null;
-        if ($priceMax !== null && $priceMax !== '') {
-            $query->whereHas('variants', fn (Builder $vq) => $vq->where('price', '<=', (float) $priceMax));
-        }
-
-        $sizeLabel = $filters['size'] ?? null;
-        if (is_string($sizeLabel) && $sizeLabel !== '') {
-            $query->whereHas('variants.sizes', fn (Builder $sq) => $sq
-                ->where('size_label', $sizeLabel)
-                ->where('stock_qty', '>', 0));
-        }
-
-        $sizeUk = $filters['size_uk'] ?? null;
-        $sizeUkList = $this->normalizeStringList($sizeUk);
-        if ($sizeUkList !== []) {
-            $query->whereHas('variants.sizes', fn (Builder $sq) => $sq
-                ->whereIn('uk_size', $sizeUkList)
-                ->where('stock_qty', '>', 0));
-        }
-
-        $availability = $filters['availability'] ?? null;
-        if ($availability === 'in_stock') {
-            $query->whereHas('variants.sizes', fn (Builder $sq) => $sq->where('stock_qty', '>', 0));
-        }
-
-        $sort = $filters['sort'] ?? null;
-        if ($sort === 'price_asc') {
-            $query->orderBy(
-                ProductVariant::query()->select('price')->whereColumn('product_id', 'products.id')->orderBy('price')->limit(1),
-                'asc'
-            );
-        } elseif ($sort === 'price_desc') {
-            $query->orderBy(
-                ProductVariant::query()->select('price')->whereColumn('product_id', 'products.id')->orderBy('price')->limit(1),
-                'desc'
-            );
-        } else {
-            $query->latest();
-        }
+        $this->filterApplicator->apply($query, $filters);
+        $this->applyProductSort($query, $filters);
 
         return $query
             ->paginate($perPage)
             ->withQueryString();
+    }
+
+    /**
+     * Search results with tiered relevance, filters, and graceful fuzzy fallback.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return array{paginator: LengthAwarePaginator, meta: array<string, mixed>, fallback_products: Collection<int, Product>}
+     */
+    public function paginatedSearchResults(array $filters, int $perPage = 12, ?string $ip = null): array
+    {
+        $q = trim((string) ($filters['q'] ?? ''));
+
+        if ($q === '') {
+            $paginator = $this->paginatedFilteredAllProducts($filters, $perPage);
+
+            return [
+                'paginator' => $paginator,
+                'meta' => [
+                    'query' => '',
+                    'fallback' => null,
+                    'total_exact' => $paginator->total(),
+                    'corrected_query' => null,
+                ],
+                'fallback_products' => new Collection,
+            ];
+        }
+
+        $result = $this->searchEngine->search($q, $filters, $perPage);
+        $paginator = $result['paginator'];
+        $meta = $result['meta'];
+
+        $fallbackProducts = new Collection;
+        if ($paginator->total() === 0) {
+            $meta['fallback'] = 'popular';
+            $fallbackProducts = $this->bestSellingProducts(12);
+        }
+
+        $this->searchLogger->log($q, $paginator->total(), $ip);
+
+        return [
+            'paginator' => $paginator,
+            'meta' => $meta,
+            'fallback_products' => $fallbackProducts,
+        ];
+    }
+
+    /**
+     * @return array{products: list<array<string, mixed>>, brands: list<array<string, mixed>>, categories: list<array<string, mixed>>, terms: list<string>}
+     */
+    public function suggest(string $query): array
+    {
+        return $this->searchEngine->suggest($query);
+    }
+
+    public function normalizeSearchQuery(string $query): string
+    {
+        return SearchQueryNormalizer::normalize($query);
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     */
+    private function applyProductSort(Builder $query, array $filters): void
+    {
+        $sort = $filters['sort'] ?? null;
+        if ($sort === null) {
+            $query->latest();
+
+            return;
+        }
+
+        $this->filterApplicator->applySort($query, $filters);
     }
 
     /**
@@ -556,6 +495,19 @@ class CatalogQueryService
         $base['sort'] = $this->parseSortFilter($request);
 
         return $base;
+    }
+
+    /**
+     * Shop/search filters including optional search query `q`.
+     *
+     * @return array<string, mixed>
+     */
+    public function parseSearchFilters(Request $request): array
+    {
+        $filters = $this->parseShopFilters($request);
+        $filters['q'] = $this->normalizeSearchQuery((string) $request->input('q', ''));
+
+        return $filters;
     }
 
     /**

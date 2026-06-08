@@ -1,4 +1,5 @@
 <script setup>
+import StoreSearchBox from '@/Components/Store/StoreSearchBox.vue';
 import { useNavCategories } from '@/composables/useNavCategories';
 import { ref, toRef } from 'vue';
 
@@ -56,6 +57,9 @@ function closeMenu() {
                     </button>
                 </div>
                 <nav class="flex-1 overflow-y-auto px-3 py-4">
+                    <div class="mb-4 px-2">
+                        <StoreSearchBox compact />
+                    </div>
                     <p class="px-2 text-[11px] font-bold uppercase tracking-widest text-stadium-outline">
                         Browse
                     </p>

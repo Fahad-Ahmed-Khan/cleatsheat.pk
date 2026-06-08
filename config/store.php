@@ -51,4 +51,33 @@ return [
      * When true, admin discounts cannot be changed after the order is delivered.
      */
     'admin_discount_lock_after_delivered' => env('STORE_ADMIN_DISCOUNT_LOCK_AFTER_DELIVERED', true),
+
+    /** Max characters for storefront search queries. */
+    'search_query_max_length' => (int) env('STORE_SEARCH_QUERY_MAX_LENGTH', 120),
+
+    /** Min typed characters before autocomplete suggestions fire. */
+    'search_suggest_min_length' => (int) env('STORE_SEARCH_SUGGEST_MIN_LENGTH', 2),
+
+    /** Debounce hint for the frontend search box (milliseconds). */
+    'search_suggest_debounce_ms' => (int) env('STORE_SEARCH_SUGGEST_DEBOUNCE_MS', 300),
+
+    /** Cache TTL for hot autocomplete queries (seconds). */
+    'search_suggest_cache_ttl' => (int) env('STORE_SEARCH_SUGGEST_CACHE_TTL', 120),
+
+    /** Log anonymized search queries for popular-term suggestions. */
+    'search_log_queries' => (bool) env('STORE_SEARCH_LOG_QUERIES', false),
+
+    /**
+     * Seed terms shown in autocomplete when they prefix-match the query.
+     *
+     * @var list<string>
+     */
+    'search_popular_terms' => [
+        'nike mercurial',
+        'adidas predator',
+        'football boots',
+        'uk 9',
+        'fg boots',
+        'turf shoes',
+    ],
 ];

@@ -86,6 +86,9 @@ run_finalize() {
   fi
 
 
+  # Backfill denormalized product search_text after migrations (idempotent, non-fatal).
+  php artisan catalog:rebuild-search-index || true
+
   # Generate responsive WebP variants for any product images missing them (idempotent, non-fatal).
   php artisan products:generate-image-variants || true
 

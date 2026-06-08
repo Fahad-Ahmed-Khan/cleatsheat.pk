@@ -142,13 +142,33 @@ Push to `master`. GitHub Actions will:
 - run `npm run build` and upload `public/build` to the server
 - SSH into Hostinger and run `bash ./deploy.sh`
 
-## 8) Scheduler (optional)
+## 8) Scheduler (required)
 
-If you use Laravel Scheduler, set a Hostinger cron:
+Set **one** Hostinger cron entry (adjust the path):
 
 ```cron
-* * * * * php /home/<user>/apps/tryino-ecom/artisan schedule:run >> /dev/null 2>&1
+* * * * * cd /home/<user>/apps/tryino-ecom && php artisan schedule:run >> /dev/null 2>&1
 ```
+
+`schedule:run` handles everything defined in `routes/console.php`, including:
+
+| What | How often |
+|------|-----------|
+| Queue worker (`queue:work --stop-when-empty`) | Every minute |
+| Shipping tracking sync | Every 30 minutes |
+| Search index backfill (`--missing` only) | Daily 03:30 |
+| Product image WebP variants | Daily 04:00 |
+| Hero image WebP variants | Daily 04:15 |
+| Failed booking reconciliation | Every 15 minutes |
+| Notification retries | Every 10 minutes |
+| COD reconciliation | Hourly |
+| WhatsApp pickup notices | Hourly |
+| WhatsApp scheduled campaigns | Every minute |
+| Prune old failed queue jobs | Weekly (Monday 04:00) |
+
+Do **not** add separate cron lines for these commands — only `schedule:run`.
+
+Full deploy still runs `catalog:rebuild-search-index` (all products) via `deploy.sh`.
 
 ## 9) Rollback (manual, basic)
 

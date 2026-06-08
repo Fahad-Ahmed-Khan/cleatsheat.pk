@@ -2,6 +2,7 @@
 import StoreBottomNav from '@/Components/Store/StoreBottomNav.vue';
 import StoreHeaderNav from '@/Components/Store/StoreHeaderNav.vue';
 import StoreMobileMenu from '@/Components/Store/StoreMobileMenu.vue';
+import StoreSearchBox from '@/Components/Store/StoreSearchBox.vue';
 import StoreThemeToggle from '@/Components/Store/StoreThemeToggle.vue';
 import { SURFACE_TILES, useStoreCategoryHref } from '@/composables/useStoreCategoryHref';
 import { useScrollDirection } from '@/composables/useScrollDirection';
@@ -173,18 +174,10 @@ onUnmounted(() => {
 
                 <StoreHeaderNav :categories="navCategories" />
 
+                <StoreSearchBox />
+
                 <div class="flex items-center gap-1 text-stadium-ink-variant sm:gap-2">
                     <StoreThemeToggle />
-                    <a
-                        :href="route('store.shop')"
-                        class="flex items-center justify-center rounded-xl p-2 transition hover:bg-stadium-muted active:scale-95"
-                        aria-label="Search catalogue"
-                    >
-                        <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="11" cy="11" r="7" />
-                            <path d="M20 20l-3-3" stroke-linecap="round" />
-                        </svg>
-                    </a>
                     <a
                         :href="route('store.cart')"
                         class="relative flex items-center justify-center rounded-xl p-2 transition hover:bg-stadium-muted active:scale-95"

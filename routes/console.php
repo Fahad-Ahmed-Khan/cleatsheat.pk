@@ -14,9 +14,62 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Schedule::command('shipping:sync-tracking')->everyThirtyMinutes();
+/*
+|--------------------------------------------------------------------------
+| Hostinger cron (required once)
+|--------------------------------------------------------------------------
+|
+|   * * * * * cd /path/to/tryino-ecom && php artisan schedule:run >> /dev/null 2>&1
+|
+| Everything below is picked up by schedule:run. Do NOT schedule these
+| artisan commands separately in cron.
+|
+| Manual / deploy-only (NOT in scheduler):
+|   deploy:notify              — called from scripts/hostinger/deploy.sh
+|   catalog:rebuild-search-index (full) — deploy.sh + manual recovery
+|   catalog:seed-football-demo — dev seeding only
+|   bargain:test-polisher      — dev diagnostic
+|   postex:probe               — integration diagnostic
+|   storage:normalize-paths    — one-off data migration utility
+|
+|--------------------------------------------------------------------------
+*/
 
-// Audit follow-up reconciliation jobs.
+// --- Queue worker (database driver; no Supervisor on shared hosting) -----------
+// Drains jobs dispatched by webhooks, shipping sync, WhatsApp, payments, etc.
+// Scheduled jobs below also enqueue work — this must run every minute.
+Schedule::command('queue:work database --stop-when-empty --max-time=55 --tries=3')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->runInBackground();
+
+Schedule::command('queue:prune-failed --hours=168')
+    ->weeklyOn(1, '04:00')
+    ->runInBackground();
+
+// --- Shipping ----------------------------------------------------------------
+Schedule::command('shipping:sync-tracking')
+    ->everyThirtyMinutes()
+    ->withoutOverlapping()
+    ->runInBackground();
+
+// --- Catalog / storefront maintenance (idempotent; skip when nothing to do) ---
+Schedule::command('catalog:rebuild-search-index --missing')
+    ->dailyAt('03:30')
+    ->withoutOverlapping()
+    ->runInBackground();
+
+Schedule::command('products:generate-image-variants')
+    ->dailyAt('04:00')
+    ->withoutOverlapping()
+    ->runInBackground();
+
+Schedule::command('storefront:generate-hero-variants')
+    ->dailyAt('04:15')
+    ->withoutOverlapping()
+    ->runInBackground();
+
+// --- Order / payment / notification reconciliation ---------------------------
 Schedule::job(new ReconcileFailedBookingsJob)
     ->everyFifteenMinutes()
     ->name('reconcile-failed-bookings')
@@ -32,9 +85,8 @@ Schedule::job(new ReconcileCodFromCourierWebhookJob)
     ->name('reconcile-cod-from-deliveries')
     ->withoutOverlapping();
 
-// Daily WhatsApp pickup notices to courier riders. Runs hourly and checks the
-// admin-configured pickup_notice_time so admins can change it without editing
-// the schedule.
+// --- WhatsApp ----------------------------------------------------------------
+// Pickup notices: hourly check against admin-configured pickup_notice_time.
 Schedule::job(new DispatchDailyPickupNoticesJob)
     ->hourly()
     ->name('dispatch-daily-pickup-notices')

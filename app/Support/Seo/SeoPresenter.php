@@ -2,10 +2,10 @@
 
 namespace App\Support\Seo;
 
-use App\Support\Storage\PublicAssetUrl;
 use App\Models\Category;
 use App\Models\ContentPost;
 use App\Models\Product;
+use App\Support\Storage\PublicAssetUrl;
 use Illuminate\Support\Str;
 
 final class SeoPresenter
@@ -113,6 +113,19 @@ final class SeoPresenter
         return Str::limit(implode(' ', $parts), 320, '…');
     }
 
+    public function searchTitle(string $query): string
+    {
+        return 'Search results for "'.Str::limit($query, 60, '…').'" | '.$this->storeName();
+    }
+
+    public function searchDescription(string $query, int $total): string
+    {
+        $count = number_format($total);
+
+        return 'Showing '.$count.' result'.($total === 1 ? '' : 's').' for "'
+            .Str::limit($query, 80, '…').'" — football boots, cleats and gear in Pakistan.';
+    }
+
     /**
      * Category meta fallback tuned for common shoe search intents.
      */
@@ -127,14 +140,14 @@ final class SeoPresenter
 
         // Football-first intents (highest commercial priority for this store).
         $footballHints = [
-            'gripper' => "Buy football grippers in Pakistan — anti-slip grip socks and gripper pads for better lock-in inside your boots. UK/EU sizing, COD and fast nationwide delivery.",
-            'sock' => "Shop football socks in Pakistan — grip socks, anti-slip and long match socks for FG, AG & turf play. Breathable, durable, with COD and fast delivery.",
-            'cleat' => "Buy football cleats in Pakistan — FG, SG, AG & turf cleats with UK/EU/PK sizing, fit notes and WhatsApp help. COD and fast nationwide delivery.",
-            'football-shoe' => "Buy football shoes online in Pakistan — FG, SG, AG & turf boots with UK/EU/PK sizing, inspected condition and fit help. COD and fast delivery from Lahore to Karachi.",
-            'football-boot' => "Shop football boots in Pakistan — firm ground, soft ground, AG and turf studs with clear UK/EU sizing. COD and fast nationwide delivery.",
-            'accessor' => "Football accessories in Pakistan — socks, grippers, laces, insoles, bags and care kits for match-ready players. COD and fast nationwide delivery.",
+            'gripper' => 'Buy football grippers in Pakistan — anti-slip grip socks and gripper pads for better lock-in inside your boots. UK/EU sizing, COD and fast nationwide delivery.',
+            'sock' => 'Shop football socks in Pakistan — grip socks, anti-slip and long match socks for FG, AG & turf play. Breathable, durable, with COD and fast delivery.',
+            'cleat' => 'Buy football cleats in Pakistan — FG, SG, AG & turf cleats with UK/EU/PK sizing, fit notes and WhatsApp help. COD and fast nationwide delivery.',
+            'football-shoe' => 'Buy football shoes online in Pakistan — FG, SG, AG & turf boots with UK/EU/PK sizing, inspected condition and fit help. COD and fast delivery from Lahore to Karachi.',
+            'football-boot' => 'Shop football boots in Pakistan — firm ground, soft ground, AG and turf studs with clear UK/EU sizing. COD and fast nationwide delivery.',
+            'accessor' => 'Football accessories in Pakistan — socks, grippers, laces, insoles, bags and care kits for match-ready players. COD and fast nationwide delivery.',
             'football' => "Shop {$name} in Pakistan — surface-matched football gear with UK/EU/PK sizing, fit help and COD nationwide delivery.",
-            'futsal' => "Buy futsal & indoor shoes in Pakistan — flat-sole IC boots for halls and concrete courts. UK/EU sizing, COD and fast delivery.",
+            'futsal' => 'Buy futsal & indoor shoes in Pakistan — flat-sole IC boots for halls and concrete courts. UK/EU sizing, COD and fast delivery.',
         ];
 
         foreach ($footballHints as $needle => $text) {
@@ -323,7 +336,7 @@ final class SeoPresenter
                     'url' => $canonicalUrl,
                     'potentialAction' => [
                         '@type' => 'SearchAction',
-                        'target' => rtrim(config('app.url'), '/').'/shop?q={search_term_string}',
+                        'target' => rtrim(config('app.url'), '/').'/search?q={search_term_string}',
                         'query-input' => 'required name=search_term_string',
                     ],
                 ],

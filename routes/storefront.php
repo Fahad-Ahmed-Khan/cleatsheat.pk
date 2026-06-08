@@ -14,11 +14,17 @@ use App\Http\Controllers\Web\Store\JournalController;
 use App\Http\Controllers\Web\Store\OrderTrackingController;
 use App\Http\Controllers\Web\Store\PageController;
 use App\Http\Controllers\Web\Store\ProductController;
+use App\Http\Controllers\Web\Store\SearchController;
+use App\Http\Controllers\Web\Store\SearchSuggestController;
 use App\Http\Controllers\Web\Store\ShopController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('store.home');
 Route::get('/shop', ShopController::class)->name('store.shop');
+Route::get('/search', SearchController::class)->name('store.search');
+Route::get('/search/suggest', SearchSuggestController::class)
+    ->middleware('throttle:search-suggest')
+    ->name('store.search.suggest');
 Route::get('/cart', [CartController::class, 'index'])->name('store.cart');
 Route::post('/cart', [CartController::class, 'store'])->name('store.cart.add');
 Route::patch('/cart/items/{item}', [CartController::class, 'update'])->name('store.cart.items.update');

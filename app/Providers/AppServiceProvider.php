@@ -2,10 +2,19 @@
 
 namespace App\Providers;
 
+use App\Domain\Catalog\Contracts\ProductSearchEngine;
+use App\Domain\Catalog\MySqlProductSearchEngine;
 use App\Listeners\MergeGuestCartOnLogin;
 use App\Listeners\MergeGuestWishlistOnLogin;
+use App\Models\Brand;
+use App\Models\Category;
+use App\Models\Color;
 use App\Models\Order;
+use App\Models\Product;
+use App\Models\ProductVariant;
+use App\Models\VariantSize;
 use App\Observers\OrderObserver;
+use App\Observers\ProductSearchIndexObserver;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -23,7 +32,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(ProductSearchEngine::class, MySqlProductSearchEngine::class);
     }
 
     /**
@@ -39,11 +48,23 @@ class AppServiceProvider extends ServiceProvider
 
         Order::observe(OrderObserver::class);
 
+        $searchObserver = $this->app->make(ProductSearchIndexObserver::class);
+        Product::observe($searchObserver);
+        ProductVariant::observe($searchObserver);
+        Brand::observe($searchObserver);
+        Category::observe($searchObserver);
+        Color::observe($searchObserver);
+        VariantSize::observe($searchObserver);
+
         Event::listen(Login::class, MergeGuestCartOnLogin::class);
         Event::listen(Login::class, MergeGuestWishlistOnLogin::class);
 
         RateLimiter::for('api', function (Request $request) {
             return Limit::perMinute(120)->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('search-suggest', function (Request $request) {
+            return Limit::perMinute(60)->by($request->ip());
         });
     }
 
