@@ -74,12 +74,76 @@ is_in_maintenance() {
   [ -f storage/framework/maintenance.php ] || [ -f storage/framework/down ]
 }
 
+# Read PUBLIC_DISK_DRIVER from .env (not exported to the shell during deploy).
+public_disk_driver() {
+  local driver="local"
+  if [ -f .env ]; then
+    driver="$(grep -E '^PUBLIC_DISK_DRIVER=' .env 2>/dev/null | tail -n 1 | cut -d= -f2- | tr -d '"' | tr -d "'" | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+  fi
+  [ -z "${driver}" ] && driver="local"
+  echo "${driver}"
+}
+
+# True when uploads use local disk (needs public/storage symlink), not B2/S3.
+uses_local_public_disk() {
+  [ "$(public_disk_driver)" != "s3" ]
+}
+
+# Backup gitignored local uploads before reset (migration safety net; skip when on B2).
+backup_local_public_uploads() {
+  if ! uses_local_public_disk; then
+    return 0
+  fi
+
+  local src="storage/app/public"
+  if [ ! -d "${src}" ] || [ -z "$(find "${src}" -mindepth 1 -not -name '.gitignore' -print -quit 2>/dev/null)" ]; then
+    return 0
+  fi
+
+  UPLOAD_BACKUP_DIR="$(mktemp -d /tmp/tryino-uploads-backup.XXXXXX)"
+  echo "Backing up local public uploads to ${UPLOAD_BACKUP_DIR}..."
+  cp -a "${src}/." "${UPLOAD_BACKUP_DIR}/"
+}
+
+restore_local_public_uploads() {
+  if [ -z "${UPLOAD_BACKUP_DIR:-}" ] || [ ! -d "${UPLOAD_BACKUP_DIR}" ]; then
+    return 0
+  fi
+
+  if ! uses_local_public_disk; then
+    rm -rf "${UPLOAD_BACKUP_DIR}"
+    unset UPLOAD_BACKUP_DIR
+    return 0
+  fi
+
+  mkdir -p storage/app/public
+  echo "Restoring local public uploads from backup..."
+  cp -a "${UPLOAD_BACKUP_DIR}/." storage/app/public/
+  rm -rf "${UPLOAD_BACKUP_DIR}"
+  unset UPLOAD_BACKUP_DIR
+}
+
+log_public_disk_status() {
+  local driver file_count
+  driver="$(public_disk_driver)"
+  if uses_local_public_disk; then
+    file_count="$(find storage/app/public -type f ! -name '.gitignore' 2>/dev/null | wc -l | tr -d ' ')"
+    echo "Public disk: local (${file_count} file(s) under storage/app/public)"
+  else
+    echo "Public disk: ${driver} (uploads stored off-server)"
+  fi
+}
+
 run_prepare() {
   php artisan down --render="errors::503" --retry=60 || true
   MAINTENANCE_ENABLED=1
 
+  backup_local_public_uploads
+
   git fetch origin "+refs/heads/${BRANCH}:refs/remotes/origin/${BRANCH}" --prune
   git reset --hard "origin/${BRANCH}"
+
+  restore_local_public_uploads
 
   composer install --no-dev --optimize-autoloader --no-interaction --no-progress --ignore-platform-reqs
 
@@ -109,6 +173,13 @@ run_finalize() {
 
   # Generate responsive WebP variants for the hero/LCP image (idempotent, non-fatal).
   php artisan storefront:generate-hero-variants || true
+
+  # Local public disk only — B2/S3 serves files directly (no symlink).
+  if uses_local_public_disk; then
+    php artisan storage:link --force
+  fi
+
+  log_public_disk_status
 
   php artisan optimize:clear
   php artisan config:cache

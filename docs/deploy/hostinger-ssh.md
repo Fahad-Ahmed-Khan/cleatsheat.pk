@@ -21,7 +21,7 @@ Clone/deploy the **full Laravel repo** into `public_html` (or your domain folder
 
 After deploy, open `https://your-domain/` (not `/public`). If you still see 403, confirm `mod_rewrite` is enabled and that `public/.htaccess` exists.
 
-If **product images** return 403 at `/storage/products/...`, ensure the root `.htaccess` does not forbid `/storage/` (uploaded files are served via `public/storage`). Run `php artisan storage:link` and confirm files exist under `storage/app/public/products/`.
+If **product images** return 403 at `/storage/products/...`, see [§3a Backblaze B2 uploads](#3a-backblaze-b2-uploads-production) (recommended) or the [local disk checklist](#image-403-troubleshooting) below.
 
 ## 2) Hostinger: allow GitHub repo access (deploy key)
 
@@ -75,6 +75,87 @@ php artisan view:cache
 Ensure Hostinger can write:
 - `storage/`
 - `bootstrap/cache/`
+
+## 3a) Backblaze B2 uploads (production)
+
+**Recommended for production.** Product and storefront images are stored in Backblaze B2 (S3-compatible), not on the Hostinger disk. Deploys (`git reset --hard`) cannot delete them, and you do not need the `public/storage` symlink.
+
+### B2 bucket setup
+
+1. In [Backblaze B2](https://www.backblaze.com/b2/cloud-storage.html), create a bucket (e.g. `tryino-ecom-public`).
+2. **Bucket Settings** → **Files in bucket are** → **Public**.
+3. **App Keys** → create an Application Key with read/write access to that bucket. Save the `keyID` and `applicationKey`.
+
+### Production `.env`
+
+Add to the server `.env` (see [`.env.example`](../../.env.example)):
+
+```env
+PUBLIC_DISK_DRIVER=s3
+AWS_ACCESS_KEY_ID=<B2 keyID>
+AWS_SECRET_ACCESS_KEY=<B2 applicationKey>
+AWS_DEFAULT_REGION=us-west-004
+AWS_BUCKET=tryino-ecom-public
+AWS_ENDPOINT=https://s3.us-west-004.backblazeb2.com
+AWS_USE_PATH_STYLE_ENDPOINT=true
+AWS_URL=https://cdn.tryinotech.cloud
+```
+
+Replace the region/bucket/endpoint with your B2 values. Use the **Cloudflare CDN URL** for `AWS_URL` when CDN is configured (below); until then you can use the B2 S3 endpoint URL.
+
+Then:
+
+```bash
+php artisan config:clear
+php artisan config:cache
+```
+
+New admin uploads go straight to B2. `deploy.sh` skips `storage:link` when `PUBLIC_DISK_DRIVER=s3`.
+
+### Cloudflare CDN (recommended for speed)
+
+Raw B2 URLs can be slow for Pakistan visitors. Put **Cloudflare** in front of the bucket for edge caching and free B2 egress:
+
+1. Follow [Backblaze: Deliver public B2 content through Cloudflare CDN](https://www.backblaze.com/docs/cloud-storage-deliver-public-backblaze-b2-content-through-cloudflare-cdn).
+2. Create a DNS record, e.g. `cdn.tryinotech.cloud`, pointing at the bucket.
+3. Set `AWS_URL=https://cdn.tryinotech.cloud` in production `.env` and run `php artisan config:cache`.
+
+All product/hero image URLs will use the CDN hostname. This is SEO-safe and improves LCP (Core Web Vitals).
+
+Optional: in Cloudflare, add a **Cache Rule** for `cdn.tryinotech.cloud/*` with a long edge TTL — product WebP variants have stable paths.
+
+### Migrate existing local files to B2
+
+If any uploads remain under `storage/app/public/` on the server:
+
+```bash
+cd ~/apps/tryino-ecom
+php artisan storage:migrate-public-disk --dry-run   # preview
+php artisan storage:migrate-public-disk             # upload (skips existing keys)
+```
+
+Re-upload any images that were already lost from disk via the admin panel. DB paths stay relative (`products/foo.jpg`); no DB migration needed.
+
+### Verify B2 + CDN
+
+```bash
+php artisan tinker --execute="echo config('filesystems.disks.public.driver');"
+php artisan tinker --execute="echo Storage::disk('public')->url('products/test.jpg');"
+curl -I "https://cdn.tryinotech.cloud/products/<filename>.jpg"
+```
+
+Upload a product image in admin, deploy again (`bash scripts/hostinger/pull-deploy.sh`), confirm the image still loads.
+
+### Image 403 troubleshooting
+
+| Symptom | `PUBLIC_DISK_DRIVER` | Check |
+|---------|---------------------|-------|
+| 403 on `tryinotech.cloud/storage/...` | `local` (or unset) | `ls -la public/storage` (symlink?), files in `storage/app/public/products/` |
+| 403 on CDN/B2 URL | `s3` | Bucket is public; `AWS_URL` matches CDN; object exists in B2 console |
+| Images gone after deploy | `local` | Switch to B2 (above) — local gitignored files can be wiped on re-clone |
+| Images gone after deploy | `s3` | Should not happen; check B2 bucket and credentials |
+
+**Never run `git clean -fdx` on production** — it deletes gitignored uploads when using the local disk.
 
 ## 4) Hostinger: create `deploy.sh`
 

@@ -31,6 +31,7 @@ Artisan::command('inspire', function () {
 |   bargain:test-polisher      — dev diagnostic
 |   postex:probe               — integration diagnostic
 |   storage:normalize-paths    — one-off data migration utility
+|   storage:migrate-public-disk — one-off upload local files to B2
 |
 |--------------------------------------------------------------------------
 */
