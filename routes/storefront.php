@@ -14,6 +14,7 @@ use App\Http\Controllers\Web\Store\JournalController;
 use App\Http\Controllers\Web\Store\OrderTrackingController;
 use App\Http\Controllers\Web\Store\PageController;
 use App\Http\Controllers\Web\Store\ProductController;
+use App\Http\Controllers\Web\Store\ReviewController;
 use App\Http\Controllers\Web\Store\SearchController;
 use App\Http\Controllers\Web\Store\SearchSuggestController;
 use App\Http\Controllers\Web\Store\ShopController;
@@ -45,6 +46,11 @@ Route::get('/shipping-policy', [PageController::class, 'shippingPolicy'])->name(
 Route::get('/about', [PageController::class, 'about'])->name('store.pages.about');
 Route::get('/faq', [PageController::class, 'faq'])->name('store.pages.faq');
 Route::get('/contact', [PageController::class, 'contact'])->name('store.pages.contact');
+
+Route::get('/review', [ReviewController::class, 'create'])->name('store.review');
+Route::post('/review', [ReviewController::class, 'store'])
+    ->middleware('throttle:customer-review')
+    ->name('store.review.store');
 
 Route::get('/c/{slug}', CategoryController::class)->name('store.category');
 Route::get('/p/{slug}', ProductController::class)->name('store.product');

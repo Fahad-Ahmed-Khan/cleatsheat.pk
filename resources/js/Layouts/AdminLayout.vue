@@ -1,5 +1,5 @@
 <script setup>
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AdminNavbar from '@/Components/Admin/AdminNavbar.vue';
 import AdminHorizontalMenu from '@/Components/Admin/AdminHorizontalMenu.vue';
@@ -11,40 +11,40 @@ import { Menu } from '@/admin/vendor/menu';
 
 const menuInstance = ref(null);
 const { toasts, dismiss, bulkSummary, clearBulkSummary } = useFlash();
+let removeNavigateListener = null;
+
+function destroyMenu() {
+    if (!menuInstance.value?.destroy) {
+        return;
+    }
+    try {
+        menuInstance.value.destroy();
+    } catch {
+        // ignore — vendor destroy can run after Inertia swapped DOM
+    }
+    menuInstance.value = null;
+}
 
 function initMenu() {
     const el = document.querySelector('#layout-menu');
     if (!el) return;
 
-    // In Inertia navigations, the previous Menu's DOM may already be removed.
-    // Destroy should never be allowed to crash navigation.
-    if (menuInstance.value?.destroy) {
-        try {
-            menuInstance.value.destroy();
-        } catch {
-            // ignore
-        }
-    }
+    destroyMenu();
     menuInstance.value = new Menu(el, { orientation: 'horizontal', showDropdownOnHover: true });
 }
 
 onMounted(() => {
     initMenu();
-    router.on('navigate', () => {
-        // Inertia may replace DOM; re-init menu bindings
-        initMenu();
+    removeNavigateListener = router.on('navigate', () => {
+        // Re-bind after Inertia finishes swapping the page (menu items / active state).
+        nextTick(() => initMenu());
     });
 });
 
 onBeforeUnmount(() => {
-    if (menuInstance.value?.destroy) {
-        try {
-            menuInstance.value.destroy();
-        } catch {
-            // ignore
-        }
-    }
-    menuInstance.value = null;
+    removeNavigateListener?.();
+    removeNavigateListener = null;
+    destroyMenu();
 });
 </script>
 

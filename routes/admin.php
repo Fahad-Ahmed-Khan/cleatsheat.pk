@@ -12,6 +12,7 @@ use App\Http\Controllers\Web\Admin\CourierAdminController;
 use App\Http\Controllers\Web\Admin\CourierRiderAdminController;
 use App\Http\Controllers\Web\Admin\CourierSettlementAdminController;
 use App\Http\Controllers\Web\Admin\CustomerAdminController;
+use App\Http\Controllers\Web\Admin\CustomerReviewAdminController;
 use App\Http\Controllers\Web\Admin\DashboardController;
 use App\Http\Controllers\Web\Admin\LogisticsTimelineAdminController;
 use App\Http\Controllers\Web\Admin\LowStockAdminController;
@@ -109,6 +110,10 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 
     Route::get('/customers', [CustomerAdminController::class, 'index'])->name('customers.index');
     Route::get('/customers/{customer}', [CustomerAdminController::class, 'show'])->name('customers.show');
+
+    Route::get('/customer-reviews', [CustomerReviewAdminController::class, 'index'])->name('customer-reviews.index');
+    Route::delete('/customer-reviews/{customer_review}', [CustomerReviewAdminController::class, 'destroy'])
+        ->name('customer-reviews.destroy');
 
     Route::get('/finance/courier-settlements', [CourierSettlementAdminController::class, 'index'])
         ->name('finance.courier-settlements');

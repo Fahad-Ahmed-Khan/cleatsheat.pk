@@ -24,6 +24,7 @@ export function buildAdminMenu(route) {
             children: [
                 { label: 'Orders', href: route('admin.orders.index'), active: 'admin.orders.*' },
                 { label: 'Customers', href: route('admin.customers.index'), active: 'admin.customers.*' },
+                { label: 'Customer reviews', href: route('admin.customer-reviews.index'), active: 'admin.customer-reviews.*' },
                 { label: 'Returns', href: route('admin.returns.index'), active: 'admin.returns.*' },
                 { label: 'Abandoned carts', href: route('admin.abandoned-carts.index'), active: 'admin.abandoned-carts.*' },
                 { label: 'Bargaining', href: route('admin.bargaining.index'), active: 'admin.bargaining.*' },
@@ -75,7 +76,7 @@ export function buildAdminMenu(route) {
             active: 'admin.content-posts.*',
         },
         {
-            label: 'Storefront',
+            label: 'View store',
             icon: 'ti tabler-external-link',
             href: route('store.home'),
             target: '_blank',

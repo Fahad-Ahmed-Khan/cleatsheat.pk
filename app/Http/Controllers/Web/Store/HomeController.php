@@ -8,6 +8,7 @@ use App\Http\Resources\Api\V1\CategoryResource;
 use App\Http\Resources\Api\V1\ProductCardResource;
 use App\Models\Brand;
 use App\Models\ContentPost;
+use App\Models\CustomerReview;
 use App\Models\MarketingSetting;
 use App\Models\Product;
 use App\Models\StorefrontSetting;
@@ -103,6 +104,13 @@ class HomeController extends Controller
                 $social['tiktok_url'] = $storefront->tiktok_url;
             }
             $homeContent['social'] = $social;
+        }
+
+        if (Schema::hasTable('customer_reviews')) {
+            $customerTestimonials = CustomerReview::testimonialsForHomepage();
+            if ($customerTestimonials !== []) {
+                $homeContent['testimonials'] = $customerTestimonials;
+            }
         }
 
         $journalPosts = [];

@@ -18,6 +18,23 @@ function safeRemove(node) {
  */
 class Menu extends VendorMenu {
     /**
+     * Vendor switchMenu() moves `.app-brand` and toggles vertical layout chrome that
+     * our Inertia admin shell does not render. Without those nodes, insertBefore(null)
+     * throws and breaks navigation (e.g. Settings → Storefront).
+     */
+    switchMenu(menu) {
+        const brand = document.querySelector('.app-brand');
+        const navbarCollapse = document.querySelector('#navbar-collapse');
+
+        if (!brand || !navbarCollapse) {
+            this._bindEvents();
+            return;
+        }
+
+        super.switchMenu(menu);
+    }
+
+    /**
      * Horizontal theme menu: vendor scrolls `.menu-inner` (negative margin) when a
      * dropdown opens so the toggled item is aligned — that jumps the strip left and
      * hides earlier links on hover. Skip that auto-slide; keep submenu flip/margins.

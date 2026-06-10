@@ -16,7 +16,7 @@ const menu = computed(() => buildAdminMenu(route));
         <!-- Match theme structure: Menu JS injects wrapper + prev/next here -->
         <div class="container-xxl d-flex h-100">
             <ul class="menu-inner">
-                <AdminMenuItem v-for="item in menu" :key="item.label" :item="item" />
+                <AdminMenuItem v-for="item in menu" :key="item.href ?? item.label" :item="item" />
             </ul>
         </div>
     </aside>
