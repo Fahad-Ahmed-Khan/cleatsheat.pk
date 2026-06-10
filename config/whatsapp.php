@@ -1,6 +1,9 @@
 <?php
 
 return [
+    /** Display name used in WhatsApp template footers and Meta sync padding. */
+    'brand_name' => env('WHATSAPP_BRAND_NAME', 'CleatSheat.pk'),
+
     /**
      * Preferred: official WhatsApp Cloud API.
      *

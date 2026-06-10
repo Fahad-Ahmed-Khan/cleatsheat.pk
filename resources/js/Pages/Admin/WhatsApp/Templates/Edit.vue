@@ -196,7 +196,7 @@ function syncToMeta(force = false) {
                                     :class="{ 'is-invalid': invalid }"
                                     :aria-describedby="describedBy"
                                     maxlength="60"
-                                    placeholder="e.g. Tryino — thank you for shopping with us"
+                                    placeholder="e.g. CleatSheat.pk - thank you for shopping with us"
                                 />
                                 <div class="form-text text-end">{{ (form.footer_text || '').length }}/60</div>
                             </template>

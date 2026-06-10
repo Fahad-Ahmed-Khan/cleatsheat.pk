@@ -102,12 +102,14 @@ final class MetaTemplateBodyConverter
             $body = 'Hello, '.$body;
         }
 
+        $brand = (string) config('whatsapp.brand_name', 'CleatSheat.pk');
+
         if (preg_match('/\{\{\d+\}\}\s*$/', $body)) {
-            $body = rtrim($body).' — Tryino.';
+            $body = rtrim($body).' - '.$brand.'.';
         }
 
         $fillers = [
-            ' This is an automated notification from Tryino.',
+            ' This is an automated notification from '.$brand.'.',
             ' Please review and action this promptly.',
             ' Contact us on WhatsApp if you need assistance.',
         ];

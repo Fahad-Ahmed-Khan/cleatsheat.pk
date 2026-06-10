@@ -38,8 +38,8 @@ class MetaTemplateBodyConverterTest extends TestCase
             "Salaam, please pick {parcels} parcel(s) from our warehouse today. Total COD: PKR {cod_total}. Tracking #s:\n{tracking_list}"
         );
 
-        $this->assertStringEndsWith('— Tryino.', $result['body']);
-        $this->assertStringContainsString('{{3}} — Tryino.', $result['body']);
+        $this->assertStringEndsWith('- CleatSheat.pk.', $result['body']);
+        $this->assertStringContainsString('{{3}} - CleatSheat.pk.', $result['body']);
     }
 
     #[Test]
@@ -49,7 +49,7 @@ class MetaTemplateBodyConverterTest extends TestCase
             "New order {order} · PKR {total}\nCustomer: {name} ({phone})\nCity: {city}\nPayment: {payment}\nStatus: {status}"
         );
 
-        $this->assertStringContainsString('automated notification from Tryino', $result['body']);
-        $this->assertStringContainsString('Status: {{7}} — Tryino.', $result['body']);
+        $this->assertStringContainsString('automated notification from CleatSheat.pk', $result['body']);
+        $this->assertStringContainsString('Status: {{7}} - CleatSheat.pk.', $result['body']);
     }
 }

@@ -51,7 +51,7 @@ final class WhatsAppTemplates
             ],
             'order_delivered' => [
                 'short' => 'Order delivered',
-                'body' => "Hi {$name}, your order {$orderNo} has been delivered. Total: PKR {$total}. Thank you for shopping with us.",
+                'body' => 'Hi '.$name.', your order '.$orderNo.' has been delivered. Total: PKR '.$total.'. Thank you for shopping at '.config('whatsapp.brand_name', 'CleatSheat.pk').'.',
             ],
             'order_canceled' => [
                 'short' => 'Order canceled',
