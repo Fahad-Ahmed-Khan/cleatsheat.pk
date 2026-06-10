@@ -9,6 +9,7 @@ const props = defineProps({
     result: { type: Object, default: null },
     choices: { type: Array, default: () => [] },
     lookup: { type: Object, default: null },
+    prefill_order_number: { type: String, default: null },
 });
 
 const page = usePage();
@@ -41,7 +42,7 @@ function syncFormFromPage() {
     } else if (props.lookup?.mode) {
         lookupMode.value = props.lookup.mode;
     }
-    form.order_number = old.order_number ?? form.order_number;
+    form.order_number = old.order_number ?? props.prefill_order_number ?? form.order_number;
     form.email = old.email ?? form.email;
     form.phone = old.phone ?? form.phone;
 }

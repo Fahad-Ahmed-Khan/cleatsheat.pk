@@ -14,6 +14,9 @@ class WhatsAppTemplate extends Model
         'audience',
         'category',
         'body',
+        'header_text',
+        'footer_text',
+        'url_buttons',
         'cloud_template_name',
         'cloud_template_language',
         'meta_parameter_order',
@@ -34,6 +37,7 @@ class WhatsAppTemplate extends Model
             'is_active' => 'boolean',
             'is_system' => 'boolean',
             'button_payloads' => 'array',
+            'url_buttons' => 'array',
             'meta_parameter_order' => 'array',
             'meta_last_synced_at' => 'datetime',
         ];

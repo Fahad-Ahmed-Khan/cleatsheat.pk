@@ -48,7 +48,7 @@ class WhatsAppTemplateSyncTest extends TestCase
 
         $template->refresh();
         $this->assertSame('pending_review', $template->meta_sync_status);
-        $this->assertSame(['name', 'order', 'total'], $template->meta_parameter_order);
+        $this->assertSame(['name', 'order', 'total', 'payment'], $template->meta_parameter_order);
 
         Http::assertSent(function ($request): bool {
             if (! str_contains((string) $request->url(), '/message_templates') || $request->method() !== 'POST') {
@@ -56,11 +56,62 @@ class WhatsAppTemplateSyncTest extends TestCase
             }
 
             $data = $request->data();
+            $body = collect($data['components'] ?? [])->firstWhere('type', 'BODY');
 
             return ($data['name'] ?? null) === 'order_placed_test'
                 && ($data['category'] ?? null) === 'UTILITY'
-                && str_contains((string) ($data['components'][0]['text'] ?? ''), '{{1}}');
+                && str_contains((string) ($body['text'] ?? ''), '{{1}}');
         });
+    }
+
+    public function test_sync_payload_includes_header_footer_and_url_buttons(): void
+    {
+        Http::fake(function ($request) {
+            if (str_contains((string) $request->url(), 'message_templates') && $request->method() === 'GET') {
+                return Http::response(['data' => []], 200);
+            }
+            if (str_contains((string) $request->url(), 'message_templates') && $request->method() === 'POST') {
+                return Http::response(['id' => 'tpl-new'], 200);
+            }
+
+            return Http::response([], 404);
+        });
+
+        $this->artisan('whatsapp:sync-templates', ['--template' => 'order_shipped'])
+            ->assertSuccessful();
+
+        Http::assertSent(function ($request): bool {
+            if (! str_contains((string) $request->url(), '/message_templates') || $request->method() !== 'POST') {
+                return false;
+            }
+
+            $components = collect($request->data()['components'] ?? []);
+
+            $header = $components->firstWhere('type', 'HEADER');
+            $footer = $components->firstWhere('type', 'FOOTER');
+            $buttons = $components->firstWhere('type', 'BUTTONS');
+            $button = $buttons['buttons'][0] ?? null;
+
+            return ($header['format'] ?? null) === 'TEXT'
+                && ($header['text'] ?? null) === 'Order Shipped'
+                && str_contains((string) ($footer['text'] ?? ''), 'thank you for shopping with us')
+                && ($button['type'] ?? null) === 'URL'
+                && ($button['text'] ?? null) === 'Track Order'
+                && str_ends_with((string) ($button['url'] ?? ''), '?order={{1}}')
+                && str_contains((string) ($button['example'][0] ?? ''), 'ORD-1001');
+        });
+    }
+
+    public function test_sync_fails_when_header_contains_placeholder(): void
+    {
+        $template = WhatsAppTemplate::query()->where('key', 'order_shipped')->firstOrFail();
+        $template->update(['header_text' => 'Order {order} Shipped']);
+
+        $this->artisan('whatsapp:sync-templates', ['--template' => 'order_shipped']);
+
+        $template->refresh();
+        $this->assertSame('failed', $template->meta_sync_status);
+        $this->assertStringContainsString('Header text must be static', (string) $template->meta_sync_error);
     }
 
     public function test_command_skips_interactive_button_templates(): void

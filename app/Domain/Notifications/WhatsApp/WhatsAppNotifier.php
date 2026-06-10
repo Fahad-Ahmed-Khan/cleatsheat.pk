@@ -153,6 +153,9 @@ class WhatsAppNotifier
         return [
             'short' => 'New order',
             'body' => $body,
+            'header_text' => null,
+            'footer_text' => null,
+            'url_buttons' => [],
             'has_buttons' => false,
             'button_payloads' => [],
             'cloud_template_name' => null,
@@ -211,7 +214,13 @@ class WhatsAppNotifier
         $cloudEnabled = (bool) config('whatsapp.cloud.enabled', false);
 
         if ($cloudEnabled && $template['has_buttons'] && $template['button_payloads'] !== []) {
-            return InteractiveMessageBuilder::buttonPayload($toE164, $template['body'], $template['button_payloads']);
+            return InteractiveMessageBuilder::buttonPayload(
+                $toE164,
+                $template['body'],
+                $template['button_payloads'],
+                $template['header_text'] ?? null,
+                $template['footer_text'] ?? null,
+            );
         }
 
         if ($cloudEnabled && (string) $template['cloud_template_name'] !== '') {
@@ -222,10 +231,52 @@ class WhatsAppNotifier
                 $order,
                 $template['short'],
                 is_array($template['meta_parameter_order'] ?? null) ? $template['meta_parameter_order'] : null,
+                is_array($template['url_buttons'] ?? null) ? $template['url_buttons'] : [],
             );
         }
 
-        return $this->buildTextPayload($toE164, $template['body'], $template['key'], $order);
+        return $this->buildTextPayload($toE164, $this->composeTextBody($template, $order), $template['key'], $order);
+    }
+
+    /**
+     * Compose a branded plain-text message for sends that cannot use Meta
+     * template components (bridge mode, or no approved cloud template):
+     * bold header, body, button links, italic footer.
+     *
+     * @param  array<string, mixed>  $template
+     */
+    private function composeTextBody(array $template, Order $order): string
+    {
+        $parts = [];
+
+        $header = trim((string) ($template['header_text'] ?? ''));
+        if ($header !== '') {
+            $parts[] = '*'.$header.'*';
+        }
+
+        $parts[] = trim((string) $template['body']);
+
+        $links = [];
+        $urlButtons = is_array($template['url_buttons'] ?? null) ? $template['url_buttons'] : [];
+        foreach ($urlButtons as $button) {
+            $text = trim((string) ($button['text'] ?? ''));
+            $url = trim((string) ($button['url'] ?? ''));
+            if ($text === '' || $url === '') {
+                continue;
+            }
+            $url = strtr($url, ['{order_number}' => rawurlencode((string) $order->order_number)]);
+            $links[] = $text.': '.$url;
+        }
+        if ($links !== []) {
+            $parts[] = implode("\n", $links);
+        }
+
+        $footer = trim((string) ($template['footer_text'] ?? ''));
+        if ($footer !== '') {
+            $parts[] = '_'.$footer.'_';
+        }
+
+        return implode("\n\n", array_filter($parts, static fn (string $p): bool => $p !== ''));
     }
 
     /**
@@ -242,7 +293,7 @@ class WhatsAppNotifier
                 'to' => ltrim($toE164, '+'),
                 'type' => 'text',
                 'text' => [
-                    'preview_url' => false,
+                    'preview_url' => str_contains($bodyText, 'http'),
                     'body' => $bodyText,
                 ],
             ];

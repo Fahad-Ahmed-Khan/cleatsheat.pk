@@ -9,6 +9,7 @@ use App\Models\NotificationLog;
 use App\Models\Order;
 use App\Models\WhatsAppSetting;
 use App\Models\WhatsAppTemplate;
+use Database\Seeders\WhatsAppTemplateSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Config;
@@ -100,6 +101,77 @@ class WhatsAppNotificationsTest extends TestCase
                 && ($data['type'] ?? null) === 'template'
                 && ($data['template']['name'] ?? null) === 'order_placed_v1';
         });
+    }
+
+    public function test_text_send_is_branded_with_header_footer_and_tracking_link(): void
+    {
+        Config::set('whatsapp.cloud.enabled', false);
+        Config::set('whatsapp.bridge.api_url', '');
+
+        $this->seed(WhatsAppTemplateSeeder::class);
+
+        $order = $this->makeOrder();
+
+        SendWhatsAppNotificationJob::dispatchSync($order->id, 'order_placed', 'customer');
+
+        $log = NotificationLog::query()
+            ->where('template_key', 'order_placed')
+            ->where('status', 'sent')
+            ->firstOrFail();
+
+        $body = (string) data_get($log->payload, 'request.body');
+
+        $this->assertStringContainsString('*Order Received*', $body);
+        $this->assertStringContainsString('/track-order?order='.$order->order_number, $body);
+        $this->assertStringContainsString('thank you for shopping with us_', $body);
+    }
+
+    public function test_cloud_template_send_includes_url_button_parameter(): void
+    {
+        Config::set('whatsapp.cloud.enabled', true);
+        Config::set('whatsapp.cloud.token', 'test-token');
+        Config::set('whatsapp.cloud.phone_number_id', '123456789');
+
+        $this->seed(WhatsAppTemplateSeeder::class);
+
+        $template = WhatsAppTemplate::query()->where('key', 'order_placed')->firstOrFail();
+        $template->cloud_template_name = 'order_placed_v1';
+        $template->meta_parameter_order = ['name', 'order', 'total', 'payment'];
+        $template->save();
+
+        Http::fake([
+            'graph.facebook.com/*' => Http::response(['messages' => [['id' => 'wamid.test']]], 200),
+        ]);
+
+        $order = $this->makeOrder();
+
+        SendWhatsAppNotificationJob::dispatchSync($order->id, 'order_placed', 'customer');
+
+        Http::assertSent(function ($request) use ($order): bool {
+            $data = $request->data();
+            if (($data['type'] ?? null) !== 'template') {
+                return false;
+            }
+
+            $buttonComponent = collect($data['template']['components'] ?? [])
+                ->first(fn ($c) => ($c['type'] ?? '') === 'button');
+
+            return ($buttonComponent['sub_type'] ?? null) === 'url'
+                && ($buttonComponent['index'] ?? null) === 0
+                && ($buttonComponent['parameters'][0]['text'] ?? null) === $order->order_number;
+        });
+    }
+
+    public function test_render_placeholders_resolves_urls(): void
+    {
+        $order = $this->makeOrder();
+
+        $repo = app(\App\Domain\Notifications\WhatsApp\TemplateRepository::class);
+
+        $rendered = $repo->renderPlaceholders('Track: {tracking_url} Review: {review_url}', $order);
+
+        $this->assertStringContainsString('/track-order?order='.$order->order_number, $rendered);
+        $this->assertStringContainsString('/review', $rendered);
     }
 
     public function test_payment_paid_dispatches_payment_received_job(): void

@@ -23,6 +23,10 @@ final class MetaTemplateBodyConverter
         'cod_total' => '12000',
         'tracking_list' => 'TRK-001, TRK-002',
         'courier' => 'PostEx',
+        'tracking_number' => 'TRK12345678',
+        'tracking_url' => 'https://example.com/track-order?order=ORD-1001',
+        'review_url' => 'https://example.com/review',
+        'order_url' => 'https://example.com/account/orders/ORD-1001',
     ];
 
     /**
@@ -165,7 +169,25 @@ final class MetaTemplateBodyConverter
             'payment' => (string) ($order->payment_gateway ?? ''),
             'phone' => (string) ($snap['phone'] ?? ''),
             'city' => (string) ($snap['city'] ?? ''),
+            'courier' => (string) (self::latestShipment($order)?->courier?->name ?? 'our courier partner'),
+            'tracking_number' => (string) (self::latestShipment($order)?->tracking_number ?? ''),
+            'tracking_url' => TemplateRepository::trackingUrl($order),
+            'review_url' => route('store.review'),
+            'order_url' => route('store.account.orders.show', ['order_number' => $order->order_number]),
             default => self::EXAMPLES[$key] ?? '',
         };
+    }
+
+    private static function latestShipment(Order $order): ?\App\Models\Shipment
+    {
+        if ($order->relationLoaded('shipments')) {
+            return $order->shipments->sortByDesc('id')->first();
+        }
+
+        if (! $order->exists) {
+            return null;
+        }
+
+        return $order->shipments()->with('courier')->latest('id')->first();
     }
 }

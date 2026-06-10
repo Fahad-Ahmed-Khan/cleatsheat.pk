@@ -17,11 +17,28 @@ class OrderTrackingController extends Controller
 
     public function show(Request $request): Response
     {
+        // Deep link support (e.g. WhatsApp "Track Order" buttons): /track-order?order=TR-XXXX
+        $orderNumber = trim((string) $request->query('order', ''));
+
+        if ($orderNumber !== '') {
+            $resolved = $this->orders->lookupForPublicTracking($orderNumber, null, null);
+
+            if ($resolved['error'] === null) {
+                return Inertia::render('Store/OrderTracking', [
+                    'seo' => ['title' => 'Track order — '.config('app.name')],
+                    'result' => $resolved['result'],
+                    'choices' => $resolved['choices'],
+                    'lookup' => ['mode' => 'order_number', 'email' => '', 'phone' => ''],
+                ]);
+            }
+        }
+
         return Inertia::render('Store/OrderTracking', [
             'seo' => ['title' => 'Track order — '.config('app.name')],
             'result' => null,
             'choices' => [],
             'lookup' => null,
+            'prefill_order_number' => $orderNumber !== '' ? $orderNumber : null,
         ]);
     }
 

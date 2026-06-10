@@ -35,11 +35,19 @@ class WhatsAppTemplateSyncService
             $language = 'en_US';
         }
 
-        $existing = $this->client->findMessageTemplate($metaName, $language);
-        $existingBody = $existing !== null ? $this->extractBodyText($existing) : null;
+        try {
+            $components = $this->buildComponents($template, $converted);
+        } catch (\InvalidArgumentException $e) {
+            return $this->markFailed($template, $e->getMessage());
+        }
 
-        if ($existing !== null && $existingBody === $converted['body'] && ! $force) {
-            return $this->markSynced($template, $metaName, $converted['parameter_order'], 'unchanged', 'Already in sync with Meta.');
+        $existing = $this->client->findMessageTemplate($metaName, $language);
+
+        if ($existing !== null && ! $force) {
+            $existingComponents = is_array($existing['components'] ?? null) ? $existing['components'] : [];
+            if ($this->componentsFingerprint($existingComponents) === $this->componentsFingerprint($components)) {
+                return $this->markSynced($template, $metaName, $converted['parameter_order'], 'unchanged', 'Already in sync with Meta.');
+            }
         }
 
         $wasUpdate = $existing !== null;
@@ -60,15 +68,7 @@ class WhatsAppTemplateSyncService
             'name' => $metaName,
             'language' => $language,
             'category' => $this->mapCategory((string) $template->category),
-            'components' => [
-                [
-                    'type' => 'BODY',
-                    'text' => $converted['body'],
-                    'example' => [
-                        'body_text' => [$converted['examples']],
-                    ],
-                ],
-            ],
+            'components' => $components,
         ];
 
         try {
@@ -166,24 +166,134 @@ class WhatsAppTemplateSyncService
     }
 
     /**
-     * @param  array<string, mixed>  $metaTemplate
+     * Build the full Meta components array: HEADER (text), BODY, FOOTER, BUTTONS (URL).
+     *
+     * @param  array{body: string, parameter_order: list<string>, examples: list<string>}  $converted
+     * @return list<array<string, mixed>>
      */
-    private function extractBodyText(array $metaTemplate): ?string
+    private function buildComponents(WhatsAppTemplate $template, array $converted): array
     {
-        $components = is_array($metaTemplate['components'] ?? null) ? $metaTemplate['components'] : [];
+        $components = [];
+
+        $headerText = trim((string) ($template->header_text ?? ''));
+        if ($headerText !== '') {
+            if (preg_match('/\{[a-z_]+\}/i', $headerText)) {
+                throw new \InvalidArgumentException('Header text must be static — placeholders are not supported in Meta template headers.');
+            }
+            $components[] = [
+                'type' => 'HEADER',
+                'format' => 'TEXT',
+                'text' => mb_substr($headerText, 0, 60),
+            ];
+        }
+
+        $bodyComponent = [
+            'type' => 'BODY',
+            'text' => $converted['body'],
+        ];
+        if ($converted['examples'] !== []) {
+            $bodyComponent['example'] = ['body_text' => [$converted['examples']]];
+        }
+        $components[] = $bodyComponent;
+
+        $footerText = trim((string) ($template->footer_text ?? ''));
+        if ($footerText !== '') {
+            $components[] = [
+                'type' => 'FOOTER',
+                'text' => mb_substr($footerText, 0, 60),
+            ];
+        }
+
+        $buttons = $this->buildUrlButtons($template);
+        if ($buttons !== []) {
+            $components[] = [
+                'type' => 'BUTTONS',
+                'buttons' => $buttons,
+            ];
+        }
+
+        return $components;
+    }
+
+    /**
+     * Convert stored URL buttons into Meta BUTTONS entries. A `{order_number}`
+     * token becomes the dynamic URL suffix variable {{1}}.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function buildUrlButtons(WhatsAppTemplate $template): array
+    {
+        $raw = is_array($template->url_buttons) ? $template->url_buttons : [];
+        $buttons = [];
+
+        foreach (array_slice($raw, 0, 2) as $btn) {
+            if (! is_array($btn)) {
+                continue;
+            }
+            $text = trim((string) ($btn['text'] ?? ''));
+            $url = trim((string) ($btn['url'] ?? ''));
+            if ($text === '' || $url === '') {
+                continue;
+            }
+
+            $button = [
+                'type' => 'URL',
+                'text' => mb_substr($text, 0, 25),
+            ];
+
+            if (str_contains($url, '{order_number}')) {
+                $button['url'] = str_replace('{order_number}', '{{1}}', $url);
+                $button['example'] = [str_replace('{order_number}', 'ORD-1001', $url)];
+            } else {
+                $button['url'] = $url;
+            }
+
+            $buttons[] = $button;
+        }
+
+        return $buttons;
+    }
+
+    /**
+     * Normalized fingerprint of the user-visible parts of a components array
+     * (works for both our payload shape and Meta's API response shape).
+     *
+     * @param  array<int, mixed>  $components
+     */
+    private function componentsFingerprint(array $components): string
+    {
+        $norm = ['header' => null, 'body' => null, 'footer' => null, 'buttons' => []];
 
         foreach ($components as $component) {
             if (! is_array($component)) {
                 continue;
             }
-            if (strtoupper((string) ($component['type'] ?? '')) === 'BODY') {
-                $text = trim((string) ($component['text'] ?? ''));
 
-                return $text !== '' ? $text : null;
+            $type = strtoupper((string) ($component['type'] ?? ''));
+            $text = trim((string) ($component['text'] ?? ''));
+
+            if ($type === 'HEADER') {
+                $norm['header'] = $text;
+            } elseif ($type === 'BODY') {
+                $norm['body'] = $text;
+            } elseif ($type === 'FOOTER') {
+                $norm['footer'] = $text;
+            } elseif ($type === 'BUTTONS') {
+                $rawButtons = is_array($component['buttons'] ?? null) ? $component['buttons'] : [];
+                foreach ($rawButtons as $btn) {
+                    if (! is_array($btn)) {
+                        continue;
+                    }
+                    $norm['buttons'][] = [
+                        'type' => strtoupper((string) ($btn['type'] ?? '')),
+                        'text' => (string) ($btn['text'] ?? ''),
+                        'url' => (string) ($btn['url'] ?? ''),
+                    ];
+                }
             }
         }
 
-        return null;
+        return (string) json_encode($norm);
     }
 
     private function mapCategory(string $category): string

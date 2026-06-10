@@ -29,9 +29,28 @@ class UpsertWhatsAppTemplateRequest extends FormRequest
                 $normalized[] = ['id' => $id, 'title' => mb_substr($title, 0, 20)];
             }
         }
+        $rawUrlButtons = $this->input('url_buttons');
+        $urlButtons = [];
+        if (is_array($rawUrlButtons)) {
+            foreach ($rawUrlButtons as $b) {
+                if (! is_array($b)) {
+                    continue;
+                }
+                $text = trim((string) ($b['text'] ?? ''));
+                $url = trim((string) ($b['url'] ?? ''));
+                if ($text === '' && $url === '') {
+                    continue;
+                }
+                $urlButtons[] = ['text' => mb_substr($text, 0, 25), 'url' => $url];
+            }
+        }
+
         $this->merge([
             'button_payloads' => $normalized,
             'has_buttons' => $this->boolean('has_buttons') && $normalized !== [],
+            'url_buttons' => $urlButtons,
+            'header_text' => trim((string) $this->input('header_text', '')) ?: null,
+            'footer_text' => trim((string) $this->input('footer_text', '')) ?: null,
         ]);
     }
 
@@ -51,6 +70,11 @@ class UpsertWhatsAppTemplateRequest extends FormRequest
             'audience' => ['required', Rule::in(['customer', 'admin', 'rider'])],
             'category' => ['required', Rule::in(['transactional', 'utility', 'marketing'])],
             'body' => ['required', 'string', 'min:5', 'max:4000'],
+            'header_text' => ['nullable', 'string', 'max:60'],
+            'footer_text' => ['nullable', 'string', 'max:60'],
+            'url_buttons' => ['array', 'max:2'],
+            'url_buttons.*.text' => ['required_with:url_buttons', 'string', 'max:25'],
+            'url_buttons.*.url' => ['required_with:url_buttons', 'string', 'max:500', 'regex:/^https?:\/\//i'],
             'cloud_template_name' => ['nullable', 'string', 'max:120'],
             'cloud_template_language' => ['nullable', 'string', 'max:16'],
             'has_buttons' => ['boolean'],

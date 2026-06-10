@@ -23,6 +23,11 @@ const form = useForm({
     audience: props.template.audience ?? 'customer',
     category: props.template.category ?? 'transactional',
     body: props.template.body ?? '',
+    header_text: props.template.header_text ?? '',
+    footer_text: props.template.footer_text ?? '',
+    url_buttons: Array.isArray(props.template.url_buttons) && props.template.url_buttons.length
+        ? props.template.url_buttons.map((b) => ({ text: b.text, url: b.url }))
+        : [],
     cloud_template_name: props.template.cloud_template_name ?? '',
     cloud_template_language: props.template.cloud_template_language ?? 'en_US',
     has_buttons: !!props.template.has_buttons,
@@ -48,6 +53,15 @@ function addButton() {
 
 function removeButton(idx) {
     form.button_payloads.splice(idx, 1);
+}
+
+function addUrlButton() {
+    if (form.url_buttons.length >= 2) return;
+    form.url_buttons.push({ text: '', url: '' });
+}
+
+function removeUrlButton(idx) {
+    form.url_buttons.splice(idx, 1);
 }
 
 function syncToMeta(force = false) {
@@ -129,7 +143,7 @@ function syncToMeta(force = false) {
 
             <FormSection
                 title="Message body"
-                description="Use placeholders like {name}, {order}, {total}, {city}, {phone}. They are replaced at send time."
+                description="Use placeholders like {name}, {order}, {total}, {city}, {phone}, {courier}, {tracking_number}, {tracking_url}, {review_url}. They are replaced at send time."
             >
                 <FormField id="body" label="Body" :error="form.errors.body">
                     <template #default="{ invalid, describedBy }">
@@ -149,6 +163,79 @@ function syncToMeta(force = false) {
                         <textarea id="description" v-model="form.description" class="form-control" :class="{ 'is-invalid': invalid }" :aria-describedby="describedBy" rows="2" />
                     </template>
                 </FormField>
+            </FormSection>
+
+            <FormSection
+                title="Header, footer & link buttons"
+                description="Header and footer brand the message (max 60 characters each, header must be static text for Meta approval). Link buttons open a URL — use {order_number} in the URL for an order-specific link, e.g. the Track Order page."
+            >
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <FormField id="header_text" label="Header (optional)" :error="form.errors.header_text" hint="Shown in bold above the body. No placeholders.">
+                            <template #default="{ invalid, describedBy }">
+                                <input
+                                    id="header_text"
+                                    v-model="form.header_text"
+                                    class="form-control"
+                                    :class="{ 'is-invalid': invalid }"
+                                    :aria-describedby="describedBy"
+                                    maxlength="60"
+                                    placeholder="e.g. Order Confirmed ✓"
+                                />
+                                <div class="form-text text-end">{{ (form.header_text || '').length }}/60</div>
+                            </template>
+                        </FormField>
+                    </div>
+                    <div class="col-md-6">
+                        <FormField id="footer_text" label="Footer (optional)" :error="form.errors.footer_text" hint="Small muted text under the message.">
+                            <template #default="{ invalid, describedBy }">
+                                <input
+                                    id="footer_text"
+                                    v-model="form.footer_text"
+                                    class="form-control"
+                                    :class="{ 'is-invalid': invalid }"
+                                    :aria-describedby="describedBy"
+                                    maxlength="60"
+                                    placeholder="e.g. Tryino — thank you for shopping with us"
+                                />
+                                <div class="form-text text-end">{{ (form.footer_text || '').length }}/60</div>
+                            </template>
+                        </FormField>
+                    </div>
+                </div>
+
+                <div v-for="(btn, idx) in form.url_buttons" :key="idx" class="row g-2 mb-2 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label">Button label (max 25)</label>
+                        <input
+                            v-model="btn.text"
+                            class="form-control"
+                            :class="{ 'is-invalid': form.errors[`url_buttons.${idx}.text`] }"
+                            maxlength="25"
+                            placeholder="Track Order"
+                        />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">URL</label>
+                        <input
+                            v-model="btn.url"
+                            class="form-control font-monospace"
+                            :class="{ 'is-invalid': form.errors[`url_buttons.${idx}.url`] }"
+                            placeholder="https://example.com/track-order?order={order_number}"
+                        />
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-outline-danger w-100" @click="removeUrlButton(idx)">Remove</button>
+                    </div>
+                </div>
+                <button
+                    v-if="form.url_buttons.length < 2"
+                    type="button"
+                    class="btn btn-outline-primary"
+                    @click="addUrlButton"
+                >
+                    Add link button
+                </button>
             </FormSection>
 
             <FormSection

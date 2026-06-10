@@ -9,13 +9,25 @@ class WhatsAppTemplateSeeder extends Seeder
 {
     public function run(): void
     {
+        $brand = (string) config('app.name', 'Tryino');
+        $footer = mb_substr($brand.' — thank you for shopping with us', 0, 60);
+
+        $trackingUrl = route('store.order-tracking').'?order={order_number}';
+        $reviewUrl = route('store.review');
+
+        $trackButton = ['text' => 'Track Order', 'url' => $trackingUrl];
+        $reviewButton = ['text' => 'Leave a Review', 'url' => $reviewUrl];
+
         $templates = [
             [
                 'key' => 'order_placed',
                 'label' => 'Order placed (customer)',
                 'audience' => 'customer',
                 'category' => 'transactional',
-                'body' => "Hi {name}, your order {order} has been placed.\nTotal: PKR {total}.\nWe'll keep you updated.",
+                'header_text' => 'Order Received',
+                'body' => "Hi {name},\n\nThank you for shopping with us! We have received your order {order}.\n\nOrder total: PKR {total}\nPayment method: {payment}\n\nWe will message you as soon as it is confirmed and on its way. You can check your order status anytime using the button below.",
+                'footer_text' => $footer,
+                'url_buttons' => [$trackButton],
                 'is_system' => true,
                 'description' => 'Sent immediately after non-COD checkout.',
             ],
@@ -24,7 +36,9 @@ class WhatsAppTemplateSeeder extends Seeder
                 'label' => 'Order placed — COD confirm buttons',
                 'audience' => 'customer',
                 'category' => 'transactional',
-                'body' => 'Hi {name}, we received your COD order {order} for PKR {total} to {city}. Please confirm so we can dispatch it.',
+                'header_text' => 'Confirm Your Order',
+                'body' => "Hi {name},\n\nWe received your Cash on Delivery order {order}.\n\nOrder total: PKR {total}\nDelivery city: {city}\nContact number: {phone}\n\nPlease tap *Confirm* if these details are correct so we can dispatch your order, or *Cancel* if you did not place it.\n\nNeed to change your shoe size or address? Just reply to this message and our team will update it for you.",
+                'footer_text' => $footer,
                 'has_buttons' => true,
                 'button_payloads' => [
                     ['id' => 'order:{order_id}:confirm', 'title' => 'Confirm'],
@@ -38,7 +52,10 @@ class WhatsAppTemplateSeeder extends Seeder
                 'label' => 'Order confirmed',
                 'audience' => 'customer',
                 'category' => 'transactional',
-                'body' => "Hi {name}, your order {order} is confirmed. Total: PKR {total}. We'll dispatch it shortly.",
+                'header_text' => 'Order Confirmed ✓',
+                'body' => "Hi {name},\n\nGreat news — your order {order} has been confirmed.\n\nOrder total: PKR {total}\n\nWe are now preparing your order for dispatch and will message you again once it ships. You can follow every step using the button below.",
+                'footer_text' => $footer,
+                'url_buttons' => [$trackButton],
                 'is_system' => true,
             ],
             [
@@ -46,7 +63,10 @@ class WhatsAppTemplateSeeder extends Seeder
                 'label' => 'Payment received',
                 'audience' => 'customer',
                 'category' => 'transactional',
-                'body' => "Hi {name}, payment received for order {order}. Total: PKR {total}. We'll start preparing your shoes now.",
+                'header_text' => 'Payment Received',
+                'body' => "Hi {name},\n\nWe have received your payment of PKR {total} for order {order}. Thank you!\n\nYour order is now being prepared and we will keep you updated at every step.",
+                'footer_text' => $footer,
+                'url_buttons' => [$trackButton],
                 'is_system' => true,
             ],
             [
@@ -54,7 +74,10 @@ class WhatsAppTemplateSeeder extends Seeder
                 'label' => 'Order packed',
                 'audience' => 'customer',
                 'category' => 'transactional',
-                'body' => 'Hi {name}, your order {order} is packed and will be handed to the courier soon.',
+                'header_text' => 'Order Packed',
+                'body' => "Hi {name},\n\nYour order {order} has been packed and will be handed over to our courier partner shortly.\n\nWe will share the tracking details with you as soon as it ships.",
+                'footer_text' => $footer,
+                'url_buttons' => [$trackButton],
                 'is_system' => true,
             ],
             [
@@ -62,7 +85,10 @@ class WhatsAppTemplateSeeder extends Seeder
                 'label' => 'Order shipped',
                 'audience' => 'customer',
                 'category' => 'transactional',
-                'body' => 'Hi {name}, your order {order} has been shipped. Track it from the Track Order page.',
+                'header_text' => 'Order Shipped',
+                'body' => "Hi {name},\n\nYour order {order} is on its way!\n\nCourier: {courier}\nTracking number: {tracking_number}\n\nTap the button below to see live tracking updates and your full delivery timeline.",
+                'footer_text' => $footer,
+                'url_buttons' => [$trackButton],
                 'is_system' => true,
             ],
             [
@@ -70,7 +96,10 @@ class WhatsAppTemplateSeeder extends Seeder
                 'label' => 'Out for delivery',
                 'audience' => 'customer',
                 'category' => 'transactional',
-                'body' => 'Hi {name}, your order {order} is out for delivery today. Please keep your phone available.',
+                'header_text' => 'Out for Delivery',
+                'body' => "Hi {name},\n\nYour order {order} is out for delivery today. Please keep your phone reachable — the rider may call you before arriving.\n\nIf you chose Cash on Delivery, kindly keep PKR {total} ready.",
+                'footer_text' => $footer,
+                'url_buttons' => [$trackButton],
                 'is_system' => true,
             ],
             [
@@ -78,7 +107,10 @@ class WhatsAppTemplateSeeder extends Seeder
                 'label' => 'Order delivered',
                 'audience' => 'customer',
                 'category' => 'transactional',
-                'body' => 'Hi {name}, your order {order} has been delivered. Thank you for shopping with us.',
+                'header_text' => 'Order Delivered ✓',
+                'body' => "Hi {name},\n\nYour order {order} has been delivered. We hope you love your new gear!\n\nIf anything is not right, just reply to this message and we will sort it out right away.\n\nLoved your experience? We would really appreciate a quick review — it helps other players shop with confidence.",
+                'footer_text' => $footer,
+                'url_buttons' => [$trackButton, $reviewButton],
                 'is_system' => true,
             ],
             [
@@ -86,7 +118,10 @@ class WhatsAppTemplateSeeder extends Seeder
                 'label' => 'Order returned',
                 'audience' => 'customer',
                 'category' => 'transactional',
-                'body' => "Hi {name}, the courier returned your order {order}. Please reach out on WhatsApp if you'd still like it delivered.",
+                'header_text' => 'Delivery Unsuccessful',
+                'body' => "Hi {name},\n\nThe courier could not deliver your order {order} and it is being returned to us.\n\nIf you would still like to receive it, simply reply to this message and we will arrange redelivery for you.",
+                'footer_text' => $footer,
+                'url_buttons' => [$trackButton],
                 'is_system' => true,
             ],
             [
@@ -94,7 +129,9 @@ class WhatsAppTemplateSeeder extends Seeder
                 'label' => 'Order canceled',
                 'audience' => 'customer',
                 'category' => 'transactional',
-                'body' => 'Hi {name}, your order {order} was canceled. Reply on WhatsApp if this is unexpected.',
+                'header_text' => 'Order Cancelled',
+                'body' => "Hi {name},\n\nYour order {order} has been cancelled.\n\nIf you did not request this, or you would like to reorder, reply to this message and our team will help you right away.",
+                'footer_text' => $footer,
                 'is_system' => true,
             ],
             [
@@ -102,7 +139,8 @@ class WhatsAppTemplateSeeder extends Seeder
                 'label' => 'Admin — new order alert',
                 'audience' => 'admin',
                 'category' => 'utility',
-                'body' => 'New order alert: {order} for PKR {total}. Customer {name} ({phone}) in {city}. Payment: {payment}. Status: {status}. Please process in admin.',
+                'header_text' => 'New Order Alert',
+                'body' => "New order {order} — PKR {total}\n\nCustomer: {name} ({phone})\nCity: {city}\nPayment: {payment}\nStatus: {status}\n\nPlease review and process it in the admin panel.",
                 'is_system' => true,
             ],
             [
@@ -110,7 +148,8 @@ class WhatsAppTemplateSeeder extends Seeder
                 'label' => 'Courier rider — pickup notice',
                 'audience' => 'rider',
                 'category' => 'utility',
-                'body' => 'Salaam, please pick {parcels} parcel(s) from our warehouse today. Total COD: PKR {cod_total}. Tracking numbers: {tracking_list}. Thank you.',
+                'header_text' => 'Pickup Request',
+                'body' => "Salaam, please arrange pickup of {parcels} parcel(s) from our warehouse today.\n\nCOD total: PKR {cod_total}\nTracking numbers: {tracking_list}\n\nThank you.",
                 'is_system' => true,
                 'description' => 'Sent daily to the primary rider per courier company. Placeholders: {parcels}, {cod_total}, {tracking_list}, {courier}.',
             ],
@@ -119,7 +158,8 @@ class WhatsAppTemplateSeeder extends Seeder
                 'label' => 'Promotional broadcast',
                 'audience' => 'customer',
                 'category' => 'marketing',
-                'body' => "Hi {name}, we have a fresh drop you'll love. Browse the latest cleats now — reply STOP to opt out.",
+                'body' => "Hi {name}, fresh arrivals just dropped! Browse the latest cleats and gear before your size runs out. Reply STOP to opt out.",
+                'footer_text' => mb_substr($brand.' — reply STOP to opt out', 0, 60),
                 'is_system' => true,
                 'description' => 'Default copy used by promotional campaigns. Reply STOP triggers opt-out.',
             ],
@@ -133,6 +173,9 @@ class WhatsAppTemplateSeeder extends Seeder
                     'cloud_template_language' => 'en_US',
                     'has_buttons' => false,
                     'button_payloads' => null,
+                    'header_text' => null,
+                    'footer_text' => null,
+                    'url_buttons' => null,
                 ], $t),
             );
         }

@@ -118,6 +118,26 @@ class OrderTrackingTest extends TestCase
                 ->where('choices', []));
     }
 
+    public function test_deep_link_auto_lookup_via_query_param(): void
+    {
+        $this->createOrder('TR-LINK01', 'link@example.com', '03004445566');
+
+        $this->get(route('store.order-tracking', ['order' => 'TR-LINK01']))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('result.order_number', 'TR-LINK01')
+                ->where('choices', []));
+    }
+
+    public function test_deep_link_with_unknown_order_prefills_form(): void
+    {
+        $this->get(route('store.order-tracking', ['order' => 'TR-NOPE99']))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('result', null)
+                ->where('prefill_order_number', 'TR-NOPE99'));
+    }
+
     public function test_requires_active_tab_field(): void
     {
         $this->post(route('store.order-tracking.lookup'), [
