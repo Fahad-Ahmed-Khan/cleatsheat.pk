@@ -13,7 +13,8 @@ class SyncWhatsAppTemplatesCommand extends Command
                             {--template= : Sync a single template by key}
                             {--all : Sync all templates (default when no --template)}
                             {--inactive : Include inactive templates}
-                            {--force : Delete and recreate approved Meta templates when body changed}';
+                            {--force : Delete and recreate approved Meta templates when body changed}
+                            {--prepare-only : Build the Meta payload locally without calling Graph API}';
 
     protected $description = 'Create or update Meta WhatsApp message templates from admin template definitions';
 
@@ -36,6 +37,15 @@ class SyncWhatsAppTemplatesCommand extends Command
                     $this->error("Template not found: {$key}");
 
                     return self::FAILURE;
+                }
+
+                if ((bool) $this->option('prepare-only')) {
+                    $payload = $sync->buildMetaPayload($template);
+                    unset($payload['parameter_order']);
+                    $this->line(json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?: '{}');
+                    $this->info('Payload built locally (no Graph API call).');
+
+                    return self::SUCCESS;
                 }
 
                 $result = $sync->sync($template, $force);

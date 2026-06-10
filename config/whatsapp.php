@@ -79,5 +79,17 @@ return [
         'timeout_seconds' => (int) env('WHATSAPP_SEND_TIMEOUT', 30),
     ],
 
+    /**
+     * Meta Graph HTTP transport. On CLI, "stream" is used automatically when unset
+     * (avoids libcurl segfaults on some shared hosts). Set WHATSAPP_HTTP_HANDLER=curl
+     * to force curl, or stream explicitly for web + CLI.
+     */
+    'http' => [
+        'handler' => env('WHATSAPP_HTTP_HANDLER'),
+        'force_ipv4' => env('WHATSAPP_HTTP_FORCE_IPV4', true),
+        'curl_http1' => env('WHATSAPP_HTTP_CURL_HTTP1', true),
+        'retries' => (int) env('WHATSAPP_HTTP_RETRIES', 2),
+    ],
+
     'queue' => env('WHATSAPP_QUEUE'),
 ];

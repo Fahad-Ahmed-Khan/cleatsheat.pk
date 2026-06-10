@@ -2,8 +2,6 @@
 
 namespace App\Domain\Notifications\WhatsApp;
 
-use Illuminate\Support\Facades\Http;
-
 class WhatsAppClient
 {
     /**
@@ -24,13 +22,9 @@ class WhatsAppClient
 
         $url = "https://graph.facebook.com/{$version}/{$phoneNumberId}/messages";
 
-        $timeout = (int) config('whatsapp.retry.timeout_seconds', 30);
-
         /** @var array<string, mixed> $json */
-        $json = Http::timeout($timeout)
-            ->retry(2, 250)
+        $json = MetaGraphHttp::client()
             ->withToken($token)
-            ->acceptJson()
             ->asJson()
             ->post($url, $payload)
             ->throw()

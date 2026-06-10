@@ -14,6 +14,39 @@ class WhatsAppTemplateSyncService
     ) {}
 
     /**
+     * @return array{
+     *     name: string,
+     *     language: string,
+     *     category: string,
+     *     components: list<array<string, mixed>>,
+     *     parameter_order: list<string>
+     * }
+     */
+    public function buildMetaPayload(WhatsAppTemplate $template): array
+    {
+        $this->client->assertConfigured();
+
+        if ((bool) $template->has_buttons) {
+            throw new \InvalidArgumentException('Interactive button templates cannot be synced as Meta message templates.');
+        }
+
+        $converted = MetaTemplateBodyConverter::convert($template->body);
+        $metaName = $this->resolveMetaName($template);
+        $language = trim((string) ($template->cloud_template_language ?: 'en_US'));
+        if ($language === '') {
+            $language = 'en_US';
+        }
+
+        return [
+            'name' => $metaName,
+            'language' => $language,
+            'category' => $this->mapCategory((string) $template->category),
+            'components' => $this->buildComponents($template, $converted),
+            'parameter_order' => $converted['parameter_order'],
+        ];
+    }
+
+    /**
      * @return array{ok: bool, action: string, message: string, meta_name?: string}
      */
     public function sync(WhatsAppTemplate $template, bool $force = false): array
@@ -25,29 +58,22 @@ class WhatsAppTemplateSyncService
         }
 
         try {
-            $converted = MetaTemplateBodyConverter::convert($template->body);
+            $payload = $this->buildMetaPayload($template);
         } catch (\InvalidArgumentException $e) {
             return $this->markFailed($template, $e->getMessage());
         }
 
-        $metaName = $this->resolveMetaName($template);
-        $language = trim((string) ($template->cloud_template_language ?: 'en_US'));
-        if ($language === '') {
-            $language = 'en_US';
-        }
-
-        try {
-            $components = $this->buildComponents($template, $converted);
-        } catch (\InvalidArgumentException $e) {
-            return $this->markFailed($template, $e->getMessage());
-        }
+        $metaName = $payload['name'];
+        $language = $payload['language'];
+        $components = $payload['components'];
+        $parameterOrder = $payload['parameter_order'];
 
         $existing = $this->client->findMessageTemplate($metaName, $language);
 
         if ($existing !== null && ! $force) {
             $existingComponents = is_array($existing['components'] ?? null) ? $existing['components'] : [];
             if ($this->componentsFingerprint($existingComponents) === $this->componentsFingerprint($components)) {
-                return $this->markSynced($template, $metaName, $converted['parameter_order'], 'unchanged', 'Already in sync with Meta.');
+                return $this->markSynced($template, $metaName, $parameterOrder, 'unchanged', 'Already in sync with Meta.');
             }
         }
 
@@ -65,15 +91,15 @@ class WhatsAppTemplateSyncService
             $this->client->deleteMessageTemplate($metaName);
         }
 
-        $payload = [
-            'name' => $metaName,
-            'language' => $language,
-            'category' => $this->mapCategory((string) $template->category),
-            'components' => $components,
+        $apiPayload = [
+            'name' => $payload['name'],
+            'language' => $payload['language'],
+            'category' => $payload['category'],
+            'components' => $payload['components'],
         ];
 
         try {
-            $response = $this->client->createMessageTemplate($payload);
+            $response = $this->client->createMessageTemplate($apiPayload);
         } catch (\Throwable $e) {
             ExceptionLogging::report($e, 'whatsapp.template_sync_failed', ['template_key' => $template->key]);
 
@@ -91,7 +117,7 @@ class WhatsAppTemplateSyncService
         return $this->markSynced(
             $template,
             $metaName,
-            $converted['parameter_order'],
+            $parameterOrder,
             'pending_review',
             "Submitted to Meta ({$action}). Awaiting approval.",
             $action,

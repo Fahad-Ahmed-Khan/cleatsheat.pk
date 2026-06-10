@@ -3,7 +3,6 @@
 namespace App\Domain\Notifications\WhatsApp;
 
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
 
 class WhatsAppCloudTemplateClient
 {
@@ -27,7 +26,6 @@ class WhatsAppCloudTemplateClient
         $wabaId = $this->resolveWabaId();
         $version = $this->apiVersion();
         $token = $this->token();
-        $timeout = (int) config('whatsapp.retry.timeout_seconds', 30);
 
         $templates = [];
         $url = "https://graph.facebook.com/{$version}/{$wabaId}/message_templates";
@@ -37,10 +35,8 @@ class WhatsAppCloudTemplateClient
         ];
 
         do {
-            $response = Http::timeout($timeout)
-                ->retry(2, 250)
+            $response = MetaGraphHttp::client()
                 ->withToken($token)
-                ->acceptJson()
                 ->get($url, $params)
                 ->throw()
                 ->json();
@@ -90,12 +86,8 @@ class WhatsAppCloudTemplateClient
         $wabaId = $this->resolveWabaId();
         $version = $this->apiVersion();
         $token = $this->token();
-        $timeout = (int) config('whatsapp.retry.timeout_seconds', 30);
-
-        Http::timeout($timeout)
-            ->retry(2, 250)
+        MetaGraphHttp::client()
             ->withToken($token)
-            ->acceptJson()
             ->delete("https://graph.facebook.com/{$version}/{$wabaId}/message_templates", [
                 'name' => strtolower($name),
             ])
@@ -113,13 +105,9 @@ class WhatsAppCloudTemplateClient
         $wabaId = $this->resolveWabaId();
         $version = $this->apiVersion();
         $token = $this->token();
-        $timeout = (int) config('whatsapp.retry.timeout_seconds', 30);
-
         /** @var array<string, mixed> $json */
-        $json = Http::timeout($timeout)
-            ->retry(2, 250)
+        $json = MetaGraphHttp::client()
             ->withToken($token)
-            ->acceptJson()
             ->asJson()
             ->post("https://graph.facebook.com/{$version}/{$wabaId}/message_templates", $payload)
             ->throw()
@@ -267,13 +255,10 @@ class WhatsAppCloudTemplateClient
     private function graphGet(string $path, array $query = []): array
     {
         $version = $this->apiVersion();
-        $timeout = (int) config('whatsapp.retry.timeout_seconds', 30);
 
         /** @var array<string, mixed> $json */
-        $json = Http::timeout($timeout)
-            ->retry(2, 250)
+        $json = MetaGraphHttp::client()
             ->withToken($this->token())
-            ->acceptJson()
             ->get("https://graph.facebook.com/{$version}/{$path}", $query)
             ->throw()
             ->json();

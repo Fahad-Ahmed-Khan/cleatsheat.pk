@@ -97,6 +97,7 @@ class AppServiceProvider extends ServiceProvider
             return;
         }
 
+        Config::set('sentry.dsn', null);
         Config::set('sentry.enable_logs', false);
 
         $stack = Config::get('logging.channels.stack.channels');
