@@ -39,6 +39,8 @@ class AppServiceProvider extends ServiceProvider
         if ($this->app->environment('local') && class_exists(\Laravel\Pail\PailServiceProvider::class)) {
             $this->app->register(\Laravel\Pail\PailServiceProvider::class);
         }
+
+        $this->configureSentryForConsole();
     }
 
     /**
@@ -85,6 +87,32 @@ class AppServiceProvider extends ServiceProvider
      * may emit http:// links that the browser then 301s to https — adding a redirect hop
      * and turning the same-origin LCP preload into a cross-origin one.
      */
+    /**
+     * Sentry structured-log flush on artisan shutdown can segfault on some shared-hosting PHP builds.
+     * Exception reporting still works via Integration::handles(); only log shipping is disabled for CLI.
+     */
+    private function configureSentryForConsole(): void
+    {
+        if (! $this->app->runningInConsole()) {
+            return;
+        }
+
+        Config::set('sentry.enable_logs', false);
+
+        $stack = Config::get('logging.channels.stack.channels');
+        if (! is_array($stack)) {
+            return;
+        }
+
+        Config::set(
+            'logging.channels.stack.channels',
+            array_values(array_filter(
+                $stack,
+                static fn (mixed $channel): bool => is_string($channel) && $channel !== 'sentry_logs',
+            )),
+        );
+    }
+
     private function forceHttpsWhenCanonicalIsSecure(): void
     {
         $appUrl = (string) config('app.url');

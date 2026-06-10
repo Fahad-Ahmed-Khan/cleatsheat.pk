@@ -23,6 +23,12 @@ class SyncWhatsAppTemplatesCommand extends Command
         $force = (bool) $this->option('force');
         $onlyActive = ! (bool) $this->option('inactive');
 
+        if ($force && $key === '') {
+            $this->warn('Force mode: syncing all templates. Prefer --template=key one at a time on shared hosting.');
+        }
+
+        $this->info('Starting Meta WhatsApp template sync...');
+
         try {
             if ($key !== '') {
                 $template = WhatsAppTemplate::query()->where('key', $key)->first();

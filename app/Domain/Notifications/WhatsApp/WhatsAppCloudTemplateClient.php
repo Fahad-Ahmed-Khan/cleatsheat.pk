@@ -7,11 +7,23 @@ use Illuminate\Support\Facades\Http;
 
 class WhatsAppCloudTemplateClient
 {
+    /** @var list<array<string, mixed>>|null */
+    private ?array $templateListCache = null;
+
+    public function clearTemplateListCache(): void
+    {
+        $this->templateListCache = null;
+    }
+
     /**
      * @return list<array<string, mixed>>
      */
-    public function listMessageTemplates(): array
+    public function listMessageTemplates(bool $refresh = false): array
     {
+        if (! $refresh && $this->templateListCache !== null) {
+            return $this->templateListCache;
+        }
+
         $wabaId = $this->resolveWabaId();
         $version = $this->apiVersion();
         $token = $this->token();
@@ -48,6 +60,8 @@ class WhatsAppCloudTemplateClient
             $url = $next;
             $params = [];
         } while (true);
+
+        $this->templateListCache = $templates;
 
         return $templates;
     }
@@ -86,6 +100,8 @@ class WhatsAppCloudTemplateClient
                 'name' => strtolower($name),
             ])
             ->throw();
+
+        $this->clearTemplateListCache();
     }
 
     /**
@@ -108,6 +124,8 @@ class WhatsAppCloudTemplateClient
             ->post("https://graph.facebook.com/{$version}/{$wabaId}/message_templates", $payload)
             ->throw()
             ->json();
+
+        $this->clearTemplateListCache();
 
         return $json;
     }

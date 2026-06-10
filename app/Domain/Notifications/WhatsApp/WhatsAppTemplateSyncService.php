@@ -104,6 +104,7 @@ class WhatsAppTemplateSyncService
     public function syncAll(bool $onlyActive = true, bool $force = false): array
     {
         $this->client->assertConfigured();
+        $this->client->clearTemplateListCache();
 
         $query = WhatsAppTemplate::query()->orderBy('key');
         if ($onlyActive) {
