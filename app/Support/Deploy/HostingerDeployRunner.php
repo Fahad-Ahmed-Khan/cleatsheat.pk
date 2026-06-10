@@ -53,20 +53,37 @@ class HostingerDeployRunner
             escapeshellarg($logFile),
         );
 
-        if (! function_exists('exec')) {
-            Log::warning('deploy.github.webhook.exec_disabled', [
-                'log' => $logFile,
-                'hint' => 'Deploy will run on next schedule via deploy:run-pending',
-            ]);
+        if (DeployShellRunner::isAvailable()) {
+            try {
+                DeployShellRunner::startInBackground($command, [], base_path());
+                Log::info('deploy.github.webhook.spawned', [
+                    'branch' => $branch,
+                    'log' => $logFile,
+                    'via' => 'proc_open',
+                ]);
 
-            return;
-        }
+                return;
+            } catch (\Throwable $e) {
+                Log::warning('deploy.github.webhook.proc_open_failed', [
+                    'message' => $e->getMessage(),
+                    'hint' => 'Deploy will run on next schedule via deploy:run-pending',
+                ]);
+            }
+        } elseif (function_exists('exec') && ! in_array('exec', array_filter(array_map('trim', explode(',', (string) ini_get('disable_functions')))), true)) {
+            $output = [];
+            $exitCode = 0;
+            exec($command, $output, $exitCode);
 
-        $output = [];
-        $exitCode = 0;
-        exec($command, $output, $exitCode);
+            if ($exitCode === 0) {
+                Log::info('deploy.github.webhook.spawned', [
+                    'branch' => $branch,
+                    'log' => $logFile,
+                    'via' => 'exec',
+                ]);
 
-        if ($exitCode !== 0) {
+                return;
+            }
+
             Log::error('deploy.github.webhook.exec_failed', [
                 'exit_code' => $exitCode,
                 'output' => $output,
@@ -76,9 +93,9 @@ class HostingerDeployRunner
             return;
         }
 
-        Log::info('deploy.github.webhook.spawned', [
-            'branch' => $branch,
+        Log::warning('deploy.github.webhook.shell_disabled', [
             'log' => $logFile,
+            'hint' => 'Deploy will run on next schedule via deploy:run-pending',
         ]);
     }
 

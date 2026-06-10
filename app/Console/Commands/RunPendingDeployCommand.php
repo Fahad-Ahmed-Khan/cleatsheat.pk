@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Support\Deploy\DeployPendingMarker;
+use App\Support\Deploy\DeployShellRunner;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
@@ -45,18 +46,42 @@ class RunPendingDeployCommand extends Command
             @mkdir($composerHome, 0755, true);
         }
 
-        $command = sprintf(
-            'cd %s && env HOME=%s COMPOSER_HOME=%s DEPLOY_BRANCH=%s bash %s',
-            escapeshellarg(base_path()),
-            escapeshellarg($home),
-            escapeshellarg($composerHome),
-            escapeshellarg($branch),
-            escapeshellarg($script),
-        );
+        if (! DeployShellRunner::isAvailable()) {
+            $this->error('Shell execution is disabled on this host (proc_open unavailable).');
+            $this->appendDeployLog($logFile, 'deploy:run-pending skipped: proc_open disabled; use cron bash fallback');
+            Log::warning('deploy.run_pending.shell_disabled', [
+                'branch' => $branch,
+                'hint' => 'Add a cron line: test -f storage/framework/deploy-pending.json && bash scripts/hostinger/pull-deploy.sh',
+            ]);
 
-        passthru($command, $exitCode);
+            return self::FAILURE;
+        }
 
-        if ($exitCode === 0) {
+        $path = getenv('PATH') ?: '/usr/local/bin:/usr/bin:/bin:/opt/alt/php83/usr/bin';
+
+        try {
+            $ok = DeployShellRunner::run(
+                sprintf('bash %s', escapeshellarg($script)),
+                $exitCode,
+                [
+                    'HOME' => $home,
+                    'COMPOSER_HOME' => $composerHome,
+                    'DEPLOY_BRANCH' => $branch,
+                    'PATH' => $path,
+                ],
+                base_path(),
+            );
+        } catch (\Throwable $e) {
+            $this->error($e->getMessage());
+            Log::error('deploy.run_pending.exception', [
+                'branch' => $branch,
+                'message' => $e->getMessage(),
+            ]);
+
+            return self::FAILURE;
+        }
+
+        if ($ok) {
             DeployPendingMarker::clear();
             $this->info('Deploy finished successfully.');
             Log::info('deploy.run_pending.success', ['branch' => $branch]);

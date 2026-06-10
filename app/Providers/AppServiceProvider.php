@@ -33,6 +33,10 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(ProductSearchEngine::class, MySqlProductSearchEngine::class);
+
+        if ($this->app->environment('local') && class_exists(\Laravel\Pail\PailServiceProvider::class)) {
+            $this->app->register(\Laravel\Pail\PailServiceProvider::class);
+        }
     }
 
     /**

@@ -145,6 +145,9 @@ run_prepare() {
 
   restore_local_public_uploads
 
+  # Stale package discovery can reference dev-only providers (e.g. laravel/pail) after --no-dev.
+  rm -f bootstrap/cache/packages.php bootstrap/cache/services.php
+
   composer install --no-dev --optimize-autoloader --no-interaction --no-progress --ignore-platform-reqs
 
   php artisan migrate --force
