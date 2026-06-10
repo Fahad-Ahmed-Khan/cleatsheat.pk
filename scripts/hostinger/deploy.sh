@@ -190,6 +190,11 @@ run_finalize() {
   php artisan route:clear
   php artisan view:cache
 
+  # LiteSpeed caches PHP bytecode; restart workers so web requests load new classes/migrations logic.
+  killall lsphp 2>/dev/null || true
+  killall lsphp82 2>/dev/null || true
+  killall lsphp83 2>/dev/null || true
+
   php artisan up || true
   MAINTENANCE_ENABLED=0
 

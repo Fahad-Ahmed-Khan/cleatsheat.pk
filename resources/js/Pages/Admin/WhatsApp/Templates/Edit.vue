@@ -303,10 +303,14 @@ function syncToMeta(force = false) {
                     </div>
                 </div>
 
-                <div v-if="isEdit && template.meta_sync_status" class="alert alert-secondary small py-2">
+                <div
+                    v-if="isEdit && template.meta_sync_status"
+                    class="alert small py-2"
+                    :class="template.meta_sync_error ? 'alert-warning' : 'alert-secondary'"
+                >
                     <strong>Meta sync:</strong> {{ template.meta_sync_status }}
                     <span v-if="template.meta_last_synced_at"> · {{ template.meta_last_synced_at }}</span>
-                    <span v-if="template.meta_sync_error" class="text-danger d-block">{{ template.meta_sync_error }}</span>
+                    <span v-if="template.meta_sync_error" class="d-block mt-1">{{ template.meta_sync_error }}</span>
                 </div>
 
                 <template #actions>
@@ -319,6 +323,16 @@ function syncToMeta(force = false) {
                         @click="syncToMeta(false)"
                     >
                         {{ syncing ? 'Syncing…' : 'Sync to Meta' }}
+                    </button>
+                    <button
+                        v-if="isEdit && cloud_enabled && !form.has_buttons"
+                        type="button"
+                        class="btn btn-outline-warning"
+                        :disabled="syncing"
+                        title="Delete and recreate approved template when local copy differs"
+                        @click="syncToMeta(true)"
+                    >
+                        {{ syncing ? 'Syncing…' : 'Force re-sync' }}
                     </button>
                     <button type="submit" class="btn btn-primary" :disabled="form.processing">
                         {{ isEdit ? 'Save changes' : 'Create template' }}

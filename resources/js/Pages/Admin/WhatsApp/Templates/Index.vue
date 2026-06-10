@@ -36,10 +36,19 @@ function sendTest(template) {
     });
 }
 
-function syncAll() {
+function syncAll(force = false) {
     if (!props.cloud_enabled) return;
-    if (!confirm('Push all active templates to Meta? New submissions require Meta approval.')) return;
+    const msg = force
+        ? 'Force re-sync ALL active templates? Approved Meta templates will be deleted and recreated — each requires Meta re-approval.'
+        : 'Push all active templates to Meta? New submissions require Meta approval.';
+    if (!confirm(msg)) return;
+    syncAllForm.force = force;
     syncAllForm.post(route('admin.whatsapp-templates.sync-meta-all'), { preserveScroll: true });
+}
+
+function needsForceResync(template) {
+    const err = String(template.meta_sync_error ?? '');
+    return err.includes('approved and differs');
 }
 
 function syncOne(template, force = false) {
@@ -81,9 +90,19 @@ function destroyTemplate(template) {
                     type="button"
                     class="btn btn-outline-primary me-2"
                     :disabled="syncAllForm.processing"
-                    @click="syncAll"
+                    @click="syncAll(false)"
                 >
                     {{ syncAllForm.processing ? 'Syncing…' : 'Sync all to Meta' }}
+                </button>
+                <button
+                    v-if="cloud_enabled"
+                    type="button"
+                    class="btn btn-outline-warning me-2"
+                    :disabled="syncAllForm.processing"
+                    title="Delete and recreate approved templates that differ from local copy"
+                    @click="syncAll(true)"
+                >
+                    Force sync all
                 </button>
                 <Link :href="route('admin.whatsapp-templates.create')" class="btn btn-primary">
                     <i class="ti tabler-plus me-1" /> New template
@@ -112,11 +131,13 @@ function destroyTemplate(template) {
         <div class="card mb-3 border-info bg-label-info">
             <div class="card-body small">
                 <strong>Available placeholders:</strong>
-                <code>{name}</code>, <code>{order}</code>, <code>{total}</code>, <code>{status}</code>, <code>{payment}</code>, <code>{phone}</code>, <code>{city}</code>.
-                Rider templates also support <code>{parcels}</code>, <code>{cod_total}</code>, <code>{tracking_list}</code>, <code>{courier}</code>.
-                Buttons use <code>{order_id}</code> in payload IDs.
+                <code>{name}</code>, <code>{order}</code>, <code>{total}</code>, <code>{status}</code>, <code>{payment}</code>, <code>{phone}</code>, <code>{city}</code>,
+                <code>{courier}</code>, <code>{tracking_number}</code>, <code>{tracking_url}</code>, <code>{review_url}</code>, <code>{order_url}</code>.
+                Rider templates also support <code>{parcels}</code>, <code>{cod_total}</code>, <code>{tracking_list}</code>.
+                Reply buttons use <code>{order_id}</code> in payload IDs; link button URLs may end with <code>{order_number}</code>.
                 <span v-if="cloud_enabled" class="d-block mt-2">
                     After editing copy, use <strong>Sync to Meta</strong> or run <code>php artisan whatsapp:sync-templates</code>.
+                    If Meta says the approved template differs, use <strong>Force</strong> to delete and recreate (requires Meta re-approval).
                     Interactive button templates are not synced (they use session messages).
                 </span>
                 <span v-else class="d-block mt-2 text-warning">
@@ -183,16 +204,27 @@ function destroyTemplate(template) {
                         <div v-else class="text-muted small">N/A</div>
                     </td>
                     <td class="text-end text-nowrap">
-                        <button
-                            v-if="cloud_enabled && !t.has_buttons"
-                            type="button"
-                            class="btn btn-sm btn-outline-primary me-1"
-                            :disabled="syncingId === t.id"
-                            title="Sync to Meta"
-                            @click="syncOne(t)"
-                        >
-                            {{ syncingId === t.id ? '…' : 'Sync' }}
-                        </button>
+                        <template v-if="cloud_enabled && !t.has_buttons">
+                            <button
+                                type="button"
+                                class="btn btn-sm btn-outline-primary me-1"
+                                :disabled="syncingId === t.id"
+                                title="Sync to Meta"
+                                @click="syncOne(t, false)"
+                            >
+                                {{ syncingId === t.id ? '…' : 'Sync' }}
+                            </button>
+                            <button
+                                type="button"
+                                class="btn btn-sm me-1"
+                                :class="needsForceResync(t) ? 'btn-warning' : 'btn-outline-warning'"
+                                :disabled="syncingId === t.id"
+                                title="Delete and recreate approved template (requires Meta re-approval)"
+                                @click="syncOne(t, true)"
+                            >
+                                Force
+                            </button>
+                        </template>
                         <Link :href="route('admin.whatsapp-templates.edit', t.id)" class="btn btn-sm btn-outline-secondary">
                             Edit
                         </Link>
