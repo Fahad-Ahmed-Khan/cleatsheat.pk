@@ -6,6 +6,8 @@ use App\Domain\Catalog\Contracts\ProductSearchEngine;
 use App\Domain\Catalog\MySqlProductSearchEngine;
 use App\Listeners\MergeGuestCartOnLogin;
 use App\Listeners\MergeGuestWishlistOnLogin;
+use App\Listeners\ReportLoggedExceptions;
+use Illuminate\Log\Events\MessageLogged;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Color;
@@ -62,6 +64,7 @@ class AppServiceProvider extends ServiceProvider
 
         Event::listen(Login::class, MergeGuestCartOnLogin::class);
         Event::listen(Login::class, MergeGuestWishlistOnLogin::class);
+        Event::listen(MessageLogged::class, ReportLoggedExceptions::class);
 
         RateLimiter::for('api', function (Request $request) {
             return Limit::perMinute(120)->by($request->user()?->id ?: $request->ip());

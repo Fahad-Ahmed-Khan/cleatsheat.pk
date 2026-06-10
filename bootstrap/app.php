@@ -52,9 +52,7 @@ return Application::configure(basePath: dirname(__DIR__))
         });
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        if (class_exists(Integration::class)) {
-            Integration::handles($exceptions);
-        }
+        Integration::handles($exceptions);
 
         $exceptions->render(function (ValidationException $e, Request $request) {
             if ($request->is('api/*')) {

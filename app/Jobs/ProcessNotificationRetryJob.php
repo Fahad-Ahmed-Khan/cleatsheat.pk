@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Domain\Notifications\WhatsApp\WhatsAppClient;
 use App\Models\NotificationLog;
+use App\Support\Sentry\ExceptionLogging;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -89,6 +90,11 @@ class ProcessNotificationRetryJob implements ShouldQueue
                     'last_auto_retry_error' => $e->getMessage(),
                 ]);
                 $log->save();
+
+                ExceptionLogging::report($e, 'notifications.whatsapp_auto_retry_failed', [
+                    'notification_log_id' => $log->id,
+                    'auto_retries' => $autoRetries + 1,
+                ]);
             }
         }
 

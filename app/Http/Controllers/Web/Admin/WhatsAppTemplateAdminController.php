@@ -10,6 +10,7 @@ use App\Http\Requests\Admin\UpsertWhatsAppTemplateRequest;
 use App\Models\NotificationLog;
 use App\Models\Order;
 use App\Models\WhatsAppTemplate;
+use App\Support\Sentry\ExceptionLogging;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -109,6 +110,8 @@ class WhatsAppTemplateAdminController extends Controller
         try {
             $result = $sync->sync($whatsappTemplate, $force);
         } catch (\Throwable $e) {
+            ExceptionLogging::report($e, 'whatsapp.template_admin.sync_failed', ['template_id' => $whatsappTemplate->id]);
+
             return back()->with('error', 'Meta sync failed: '.$e->getMessage());
         }
 
@@ -130,6 +133,8 @@ class WhatsAppTemplateAdminController extends Controller
         try {
             $summary = $sync->syncAll(onlyActive: true, force: $force);
         } catch (\Throwable $e) {
+            ExceptionLogging::report($e, 'whatsapp.template_admin.sync_all_failed');
+
             return back()->with('error', 'Meta sync failed: '.$e->getMessage());
         }
 
@@ -201,6 +206,11 @@ class WhatsAppTemplateAdminController extends Controller
                 ],
                 'status' => 'failed',
                 'error_message' => $e->getMessage(),
+            ]);
+
+            ExceptionLogging::report($e, 'whatsapp.template_admin.test_send_failed', [
+                'template_id' => $whatsappTemplate->id,
+                'recipient' => $to,
             ]);
 
             return back()->with('error', 'Test failed: '.$e->getMessage());

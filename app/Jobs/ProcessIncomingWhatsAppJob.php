@@ -6,6 +6,7 @@ use App\Domain\Notifications\WhatsApp\OrderConfirmationService;
 use App\Models\User;
 use App\Models\WhatsAppInboundMessage;
 use App\Models\WhatsAppSetting;
+use App\Support\Sentry\ExceptionLogging;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -112,10 +113,7 @@ class ProcessIncomingWhatsAppJob implements ShouldQueue
             $row->processed_at = now();
             $row->save();
 
-            Log::error('whatsapp.inbound.routing_failed', [
-                'id' => $row->id,
-                'error' => $e->getMessage(),
-            ]);
+            ExceptionLogging::report($e, 'whatsapp.inbound.routing_failed', ['id' => $row->id]);
         }
     }
 

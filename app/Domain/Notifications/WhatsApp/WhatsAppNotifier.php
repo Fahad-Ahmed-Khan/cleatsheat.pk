@@ -5,6 +5,7 @@ namespace App\Domain\Notifications\WhatsApp;
 use App\Models\NotificationLog;
 use App\Models\Order;
 use App\Models\WhatsAppSetting;
+use App\Support\Sentry\ExceptionLogging;
 use Illuminate\Support\Facades\Log;
 
 class WhatsAppNotifier
@@ -130,6 +131,13 @@ class WhatsAppNotifier
                 'order_id' => $order?->id,
                 'campaign_id' => $campaignId,
                 'request' => $payload,
+            ]);
+
+            ExceptionLogging::report($e, 'whatsapp.send_arbitrary_failed', [
+                'template' => $templateKey,
+                'audience' => $audience,
+                'order_id' => $order?->id,
+                'campaign_id' => $campaignId,
             ]);
 
             return false;

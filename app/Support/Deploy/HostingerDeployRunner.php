@@ -2,6 +2,7 @@
 
 namespace App\Support\Deploy;
 
+use App\Support\Sentry\ExceptionLogging;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -64,10 +65,9 @@ class HostingerDeployRunner
 
                 return;
             } catch (\Throwable $e) {
-                Log::warning('deploy.github.webhook.proc_open_failed', [
-                    'message' => $e->getMessage(),
+                ExceptionLogging::report($e, 'deploy.github.webhook.proc_open_failed', [
                     'hint' => 'Deploy will run on next schedule via deploy:run-pending',
-                ]);
+                ], 'warning');
             }
         } elseif (function_exists('exec') && ! in_array('exec', array_filter(array_map('trim', explode(',', (string) ini_get('disable_functions')))), true)) {
             $output = [];

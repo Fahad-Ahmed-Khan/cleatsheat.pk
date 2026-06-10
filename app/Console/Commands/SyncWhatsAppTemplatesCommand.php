@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Domain\Notifications\WhatsApp\WhatsAppTemplateSyncService;
 use App\Models\WhatsAppTemplate;
+use App\Support\Sentry\ExceptionLogging;
 use Illuminate\Console\Command;
 
 class SyncWhatsAppTemplatesCommand extends Command
@@ -48,6 +49,7 @@ class SyncWhatsAppTemplatesCommand extends Command
 
             return $summary['failed'] > 0 ? self::FAILURE : self::SUCCESS;
         } catch (\Throwable $e) {
+            ExceptionLogging::report($e, 'whatsapp.templates.sync_command_failed');
             $this->error($e->getMessage());
 
             return self::FAILURE;

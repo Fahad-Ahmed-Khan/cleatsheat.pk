@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Web\Webhooks;
 use App\Http\Controllers\Controller;
 use App\Jobs\ProcessIncomingWhatsAppJob;
 use App\Models\WhatsAppSetting;
+use App\Support\Sentry\ExceptionLogging;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
@@ -78,9 +79,7 @@ class WhatsAppWebhookController extends Controller
                 ProcessIncomingWhatsAppJob::dispatch($payload);
             }
         } catch (\Throwable $e) {
-            Log::error('whatsapp.webhook.dispatch_failed', [
-                'message' => $e->getMessage(),
-            ]);
+            ExceptionLogging::report($e, 'whatsapp.webhook.dispatch_failed');
         }
 
         return response('OK', 200);

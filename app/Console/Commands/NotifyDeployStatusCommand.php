@@ -3,8 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Mail\DeployStatusMail;
+use App\Support\Sentry\ExceptionLogging;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class NotifyDeployStatusCommand extends Command
@@ -54,10 +54,9 @@ class NotifyDeployStatusCommand extends Command
                 appUrl: $appUrl,
             ));
         } catch (\Throwable $e) {
-            Log::error('deploy.notify.mail_failed', [
+            ExceptionLogging::report($e, 'deploy.notify.mail_failed', [
                 'status' => $status,
                 'source' => $source,
-                'message' => $e->getMessage(),
             ]);
 
             $this->error('Failed to send deploy notification: '.$e->getMessage());

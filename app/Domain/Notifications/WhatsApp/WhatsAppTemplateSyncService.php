@@ -3,6 +3,7 @@
 namespace App\Domain\Notifications\WhatsApp;
 
 use App\Models\WhatsAppTemplate;
+use App\Support\Sentry\ExceptionLogging;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
@@ -74,6 +75,8 @@ class WhatsAppTemplateSyncService
         try {
             $response = $this->client->createMessageTemplate($payload);
         } catch (\Throwable $e) {
+            ExceptionLogging::report($e, 'whatsapp.template_sync_failed', ['template_key' => $template->key]);
+
             return $this->markFailed($template, $e->getMessage());
         }
 

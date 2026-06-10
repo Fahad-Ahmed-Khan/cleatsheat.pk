@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Support\Deploy\DeployPendingMarker;
 use App\Support\Deploy\DeployShellRunner;
+use App\Support\Sentry\ExceptionLogging;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
@@ -73,10 +74,7 @@ class RunPendingDeployCommand extends Command
             );
         } catch (\Throwable $e) {
             $this->error($e->getMessage());
-            Log::error('deploy.run_pending.exception', [
-                'branch' => $branch,
-                'message' => $e->getMessage(),
-            ]);
+            ExceptionLogging::report($e, 'deploy.run_pending.exception', ['branch' => $branch]);
 
             return self::FAILURE;
         }

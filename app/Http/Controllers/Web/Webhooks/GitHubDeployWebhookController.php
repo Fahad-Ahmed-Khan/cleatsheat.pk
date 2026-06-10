@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web\Webhooks;
 
 use App\Http\Controllers\Controller;
 use App\Support\Deploy\HostingerDeployRunner;
+use App\Support\Sentry\ExceptionLogging;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
@@ -64,9 +65,7 @@ class GitHubDeployWebhookController extends Controller
                 'after' => $payload['after'] ?? null,
             ]);
         } catch (\Throwable $e) {
-            Log::error('deploy.github.webhook.start_failed', [
-                'message' => $e->getMessage(),
-            ]);
+            ExceptionLogging::report($e, 'deploy.github.webhook.start_failed');
 
             return response('Deploy could not be started.', 500);
         }
