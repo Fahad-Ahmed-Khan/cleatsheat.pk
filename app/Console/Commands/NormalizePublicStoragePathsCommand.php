@@ -2,8 +2,10 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Brand;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Models\StorefrontSetting;
 use App\Support\Storage\PublicAssetUrl;
 use Illuminate\Console\Command;
 
@@ -11,7 +13,7 @@ class NormalizePublicStoragePathsCommand extends Command
 {
     protected $signature = 'storage:normalize-paths';
 
-    protected $description = 'Convert product image paths from full URLs to disk-relative paths';
+    protected $description = 'Convert stored public asset URLs to disk-relative paths (products, storefront, brands)';
 
     public function handle(): int
     {
@@ -42,7 +44,44 @@ class NormalizePublicStoragePathsCommand extends Command
             }
         });
 
-        $this->info("Normalized {$updated} product image path(s) and {$videoUpdated} video URL(s).");
+        $storefrontUpdated = 0;
+        $storefront = StorefrontSetting::query()->first();
+        if ($storefront) {
+            $changes = [];
+            foreach (StorefrontSetting::PUBLIC_ASSET_COLUMNS as $column) {
+                $current = $storefront->{$column};
+                if (! is_string($current) || $current === '') {
+                    continue;
+                }
+
+                $normalized = PublicAssetUrl::normalizeForStorage($current);
+                if ($normalized === null || $normalized === $current) {
+                    continue;
+                }
+
+                $changes[$column] = $normalized;
+            }
+
+            if ($changes !== []) {
+                $storefront->update($changes);
+                $storefrontUpdated = count($changes);
+            }
+        }
+
+        $brandUpdated = 0;
+        Brand::query()->whereNotNull('logo_path')->orderBy('id')->chunkById(100, function ($brands) use (&$brandUpdated) {
+            foreach ($brands as $brand) {
+                $normalized = PublicAssetUrl::normalizeForStorage($brand->logo_path);
+                if ($normalized === null || $normalized === $brand->logo_path) {
+                    continue;
+                }
+
+                $brand->update(['logo_path' => $normalized]);
+                $brandUpdated++;
+            }
+        });
+
+        $this->info("Normalized {$updated} product image path(s), {$videoUpdated} video URL(s), {$storefrontUpdated} storefront asset(s), and {$brandUpdated} brand logo path(s).");
 
         return self::SUCCESS;
     }

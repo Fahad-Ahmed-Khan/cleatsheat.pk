@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreBrandRequest;
 use App\Http\Requests\Admin\UpdateBrandRequest;
 use App\Models\Brand;
+use App\Support\Storage\PublicAssetUrl;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -30,7 +30,7 @@ class BrandAdminController extends Controller
             ->withQueryString();
 
         $brands->through(function (Brand $b) {
-            $b->logo_url = $b->logo_path ? Storage::url($b->logo_path) : null;
+            $b->logo_url = PublicAssetUrl::resolve($b->logo_path);
             return $b;
         });
 
@@ -62,7 +62,7 @@ class BrandAdminController extends Controller
 
     public function edit(Brand $brand): Response
     {
-        $logoUrl = $brand->logo_path ? Storage::url($brand->logo_path) : null;
+        $logoUrl = PublicAssetUrl::resolve($brand->logo_path);
 
         return Inertia::render('Admin/Brands/Edit', [
             'brand' => array_merge($brand->toArray(), [

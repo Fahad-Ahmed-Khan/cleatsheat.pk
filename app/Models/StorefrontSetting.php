@@ -8,6 +8,16 @@ use Illuminate\Database\Eloquent\Model;
 
 class StorefrontSetting extends Model
 {
+    /** @var list<string> */
+    public const PUBLIC_ASSET_COLUMNS = [
+        'logo_url',
+        'logo_dark_url',
+        'favicon_url',
+        'hero_image_url',
+        'promo_banner_image_url',
+        'default_og_image_url',
+    ];
+
     protected $fillable = [
         'site_name',
         'logo_url',
@@ -60,6 +70,84 @@ class StorefrontSetting extends Model
             'newsletter_enabled' => 'boolean',
             'hero_image_variants' => 'array',
         ];
+    }
+
+    public static function resolveAssetUrl(?string $stored): ?string
+    {
+        return PublicAssetUrl::resolve($stored);
+    }
+
+    public static function normalizeStoredAssetPath(?string $value): ?string
+    {
+        if ($value === null || trim($value) === '') {
+            return null;
+        }
+
+        return PublicAssetUrl::normalizeForStorage($value) ?? $value;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public static function normalizeStoredAssetPaths(array $data): array
+    {
+        foreach (self::PUBLIC_ASSET_COLUMNS as $key) {
+            if (array_key_exists($key, $data)) {
+                $data[$key] = self::normalizeStoredAssetPath(
+                    is_string($data[$key] ?? null) ? $data[$key] : null,
+                );
+            }
+        }
+
+        return $data;
+    }
+
+    /**
+     * Admin form + API payloads need fully qualified URLs for previews.
+     *
+     * @return array<string, mixed>
+     */
+    public function toAdminSettingsPayload(): array
+    {
+        $payload = $this->only([
+            'site_name',
+            'logo_url',
+            'logo_dark_url',
+            'favicon_url',
+            'primary_color',
+            'secondary_color',
+            'primary_foreground_color',
+            'hero_title',
+            'hero_subtitle',
+            'hero_badge',
+            'hero_image_url',
+            'hero_cta_label',
+            'hero_cta_url',
+            'promo_banner_image_url',
+            'promo_banner_link_url',
+            'promo_banner_title',
+            'default_meta_title',
+            'default_meta_description',
+            'default_og_image_url',
+            'twitter_site',
+            'ga4_enabled',
+            'ga4_measurement_id',
+            'gtm_enabled',
+            'gtm_container_id',
+            'meta_pixel_enabled',
+            'meta_pixel_id',
+            'tiktok_pixel_enabled',
+            'tiktok_pixel_id',
+        ]);
+
+        foreach (self::PUBLIC_ASSET_COLUMNS as $key) {
+            if (! empty($payload[$key])) {
+                $payload[$key] = PublicAssetUrl::resolve($payload[$key]);
+            }
+        }
+
+        return $payload;
     }
 
     public static function current(): self
@@ -117,9 +205,9 @@ class StorefrontSetting extends Model
 
         return [
             'site_name' => $this->site_name,
-            'logo_url' => $this->logo_url,
-            'logo_dark_url' => $this->logo_dark_url,
-            'favicon_url' => $this->favicon_url,
+            'logo_url' => PublicAssetUrl::resolve($this->logo_url),
+            'logo_dark_url' => PublicAssetUrl::resolve($this->logo_dark_url),
+            'favicon_url' => PublicAssetUrl::resolve($this->favicon_url),
             'primary_color' => $this->primary_color,
             'secondary_color' => $this->secondary_color,
             'primary_foreground_color' => $this->primary_foreground_color,
@@ -138,11 +226,14 @@ class StorefrontSetting extends Model
     {
         $usingStoredImage = filled($this->hero_image_url);
 
+        $fallbackHero = config('store.hero_image_url');
+
         return [
             'title' => $this->hero_title ?: config('store.hero_title'),
             'subtitle' => $this->hero_subtitle ?: config('store.hero_subtitle'),
             'badge' => $this->hero_badge ?: config('store.hero_badge'),
-            'image_url' => $this->hero_image_url ?: config('store.hero_image_url'),
+            'image_url' => PublicAssetUrl::resolve($this->hero_image_url)
+                ?: (is_string($fallbackHero) ? PublicAssetUrl::resolve($fallbackHero) ?? $fallbackHero : null),
             'image_srcset' => $usingStoredImage ? self::buildSrcset($this->hero_image_variants) : null,
             'image_width' => $usingStoredImage ? $this->hero_image_width : null,
             'image_height' => $usingStoredImage ? $this->hero_image_height : null,
@@ -167,7 +258,7 @@ class StorefrontSetting extends Model
     public function toPromoBannerPayload(): array
     {
         return [
-            'image_url' => $this->promo_banner_image_url,
+            'image_url' => PublicAssetUrl::resolve($this->promo_banner_image_url),
             'link_url' => $this->promo_banner_link_url,
             'title' => $this->promo_banner_title,
         ];

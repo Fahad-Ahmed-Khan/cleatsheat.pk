@@ -6,9 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UpdateStorefrontSettingsRequest;
 use App\Models\StorefrontSetting;
 use App\Support\Images\ResponsiveImageGenerator;
+use App\Support\Storage\PublicAssetUrl;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -19,36 +19,7 @@ class StorefrontSettingsAdminController extends Controller
         $s = StorefrontSetting::current();
 
         return Inertia::render('Admin/Storefront/Settings', [
-            'settings' => $s->only([
-                'site_name',
-                'logo_url',
-                'logo_dark_url',
-                'favicon_url',
-                'primary_color',
-                'secondary_color',
-                'primary_foreground_color',
-                'hero_title',
-                'hero_subtitle',
-                'hero_badge',
-                'hero_image_url',
-                'hero_cta_label',
-                'hero_cta_url',
-                'promo_banner_image_url',
-                'promo_banner_link_url',
-                'promo_banner_title',
-                'default_meta_title',
-                'default_meta_description',
-                'default_og_image_url',
-                'twitter_site',
-                'ga4_enabled',
-                'ga4_measurement_id',
-                'gtm_enabled',
-                'gtm_container_id',
-                'meta_pixel_enabled',
-                'meta_pixel_id',
-                'tiktok_pixel_enabled',
-                'tiktok_pixel_id',
-            ]) + [
+            'settings' => $s->toAdminSettingsPayload() + [
                 'ga4_enabled' => (bool) $s->ga4_enabled,
                 'gtm_enabled' => (bool) $s->gtm_enabled,
                 'meta_pixel_enabled' => (bool) $s->meta_pixel_enabled,
@@ -72,6 +43,8 @@ class StorefrontSettingsAdminController extends Controller
                 $data[$urlKey] = $this->storePublicImage($file);
             }
         }
+
+        $data = StorefrontSetting::normalizeStoredAssetPaths($data);
 
         $s->fill($data);
         $s->save();
@@ -130,6 +103,6 @@ class StorefrontSettingsAdminController extends Controller
     {
         $path = $file->store('storefront', 'public');
 
-        return Storage::disk('public')->url($path);
+        return PublicAssetUrl::normalizeForStorage($path) ?? $path;
     }
 }

@@ -165,6 +165,9 @@ run_finalize() {
   fi
 
 
+  # Convert legacy full URLs in the DB to disk-relative paths (idempotent, non-fatal).
+  php artisan storage:normalize-paths || true
+
   # Backfill denormalized product search_text after migrations (idempotent, non-fatal).
   php artisan catalog:rebuild-search-index || true
 

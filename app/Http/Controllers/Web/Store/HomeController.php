@@ -13,8 +13,8 @@ use App\Models\MarketingSetting;
 use App\Models\Product;
 use App\Models\StorefrontSetting;
 use App\Support\Seo\SeoPresenter;
+use App\Support\Storage\PublicAssetUrl;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -43,7 +43,8 @@ class HomeController extends Controller
             ?: $m?->home_meta_description
             ?: $defaultDescription;
         $canonical = $seo->canonicalHome();
-        $ogImage = $storefront?->default_og_image_url ?: $m?->default_og_image_url;
+        $ogImage = StorefrontSetting::resolveAssetUrl($storefront?->default_og_image_url)
+            ?: PublicAssetUrl::resolve($m?->default_og_image_url);
         $twitterSite = $storefront?->twitter_site ?: $m?->twitter_site;
 
         $listForSchema = array_merge($featured, $trending);
@@ -139,7 +140,7 @@ class HomeController extends Controller
                 'id' => $b->id,
                 'name' => $b->name,
                 'slug' => $b->slug,
-                'logo_url' => $b->logo_path ? Storage::url($b->logo_path) : null,
+                'logo_url' => PublicAssetUrl::resolve($b->logo_path),
             ])
             ->values()
             ->all();
