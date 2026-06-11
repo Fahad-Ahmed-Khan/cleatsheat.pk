@@ -3,7 +3,6 @@
 namespace App\Domain\Notifications\WhatsApp;
 
 use GuzzleHttp\Handler\StreamHandler;
-use GuzzleHttp\HandlerStack;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 
@@ -26,9 +25,9 @@ final class MetaGraphHttp
         }
 
         if ($handler === 'stream') {
-            $request = $request->withOptions([
-                'handler' => HandlerStack::create(new StreamHandler()),
-            ]);
+            // setHandler keeps Laravel's stub/recorder middleware on the stack;
+            // withOptions(['handler' => ...]) would bypass Http::fake() in tests.
+            $request = $request->setHandler(new StreamHandler());
         } else {
             $curl = [];
             if ((bool) config('whatsapp.http.force_ipv4', true) && defined('CURLOPT_IPRESOLVE')) {

@@ -3,7 +3,11 @@
 namespace Tests\Unit\Notifications;
 
 use App\Domain\Notifications\WhatsApp\MetaGraphHttp;
+use GuzzleHttp\Handler\StreamHandler;
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Http;
+use ReflectionProperty;
 use Tests\TestCase;
 
 class MetaGraphHttpTest extends TestCase
@@ -12,12 +16,15 @@ class MetaGraphHttpTest extends TestCase
     {
         Config::set('whatsapp.http.handler', null);
 
-        $options = MetaGraphHttp::client()->getOptions();
+        $request = MetaGraphHttp::client();
+        $options = $request->getOptions();
+
+        $this->assertArrayNotHasKey('handler', $options);
 
         if (PHP_SAPI === 'cli') {
-            $this->assertArrayHasKey('handler', $options);
+            $this->assertInstanceOf(StreamHandler::class, $this->requestHandler($request));
         } else {
-            $this->assertArrayNotHasKey('handler', $options);
+            $this->assertNull($this->requestHandler($request));
             $this->assertArrayHasKey('curl', $options);
         }
     }
@@ -36,8 +43,31 @@ class MetaGraphHttpTest extends TestCase
     {
         Config::set('whatsapp.http.handler', 'stream');
 
-        $options = MetaGraphHttp::client()->getOptions();
+        $request = MetaGraphHttp::client();
 
-        $this->assertArrayHasKey('handler', $options);
+        $this->assertArrayNotHasKey('handler', $request->getOptions());
+        $this->assertInstanceOf(StreamHandler::class, $this->requestHandler($request));
+    }
+
+    public function test_stream_handler_respects_http_fake(): void
+    {
+        Config::set('whatsapp.http.handler', 'stream');
+
+        Http::fake([
+            'graph.facebook.com/*' => Http::response(['ok' => true], 200),
+        ]);
+
+        $response = MetaGraphHttp::client()
+            ->post('https://graph.facebook.com/v21.0/123/messages', ['type' => 'template']);
+
+        $this->assertTrue($response->successful());
+        Http::assertSentCount(1);
+    }
+
+    private function requestHandler(PendingRequest $request): mixed
+    {
+        $property = new ReflectionProperty($request, 'handler');
+
+        return $property->getValue($request);
     }
 }

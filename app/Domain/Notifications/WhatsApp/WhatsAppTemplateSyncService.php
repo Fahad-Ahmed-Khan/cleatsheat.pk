@@ -73,22 +73,35 @@ class WhatsAppTemplateSyncService
         if ($existing !== null && ! $force) {
             $existingComponents = is_array($existing['components'] ?? null) ? $existing['components'] : [];
             if ($this->componentsFingerprint($existingComponents) === $this->componentsFingerprint($components)) {
-                return $this->markSynced($template, $metaName, $parameterOrder, 'unchanged', 'Already in sync with Meta.');
+                $metaStatus = strtolower((string) ($existing['status'] ?? 'unchanged'));
+                $localStatus = in_array($metaStatus, ['approved', 'pending', 'rejected'], true)
+                    ? ($metaStatus === 'approved' ? 'approved' : 'pending_review')
+                    : 'unchanged';
+
+                return $this->markSynced(
+                    $template,
+                    $metaName,
+                    $parameterOrder,
+                    $localStatus,
+                    'Already in sync with Meta ('.strtoupper((string) ($existing['status'] ?? 'UNKNOWN')).').',
+                );
             }
+
+            $status = strtoupper((string) ($existing['status'] ?? 'UNKNOWN'));
+
+            return $this->markFailed(
+                $template,
+                "Template exists on Meta ({$status}) with different content. "
+                .'Delete it in Meta Business Manager, or re-run with --force after deploy (one template at a time).',
+            );
         }
 
         $wasUpdate = $existing !== null;
 
-        if ($existing !== null) {
-            $status = strtoupper((string) ($existing['status'] ?? ''));
-            if ($status === 'APPROVED' && ! $force) {
-                return $this->markFailed(
-                    $template,
-                    'Meta template is approved and differs from local copy. Re-run with --force to delete and recreate (requires Meta re-approval).',
-                );
-            }
-
-            $this->client->deleteMessageTemplate($metaName);
+        if ($existing !== null && $force) {
+            $templateId = isset($existing['id']) ? (string) $existing['id'] : null;
+            $this->client->deleteMessageTemplate($metaName, $templateId);
+            $this->client->waitUntilTemplateAbsent($metaName, $language);
         }
 
         $apiPayload = [
@@ -103,7 +116,7 @@ class WhatsAppTemplateSyncService
         } catch (\Throwable $e) {
             ExceptionLogging::report($e, 'whatsapp.template_sync_failed', ['template_key' => $template->key]);
 
-            return $this->markFailed($template, $e->getMessage());
+            return $this->markFailed($template, MetaGraphErrorParser::summarize($e));
         }
 
         Log::info('whatsapp.template_synced', [

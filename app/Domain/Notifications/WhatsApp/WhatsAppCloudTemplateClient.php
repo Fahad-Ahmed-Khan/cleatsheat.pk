@@ -81,19 +81,42 @@ class WhatsAppCloudTemplateClient
         return null;
     }
 
-    public function deleteMessageTemplate(string $name): void
+    public function deleteMessageTemplate(string $name, ?string $templateId = null): void
     {
         $wabaId = $this->resolveWabaId();
         $version = $this->apiVersion();
         $token = $this->token();
+
+        $query = $templateId !== null && $templateId !== ''
+            ? ['hsm_id' => $templateId]
+            : ['name' => strtolower($name)];
+
         MetaGraphHttp::client()
             ->withToken($token)
-            ->delete("https://graph.facebook.com/{$version}/{$wabaId}/message_templates", [
-                'name' => strtolower($name),
-            ])
+            ->delete("https://graph.facebook.com/{$version}/{$wabaId}/message_templates", $query)
             ->throw();
 
         $this->clearTemplateListCache();
+    }
+
+    public function waitUntilTemplateAbsent(string $name, string $language, int $maxAttempts = 10, int $sleepSeconds = 2): void
+    {
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            $this->clearTemplateListCache();
+
+            if ($this->findMessageTemplate($name, $language) === null) {
+                return;
+            }
+
+            if ($attempt < $maxAttempts) {
+                sleep($sleepSeconds);
+            }
+        }
+
+        throw new \RuntimeException(
+            'Meta template still exists after delete ('.strtolower($name).', '.$language.'). '
+            .'Delete it in Meta Business Manager or wait a minute and retry.'
+        );
     }
 
     /**
