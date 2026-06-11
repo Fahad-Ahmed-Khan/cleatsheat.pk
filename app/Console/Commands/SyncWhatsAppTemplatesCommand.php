@@ -2,10 +2,12 @@
 
 namespace App\Console\Commands;
 
+use App\Domain\Notifications\WhatsApp\MetaGraphHttp;
 use App\Domain\Notifications\WhatsApp\WhatsAppTemplateSyncService;
 use App\Models\WhatsAppTemplate;
 use App\Support\Sentry\ExceptionLogging;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Config;
 
 class SyncWhatsAppTemplatesCommand extends Command
 {
@@ -29,6 +31,7 @@ class SyncWhatsAppTemplatesCommand extends Command
         }
 
         $this->info('Starting Meta WhatsApp template sync...');
+        $this->ensureCliStreamTransport();
 
         try {
             if ($key !== '') {
@@ -70,5 +73,20 @@ class SyncWhatsAppTemplatesCommand extends Command
 
             return self::FAILURE;
         }
+    }
+
+    /**
+     * Hostinger/LiteSpeed PHP builds can segfault inside libcurl during artisan commands.
+     */
+    private function ensureCliStreamTransport(): void
+    {
+        if (PHP_SAPI !== 'cli') {
+            return;
+        }
+
+        Config::set('whatsapp.http.handler', 'stream');
+        Config::set('whatsapp.http.curl_in_cli', false);
+
+        $this->line('Meta Graph HTTP transport: '.MetaGraphHttp::resolvedHandler());
     }
 }

@@ -14,15 +14,27 @@ use Illuminate\Support\Facades\Http;
  */
 final class MetaGraphHttp
 {
+    public static function resolvedHandler(): string
+    {
+        $handler = strtolower(trim((string) config('whatsapp.http.handler', '')));
+
+        if ($handler === 'curl' && PHP_SAPI === 'cli' && ! (bool) config('whatsapp.http.curl_in_cli', false)) {
+            return 'stream';
+        }
+
+        if ($handler === '') {
+            return PHP_SAPI === 'cli' ? 'stream' : 'curl';
+        }
+
+        return $handler;
+    }
+
     public static function client(): PendingRequest
     {
         $timeout = (int) config('whatsapp.retry.timeout_seconds', 30);
         $request = Http::timeout($timeout)->acceptJson();
 
-        $handler = strtolower(trim((string) config('whatsapp.http.handler', '')));
-        if ($handler === '') {
-            $handler = PHP_SAPI === 'cli' ? 'stream' : 'curl';
-        }
+        $handler = self::resolvedHandler();
 
         if ($handler === 'stream') {
             // setHandler keeps Laravel's stub/recorder middleware on the stack;

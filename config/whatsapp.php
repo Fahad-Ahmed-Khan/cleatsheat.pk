@@ -81,11 +81,13 @@ return [
 
     /**
      * Meta Graph HTTP transport. On CLI, "stream" is used automatically when unset
-     * (avoids libcurl segfaults on some shared hosts). Set WHATSAPP_HTTP_HANDLER=curl
-     * to force curl, or stream explicitly for web + CLI.
+     * (avoids libcurl segfaults on some shared hosts). Set WHATSAPP_HTTP_HANDLER=stream
+     * if curl segfaults on web too. WHATSAPP_HTTP_HANDLER=curl applies to web only unless
+     * WHATSAPP_HTTP_CURL_IN_CLI=true.
      */
     'http' => [
         'handler' => env('WHATSAPP_HTTP_HANDLER'),
+        'curl_in_cli' => env('WHATSAPP_HTTP_CURL_IN_CLI', false),
         'force_ipv4' => env('WHATSAPP_HTTP_FORCE_IPV4', true),
         'curl_http1' => env('WHATSAPP_HTTP_CURL_HTTP1', true),
         'retries' => (int) env('WHATSAPP_HTTP_RETRIES', 2),

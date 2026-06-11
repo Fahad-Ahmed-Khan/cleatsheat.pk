@@ -33,10 +33,30 @@ class MetaGraphHttpTest extends TestCase
     {
         Config::set('whatsapp.http.handler', 'curl');
 
+        if (PHP_SAPI === 'cli') {
+            $this->assertSame('stream', MetaGraphHttp::resolvedHandler());
+            $this->assertInstanceOf(StreamHandler::class, $this->requestHandler(MetaGraphHttp::client()));
+
+            return;
+        }
+
         $options = MetaGraphHttp::client()->getOptions();
 
+        $this->assertSame('curl', MetaGraphHttp::resolvedHandler());
         $this->assertArrayNotHasKey('handler', $options);
         $this->assertArrayHasKey('curl', $options);
+    }
+
+    public function test_cli_can_opt_into_curl_handler(): void
+    {
+        Config::set('whatsapp.http.handler', 'curl');
+        Config::set('whatsapp.http.curl_in_cli', true);
+
+        if (PHP_SAPI !== 'cli') {
+            $this->markTestSkipped('CLI-only behavior.');
+        }
+
+        $this->assertSame('curl', MetaGraphHttp::resolvedHandler());
     }
 
     public function test_can_force_stream_handler_via_config(): void
