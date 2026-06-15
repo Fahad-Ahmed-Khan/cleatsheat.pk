@@ -29,6 +29,9 @@ class TemplateRepository
 
             $cloudName = (string) ($row->cloud_template_name ?? '');
             if ($cloudName === '') {
+                $cloudName = WhatsAppTemplateSyncService::defaultMetaNameForKey($key);
+            }
+            if ($cloudName === '') {
                 $cloudName = (string) (config("whatsapp.cloud.templates.{$key}.name") ?? '');
             }
             $cloudLang = $row->cloud_template_language ?: (string) (config("whatsapp.cloud.templates.{$key}.language") ?? 'en_US');

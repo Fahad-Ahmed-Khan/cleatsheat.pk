@@ -27,6 +27,16 @@ class WhatsAppTemplateSyncTest extends TestCase
         $this->seed(WhatsAppTemplateSeeder::class);
     }
 
+    public function test_seeder_sets_default_v2_meta_names(): void
+    {
+        $template = WhatsAppTemplate::query()->where('key', 'order_placed')->firstOrFail();
+
+        $this->assertSame('order_placed_v2', $template->cloud_template_name);
+
+        $cod = WhatsAppTemplate::query()->where('key', 'order_placed_cod_confirm')->firstOrFail();
+        $this->assertNull($cod->cloud_template_name);
+    }
+
     public function test_command_creates_meta_template_when_missing(): void
     {
         Http::fake(function ($request) {

@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Domain\Notifications\WhatsApp\WhatsAppTemplateSyncService;
 use App\Models\WhatsAppTemplate;
 use Illuminate\Database\Seeder;
 
@@ -166,11 +167,16 @@ class WhatsAppTemplateSeeder extends Seeder
         ];
 
         foreach ($templates as $t) {
+            $hasButtons = (bool) ($t['has_buttons'] ?? false);
+
             WhatsAppTemplate::query()->updateOrCreate(
                 ['key' => $t['key']],
                 array_merge([
                     'is_active' => true,
                     'cloud_template_language' => 'en_US',
+                    'cloud_template_name' => $hasButtons
+                        ? null
+                        : WhatsAppTemplateSyncService::defaultMetaNameForKey((string) $t['key']),
                     'has_buttons' => false,
                     'button_payloads' => null,
                     'header_text' => null,

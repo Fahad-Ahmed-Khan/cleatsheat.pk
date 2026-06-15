@@ -195,7 +195,7 @@ class WhatsAppTemplateSyncService
     {
         $raw = trim((string) ($template->cloud_template_name ?? ''));
         if ($raw === '') {
-            $raw = (string) $template->key;
+            $raw = self::defaultMetaNameForKey((string) $template->key);
         }
 
         $sanitized = strtolower(preg_replace('/[^a-z0-9_]/', '_', strtolower($raw)) ?? '');
@@ -206,6 +206,17 @@ class WhatsAppTemplateSyncService
         }
 
         return $sanitized;
+    }
+
+    /**
+     * Default Meta template name when admin has not set one. Uses a _v2 suffix so
+     * sync works when Meta still reserves an older deleted name (e.g. order_placed).
+     */
+    public static function defaultMetaNameForKey(string $key): string
+    {
+        $key = strtolower(trim($key));
+
+        return $key !== '' ? $key.'_v2' : '';
     }
 
     /**
