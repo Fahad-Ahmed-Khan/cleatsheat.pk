@@ -69,6 +69,15 @@ class MetaGraphHttpTest extends TestCase
         $this->assertInstanceOf(StreamHandler::class, $this->requestHandler($request));
     }
 
+    public function test_can_force_native_handler_via_config(): void
+    {
+        Config::set('whatsapp.http.handler', 'native');
+
+        $this->assertSame('native', MetaGraphHttp::resolvedHandler());
+        $this->expectException(\LogicException::class);
+        MetaGraphHttp::client();
+    }
+
     public function test_stream_handler_respects_http_fake(): void
     {
         Config::set('whatsapp.http.handler', 'stream');

@@ -23,12 +23,7 @@ class WhatsAppClient
         $url = "https://graph.facebook.com/{$version}/{$phoneNumberId}/messages";
 
         /** @var array<string, mixed> $json */
-        $json = MetaGraphHttp::client()
-            ->withToken($token)
-            ->asJson()
-            ->post($url, $payload)
-            ->throw()
-            ->json();
+        $json = MetaGraphTransport::post($url, $token, $payload);
 
         return $json;
     }

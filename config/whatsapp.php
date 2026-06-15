@@ -80,10 +80,10 @@ return [
     ],
 
     /**
-     * Meta Graph HTTP transport. On CLI, "stream" is used automatically when unset
-     * (avoids libcurl segfaults on some shared hosts). Set WHATSAPP_HTTP_HANDLER=stream
-     * if curl segfaults on web too. WHATSAPP_HTTP_HANDLER=curl applies to web only unless
-     * WHATSAPP_HTTP_CURL_IN_CLI=true.
+     * Meta Graph HTTP transport. On CLI, "native" (PHP streams) is used automatically when
+     * allow_url_fopen is enabled — avoids Guzzle/curl segfaults on Hostinger. Set
+     * WHATSAPP_HTTP_HANDLER=stream|curl|native explicitly to override. curl in CLI is
+     * blocked unless WHATSAPP_HTTP_CURL_IN_CLI=true.
      */
     'http' => [
         'handler' => env('WHATSAPP_HTTP_HANDLER'),

@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Domain\Notifications\WhatsApp\MetaGraphHttp;
+use App\Domain\Notifications\WhatsApp\MetaGraphNativeTransport;
 use App\Domain\Notifications\WhatsApp\WhatsAppTemplateSyncService;
 use App\Models\WhatsAppTemplate;
 use App\Support\Sentry\ExceptionLogging;
@@ -31,7 +32,7 @@ class SyncWhatsAppTemplatesCommand extends Command
         }
 
         $this->info('Starting Meta WhatsApp template sync...');
-        $this->ensureCliStreamTransport();
+        $this->ensureCliSafeTransport();
 
         try {
             if ($key !== '') {
@@ -76,17 +77,24 @@ class SyncWhatsAppTemplatesCommand extends Command
     }
 
     /**
-     * Hostinger/LiteSpeed PHP builds can segfault inside libcurl during artisan commands.
+     * Hostinger/LiteSpeed PHP builds can segfault inside Guzzle/curl during artisan commands.
      */
-    private function ensureCliStreamTransport(): void
+    private function ensureCliSafeTransport(): void
     {
         if (PHP_SAPI !== 'cli') {
             return;
         }
 
-        Config::set('whatsapp.http.handler', 'stream');
+        Config::set('whatsapp.http.handler', 'native');
         Config::set('whatsapp.http.curl_in_cli', false);
 
-        $this->line('Meta Graph HTTP transport: '.MetaGraphHttp::resolvedHandler());
+        $handler = MetaGraphHttp::resolvedHandler();
+        if ($handler === 'native' && ! MetaGraphNativeTransport::isAvailable()) {
+            $this->warn('Native Meta Graph transport unavailable (allow_url_fopen?). Falling back to stream.');
+            Config::set('whatsapp.http.handler', 'stream');
+            $handler = MetaGraphHttp::resolvedHandler();
+        }
+
+        $this->line('Meta Graph HTTP transport: '.$handler);
     }
 }

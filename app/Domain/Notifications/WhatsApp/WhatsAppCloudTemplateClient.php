@@ -35,11 +35,7 @@ class WhatsAppCloudTemplateClient
         ];
 
         do {
-            $response = MetaGraphHttp::client()
-                ->withToken($token)
-                ->get($url, $params)
-                ->throw()
-                ->json();
+            $response = MetaGraphTransport::get($url, $token, $params);
 
             $batch = is_array($response['data'] ?? null) ? $response['data'] : [];
             foreach ($batch as $row) {
@@ -91,10 +87,7 @@ class WhatsAppCloudTemplateClient
             ? ['hsm_id' => $templateId]
             : ['name' => strtolower($name)];
 
-        MetaGraphHttp::client()
-            ->withToken($token)
-            ->delete("https://graph.facebook.com/{$version}/{$wabaId}/message_templates", $query)
-            ->throw();
+        MetaGraphTransport::delete("https://graph.facebook.com/{$version}/{$wabaId}/message_templates", $token, $query);
 
         $this->clearTemplateListCache();
     }
@@ -129,12 +122,11 @@ class WhatsAppCloudTemplateClient
         $version = $this->apiVersion();
         $token = $this->token();
         /** @var array<string, mixed> $json */
-        $json = MetaGraphHttp::client()
-            ->withToken($token)
-            ->asJson()
-            ->post("https://graph.facebook.com/{$version}/{$wabaId}/message_templates", $payload)
-            ->throw()
-            ->json();
+        $json = MetaGraphTransport::post(
+            "https://graph.facebook.com/{$version}/{$wabaId}/message_templates",
+            $token,
+            $payload,
+        );
 
         $this->clearTemplateListCache();
 
@@ -280,11 +272,11 @@ class WhatsAppCloudTemplateClient
         $version = $this->apiVersion();
 
         /** @var array<string, mixed> $json */
-        $json = MetaGraphHttp::client()
-            ->withToken($this->token())
-            ->get("https://graph.facebook.com/{$version}/{$path}", $query)
-            ->throw()
-            ->json();
+        $json = MetaGraphTransport::get(
+            "https://graph.facebook.com/{$version}/{$path}",
+            $this->token(),
+            $query,
+        );
 
         return $json;
     }

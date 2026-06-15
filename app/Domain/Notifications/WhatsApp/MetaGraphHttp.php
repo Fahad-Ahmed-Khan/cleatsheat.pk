@@ -19,14 +19,39 @@ final class MetaGraphHttp
         $handler = strtolower(trim((string) config('whatsapp.http.handler', '')));
 
         if ($handler === 'curl' && PHP_SAPI === 'cli' && ! (bool) config('whatsapp.http.curl_in_cli', false)) {
-            return 'stream';
+            return self::cliDefaultHandler();
         }
 
         if ($handler === '') {
-            return PHP_SAPI === 'cli' ? 'stream' : 'curl';
+            return PHP_SAPI === 'cli' ? self::cliDefaultHandler() : 'curl';
         }
 
         return $handler;
+    }
+
+    /**
+     * CLI default: native streams when available (Hostinger-safe), else Guzzle stream handler.
+     */
+    public static function cliDefaultHandler(): string
+    {
+        if (self::shouldPreferNativeInCli()) {
+            return 'native';
+        }
+
+        return 'stream';
+    }
+
+    public static function shouldPreferNativeInCli(): bool
+    {
+        if (PHP_SAPI !== 'cli') {
+            return false;
+        }
+
+        if (function_exists('app') && app()->runningUnitTests()) {
+            return false;
+        }
+
+        return MetaGraphNativeTransport::isAvailable();
     }
 
     public static function client(): PendingRequest
@@ -35,6 +60,10 @@ final class MetaGraphHttp
         $request = Http::timeout($timeout)->acceptJson();
 
         $handler = self::resolvedHandler();
+
+        if ($handler === 'native') {
+            throw new \LogicException('MetaGraphHttp::client() must not be used when handler is native.');
+        }
 
         if ($handler === 'stream') {
             // setHandler keeps Laravel's stub/recorder middleware on the stack;
