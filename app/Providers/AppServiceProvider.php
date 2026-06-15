@@ -41,6 +41,11 @@ class AppServiceProvider extends ServiceProvider
         }
 
         $this->configureSentryForConsole();
+
+        $this->app->bind(
+            \Laravel\Tinker\Console\TinkerCommand::class,
+            \App\Console\Commands\TinkerCommand::class,
+        );
     }
 
     /**
@@ -159,6 +164,10 @@ class AppServiceProvider extends ServiceProvider
 
     private function windowsShortPathExe(string $absolutePath): ?string
     {
+        if (! \function_exists('shell_exec')) {
+            return null;
+        }
+
         $safe = str_replace('"', '', $absolutePath);
         $out = shell_exec('cmd /c for %I in ("'.$safe.'") do @echo %~sI');
         if ($out === null || $out === '') {
