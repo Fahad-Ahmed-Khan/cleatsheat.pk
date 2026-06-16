@@ -12,15 +12,15 @@ BRANCH="${DEPLOY_BRANCH:-production}"
 # Set DEPLOY_BRANCH=master only for manual deploys from a machine that builds assets locally.
 STAGE="${1:-all}"
 
+# shellcheck source=resolve-php.sh
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/resolve-php.sh"
+
 if [ ! -f artisan ]; then
   echo "ERROR: artisan not found. Run this from your Laravel project root."
   exit 1
 fi
 
-if ! command -v php >/dev/null 2>&1; then
-  echo "ERROR: php not found in PATH."
-  exit 1
-fi
+echo "Using PHP: ${PHP_BIN} ($("${PHP_BIN}" -r 'echo PHP_VERSION;'))"
 
 if ! command -v composer >/dev/null 2>&1; then
   echo "ERROR: composer not found in PATH."

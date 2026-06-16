@@ -51,6 +51,26 @@ Create `.env` on the server (do **not** commit):
 - Set **`APP_URL=https://tryinotech.cloud`** (no trailing slash; must match your live domain — wrong value breaks image URLs)
 - Set DB credentials, mail, and any 3rd party keys.
 
+### PHP 8.3 required (SSH)
+
+Laravel 13 needs **PHP 8.3+**. Hostinger SSH often defaults to PHP 8.2 — use the 8.3 binary:
+
+```bash
+export PHP_BIN=/opt/alt/php83/usr/bin/php
+$PHP_BIN -v
+$PHP_BIN artisan migrate --force
+```
+
+Or add to `~/.bashrc`:
+
+```bash
+export PATH="/opt/alt/php83/usr/bin:$PATH"
+```
+
+Deploy scripts (`scripts/hostinger/deploy.sh`) auto-select PHP 8.3 when available.
+
+In **hPanel** → **Advanced** → **PHP Configuration**, set the site to **PHP 8.3** for web requests.
+
 After changing `APP_URL`:
 
 ```bash
@@ -263,6 +283,20 @@ If `deploy.log` is missing after a push:
 3. Or: `bash scripts/hostinger/pull-deploy.sh`
 
 Check `storage/logs/deploy.log` and `storage/logs/laravel.log` for `deploy.run_pending.*` entries.
+
+### WhatsApp template sync (Meta)
+
+Use **PHP 8.3** and sync **one template at a time** on first run (or all once native transport is working):
+
+```bash
+cd ~/public_html   # or ~/apps/tryino-ecom
+/opt/alt/php83/usr/bin/php artisan whatsapp:sync-templates --template=order_placed
+/opt/alt/php83/usr/bin/php artisan whatsapp:sync-templates   # all active templates
+```
+
+CLI uses **native** HTTP transport (not Guzzle) to avoid segfaults on shared hosting. Templates are submitted as `{key}_v2` on Meta (e.g. `order_placed_v2`). Wait for **Meta approval** in WhatsApp Manager before messages send as templates.
+
+`order_placed_cod_confirm` is skipped (interactive buttons — not a Meta message template).
 
 ## 9) Production admin login
 

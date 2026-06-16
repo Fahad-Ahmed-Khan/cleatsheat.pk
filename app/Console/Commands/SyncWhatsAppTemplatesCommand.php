@@ -81,7 +81,7 @@ class SyncWhatsAppTemplatesCommand extends Command
      */
     private function ensureCliSafeTransport(): void
     {
-        if (PHP_SAPI !== 'cli') {
+        if (PHP_SAPI !== 'cli' || $this->laravel->runningUnitTests()) {
             return;
         }
 
