@@ -83,6 +83,12 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         ->name('orders.postex.load-sheet');
     Route::post('/orders/{order}/shipments/{shipment}/postex/cancel', [OrderAdminController::class, 'postExCancel'])
         ->name('orders.shipment.postex.cancel');
+    Route::get('/orders/{order}/shipments/{shipment}/trax/air-waybill', [OrderAdminController::class, 'traxAirWaybill'])
+        ->name('orders.shipment.trax.air-waybill');
+    Route::get('/orders/{order}/trax/receiving-sheet', [OrderAdminController::class, 'traxReceivingSheet'])
+        ->name('orders.trax.receiving-sheet');
+    Route::post('/orders/{order}/shipments/{shipment}/trax/cancel', [OrderAdminController::class, 'traxCancel'])
+        ->name('orders.shipment.trax.cancel');
 
     Route::post('/orders/bulk/book', [OrderBulkAdminController::class, 'book'])
         ->name('orders.bulk.book');

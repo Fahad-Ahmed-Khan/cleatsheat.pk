@@ -10,7 +10,7 @@ import { useStoreAnalytics } from '@/composables/useStoreAnalytics';
 
 import { useForm, usePage } from '@inertiajs/vue3';
 
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 
 
 
@@ -88,6 +88,70 @@ const form = useForm({
 
 });
 
+const cityQuery = ref('');
+const citySuggestions = ref([]);
+const cityOpen = ref(false);
+const cityLoading = ref(false);
+let cityTimer = null;
+
+function syncCityQueryFromForm() {
+    cityQuery.value = form.city || '';
+}
+
+syncCityQueryFromForm();
+
+watch(
+    () => form.city,
+    () => {
+        // keep query synced when saved address is applied
+        syncCityQueryFromForm();
+    },
+);
+
+const canSuggestCities = computed(() => (cityQuery.value || '').trim().length >= 1);
+
+async function fetchCitySuggestions() {
+    if (!canSuggestCities.value) {
+        citySuggestions.value = [];
+        return;
+    }
+
+    cityLoading.value = true;
+    try {
+        const q = encodeURIComponent(cityQuery.value.trim());
+        const res = await fetch(route('store.checkout.cities', { q }), {
+            headers: { Accept: 'application/json' },
+        });
+        const json = await res.json();
+        const rows = Array.isArray(json?.cities) ? json.cities : [];
+        citySuggestions.value = rows.slice(0, 25);
+    } catch (e) {
+        citySuggestions.value = [];
+    } finally {
+        cityLoading.value = false;
+    }
+}
+
+function scheduleCitySuggest() {
+    cityOpen.value = true;
+    if (cityTimer) clearTimeout(cityTimer);
+    cityTimer = setTimeout(fetchCitySuggestions, 200);
+}
+
+function pickCity(name) {
+    form.city = name;
+    cityQuery.value = name;
+    cityOpen.value = false;
+    citySuggestions.value = [];
+}
+
+function closeCityDropdownSoon() {
+    // allow click selection to register before closing
+    setTimeout(() => {
+        cityOpen.value = false;
+    }, 150);
+}
+
 onMounted(() => {
 
     if (props.analytics_checkout?.items?.length) {
@@ -133,6 +197,8 @@ function applyAddress(id) {
     form.area = addr.area ?? '';
 
     form.postal_code = addr.postal_code ?? '';
+
+    syncCityQueryFromForm();
 
 }
 
@@ -330,7 +396,35 @@ const inputClass =
 
                         <label :class="labelClass">City</label>
 
-                        <input v-model="form.city" type="text" required :class="inputClass">
+                        <div class="relative">
+                            <input
+                                v-model="cityQuery"
+                                type="text"
+                                required
+                                autocomplete="address-level2"
+                                :class="inputClass"
+                                placeholder="Start typing…"
+                                @input="() => { form.city = cityQuery; scheduleCitySuggest(); }"
+                                @focus="scheduleCitySuggest"
+                                @blur="closeCityDropdownSoon"
+                            >
+
+                            <div
+                                v-if="cityOpen && (cityLoading || citySuggestions.length)"
+                                class="absolute z-20 mt-2 w-full overflow-hidden rounded-2xl border border-stadium-outline-soft bg-stadium-white shadow-lg"
+                            >
+                                <div v-if="cityLoading" class="px-4 py-3 text-sm text-stadium-ink/70">Searching…</div>
+                                <button
+                                    v-for="name in citySuggestions"
+                                    :key="name"
+                                    type="button"
+                                    class="block w-full px-4 py-3 text-left text-sm hover:bg-stadium-surface"
+                                    @mousedown.prevent="pickCity(name)"
+                                >
+                                    {{ name }}
+                                </button>
+                            </div>
+                        </div>
 
                     </div>
 

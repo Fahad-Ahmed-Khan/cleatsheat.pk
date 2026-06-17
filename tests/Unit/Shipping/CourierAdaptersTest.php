@@ -6,6 +6,7 @@ use App\Domain\Shipping\Couriers\GenericCourierAdapter;
 use App\Domain\Shipping\Couriers\LeopardsCourierAdapter;
 use App\Domain\Shipping\Couriers\MpCourierAdapter;
 use App\Domain\Shipping\Couriers\PostExCourierAdapter;
+use App\Domain\Shipping\Couriers\TraxCourierAdapter;
 use App\Domain\Shipping\Couriers\TcsCourierAdapter;
 use App\Domain\Shipping\CourierApiLogger;
 use App\Enums\OrderStatus;
@@ -117,5 +118,13 @@ class CourierAdaptersTest extends TestCase
         $shipment3->load('order');
         $tc = new TcsCourierAdapter($logger);
         $this->assertEquals(ShipmentStatus::InTransit, $tc->track($shipment3, $courier3, null)->status);
+
+        $courier4 = Courier::query()->create([
+            'code' => 'x', 'name' => 'X', 'adapter' => 'trax', 'is_active' => true, 'sort_order' => 0,
+        ]);
+        $shipment4 = $this->makeOrderAndShipment($courier4);
+        $shipment4->load('order');
+        $tr = new TraxCourierAdapter($logger);
+        $this->assertEquals(ShipmentStatus::InTransit, $tr->track($shipment4, $courier4, null)->status);
     }
 }

@@ -8,6 +8,7 @@ use App\Domain\Shipping\Couriers\LeopardsCourierAdapter;
 use App\Domain\Shipping\Couriers\MpCourierAdapter;
 use App\Domain\Shipping\Couriers\PostExCourierAdapter;
 use App\Domain\Shipping\Couriers\RunCourierAdapter;
+use App\Domain\Shipping\Couriers\TraxCourierAdapter;
 use App\Domain\Shipping\Couriers\TcsCourierAdapter;
 use App\Models\Courier;
 use InvalidArgumentException;
@@ -20,6 +21,7 @@ class CourierRegistry
         private readonly MpCourierAdapter $mp,
         private readonly PostExCourierAdapter $postEx,
         private readonly RunCourierAdapter $runCourier,
+        private readonly TraxCourierAdapter $trax,
         private readonly TcsCourierAdapter $tcs,
     ) {}
 
@@ -30,6 +32,7 @@ class CourierRegistry
             'mp' => $this->mp,
             'postex' => $this->postEx,
             'runcourier' => $this->runCourier,
+            'trax' => $this->trax,
             'tcs' => $this->tcs,
             'generic', '' => $this->generic,
             default => throw new InvalidArgumentException('Unknown courier adapter: '.$courier->adapter),

@@ -21,6 +21,11 @@ const form = useForm({
     sender_snapshot: { ...props.settings.sender_snapshot },
     postex_pickup_address_code: props.settings.postex_pickup_address_code ?? '',
     postex_store_address_code: props.settings.postex_store_address_code ?? '',
+    trax_pickup_address_id: props.settings.trax_pickup_address_id ?? null,
+    trax_shipping_mode_id: props.settings.trax_shipping_mode_id ?? 1,
+    trax_charges_mode_id: props.settings.trax_charges_mode_id ?? 4,
+    trax_item_product_type_id: props.settings.trax_item_product_type_id ?? 24,
+    trax_delivery_type_id: props.settings.trax_delivery_type_id ?? 1,
     default_weight_kg: props.settings.default_weight_kg,
     default_length_cm: props.settings.default_length_cm,
     default_width_cm: props.settings.default_width_cm,
@@ -211,6 +216,98 @@ function submit() {
                 </div>
             </FormSection>
 
+            <FormSection title="Trax (Sonic) defaults" description="Used when booking Trax shipments. Pickup address ID comes from the Sonic portal (or trax:probe pickup-addresses).">
+                <div class="row g-3">
+                    <div class="col-12 col-md-6">
+                        <FormField id="trax_pickup_id" label="Pickup address ID" :error="form.errors.trax_pickup_address_id">
+                            <template #default="{ invalid, describedBy }">
+                                <input
+                                    id="trax_pickup_id"
+                                    v-model.number="form.trax_pickup_address_id"
+                                    type="number"
+                                    min="1"
+                                    class="form-control"
+                                    placeholder="e.g. 3015"
+                                    :class="{ 'is-invalid': invalid }"
+                                    :aria-describedby="describedBy"
+                                />
+                            </template>
+                        </FormField>
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <FormField id="trax_shipping_mode" label="Shipping mode" :error="form.errors.trax_shipping_mode_id">
+                            <template #default="{ invalid, describedBy }">
+                                <select
+                                    id="trax_shipping_mode"
+                                    v-model.number="form.trax_shipping_mode_id"
+                                    class="form-select"
+                                    :class="{ 'is-invalid': invalid }"
+                                    :aria-describedby="describedBy"
+                                >
+                                    <option :value="1">Rush</option>
+                                    <option :value="2">Saver Plus</option>
+                                    <option :value="3">Swift</option>
+                                    <option :value="4">Same day</option>
+                                </select>
+                            </template>
+                        </FormField>
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <FormField id="trax_charges_mode" label="Charges mode" :error="form.errors.trax_charges_mode_id">
+                            <template #default="{ invalid, describedBy }">
+                                <select
+                                    id="trax_charges_mode"
+                                    v-model.number="form.trax_charges_mode_id"
+                                    class="form-select"
+                                    :class="{ 'is-invalid': invalid }"
+                                    :aria-describedby="describedBy"
+                                >
+                                    <option :value="4">Reimbursement (deduct during COD payouts)</option>
+                                    <option :value="3">Invoicing (billed to shipper)</option>
+                                </select>
+                            </template>
+                        </FormField>
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <FormField id="trax_delivery_type" label="Delivery type" :error="form.errors.trax_delivery_type_id">
+                            <template #default="{ invalid, describedBy }">
+                                <select
+                                    id="trax_delivery_type"
+                                    v-model.number="form.trax_delivery_type_id"
+                                    class="form-select"
+                                    :class="{ 'is-invalid': invalid }"
+                                    :aria-describedby="describedBy"
+                                >
+                                    <option :value="1">Doorstep</option>
+                                    <option :value="2">Hub to Hub</option>
+                                </select>
+                            </template>
+                        </FormField>
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <FormField id="trax_item_type" label="Default item product type ID" :error="form.errors.trax_item_product_type_id">
+                            <template #default="{ invalid, describedBy }">
+                                <input
+                                    id="trax_item_type"
+                                    v-model.number="form.trax_item_product_type_id"
+                                    type="number"
+                                    min="1"
+                                    max="24"
+                                    class="form-control"
+                                    :class="{ 'is-invalid': invalid }"
+                                    :aria-describedby="describedBy"
+                                />
+                            </template>
+                        </FormField>
+                        <div class="text-muted small mt-1">Sonic Appendix B: 24 = Other.</div>
+                    </div>
+                </div>
+            </FormSection>
+
             <FormSection v-if="form.courier_accounts.length" title="Courier API accounts" description="One tab per carrier. Leave token blank to keep the existing secret.">
                 <ul class="nav nav-tabs flex-wrap gap-1 mb-0 px-1 pt-1" role="tablist">
                     <li
@@ -279,6 +376,22 @@ function submit() {
                                     <FormField :id="`ca-service-${row.id}`" label="Service code" :error="form.errors[`courier_accounts.${idx}.service_code`]">
                                         <template #default="{ invalid, describedBy }">
                                             <input :id="`ca-service-${row.id}`" v-model="form.courier_accounts[idx].service_code" class="form-control" :class="{ 'is-invalid': invalid }" :aria-describedby="describedBy" />
+                                        </template>
+                                    </FormField>
+                                </div>
+                                <div v-if="row.courier_adapter === 'trax'" class="col-12 col-md-6">
+                                    <FormField :id="`ca-env-${row.id}`" label="Trax API environment" :error="form.errors[`courier_accounts.${idx}.api_environment`]">
+                                        <template #default="{ invalid, describedBy }">
+                                            <select
+                                                :id="`ca-env-${row.id}`"
+                                                v-model="form.courier_accounts[idx].api_environment"
+                                                class="form-select"
+                                                :class="{ 'is-invalid': invalid }"
+                                                :aria-describedby="describedBy"
+                                            >
+                                                <option value="testing">Testing (app.sonic.pk)</option>
+                                                <option value="live">Live (sonic.pk)</option>
+                                            </select>
                                         </template>
                                     </FormField>
                                 </div>

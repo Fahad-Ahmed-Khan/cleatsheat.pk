@@ -12,6 +12,8 @@ class ShippingSetting extends Model
         'default_courier_id', 'courier_assignment_default', 'auto_book_on_payment_confirmed',
         'auto_book_cod_orders', 'tracking_sync_interval_minutes', 'sender_snapshot',
         'postex_pickup_address_code', 'postex_store_address_code',
+        'trax_pickup_address_id', 'trax_shipping_mode_id', 'trax_charges_mode_id',
+        'trax_item_product_type_id', 'trax_delivery_type_id',
         'default_weight_kg', 'default_length_cm', 'default_width_cm', 'default_height_cm',
     ];
 
@@ -53,6 +55,10 @@ class ShippingSetting extends Model
                 'phone' => '',
                 'city' => 'Karachi',
             ],
+            'trax_shipping_mode_id' => 1,
+            'trax_charges_mode_id' => 4,
+            'trax_item_product_type_id' => 24,
+            'trax_delivery_type_id' => 1,
             'default_weight_kg' => 1,
             'default_length_cm' => 30,
             'default_width_cm' => 20,

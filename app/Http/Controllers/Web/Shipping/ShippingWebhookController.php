@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web\Shipping;
 
 use App\Domain\Notifications\WhatsApp\ShipmentStatusCustomerAlertService;
+use App\Domain\Shipping\Trax\TraxStatusMapper;
 use App\Enums\ShipmentStatus;
 use App\Http\Controllers\Controller;
 use App\Jobs\SyncShipmentTrackingJob;
@@ -83,6 +84,40 @@ class ShippingWebhookController extends Controller
                             'shipment_id' => $shipment->id,
                             'status' => $maybe->value,
                             'description' => 'Status updated from PostEx webhook',
+                            'raw_payload' => $payload,
+                            'occurred_at' => now(),
+                        ]);
+
+                        $this->customerAlerts->notifyStatusTransition($shipment, $previous, $maybe);
+                    }
+
+                    if ($this->payloadSuggestsOutForDelivery($payload)) {
+                        $this->customerAlerts->notifyOutForDeliveryIfApplicable($shipment);
+                    }
+                }
+
+                if ($courier === 'trax') {
+                    $previous = $shipment->status;
+                    $remote = (string) (Arr::get($payload, 'status') ?? Arr::get($payload, 'trackStatus') ?? '');
+                    $maybe = TraxStatusMapper::fromText($remote);
+                    if ($maybe !== $shipment->status) {
+                        $shipment->status = $maybe;
+                        if ($maybe === ShipmentStatus::Delivered) {
+                            $shipment->delivered_at = $shipment->delivered_at ?? now();
+                        }
+                        if ($maybe === ShipmentStatus::Failed) {
+                            $shipment->failed_at = $shipment->failed_at ?? now();
+                        }
+                        if ($maybe === ShipmentStatus::Canceled) {
+                            $shipment->failed_at = $shipment->failed_at ?? now();
+                        }
+
+                        $shipment->save();
+
+                        ShipmentEvent::query()->create([
+                            'shipment_id' => $shipment->id,
+                            'status' => $maybe->value,
+                            'description' => 'Status updated from Trax webhook',
                             'raw_payload' => $payload,
                             'occurred_at' => now(),
                         ]);

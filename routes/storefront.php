@@ -8,6 +8,7 @@ use App\Http\Controllers\Web\Store\Account\ProfileController as AccountProfileCo
 use App\Http\Controllers\Web\Store\Account\WishlistController as AccountWishlistController;
 use App\Http\Controllers\Web\Store\CartController;
 use App\Http\Controllers\Web\Store\CategoryController;
+use App\Http\Controllers\Web\Store\CitySuggestController;
 use App\Http\Controllers\Web\Store\CheckoutController;
 use App\Http\Controllers\Web\Store\HomeController;
 use App\Http\Controllers\Web\Store\JournalController;
@@ -26,6 +27,9 @@ Route::get('/search', SearchController::class)->name('store.search');
 Route::get('/search/suggest', SearchSuggestController::class)
     ->middleware('throttle:search-suggest')
     ->name('store.search.suggest');
+Route::get('/checkout/cities', CitySuggestController::class)
+    ->middleware('throttle:search-suggest')
+    ->name('store.checkout.cities');
 Route::get('/cart', [CartController::class, 'index'])->name('store.cart');
 Route::post('/cart', [CartController::class, 'store'])->name('store.cart.add');
 Route::patch('/cart/items/{item}', [CartController::class, 'update'])->name('store.cart.items.update');

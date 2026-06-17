@@ -45,6 +45,9 @@ class ShippingSettingsAdminController extends Controller
                     'client_code' => '',
                     'profile_id' => '',
                     'api_vendor' => '',
+                    'api_environment' => $courier->adapter === 'trax'
+                        ? (string) ($creds['api_environment'] ?? 'testing')
+                        : null,
                     'has_api_token' => trim((string) ($creds['api_token'] ?? '')) !== '',
                     'has_client_code' => trim((string) ($creds['client_code'] ?? '')) !== '',
                     'has_profile_id' => trim((string) ($creds['profile_id'] ?? '')) !== '',
@@ -63,6 +66,11 @@ class ShippingSettingsAdminController extends Controller
                 'sender_snapshot' => $settings->sender_snapshot ?? [],
                 'postex_pickup_address_code' => $settings->postex_pickup_address_code,
                 'postex_store_address_code' => $settings->postex_store_address_code,
+                'trax_pickup_address_id' => $settings->trax_pickup_address_id,
+                'trax_shipping_mode_id' => (int) ($settings->trax_shipping_mode_id ?? 1),
+                'trax_charges_mode_id' => (int) ($settings->trax_charges_mode_id ?? 4),
+                'trax_item_product_type_id' => (int) ($settings->trax_item_product_type_id ?? 24),
+                'trax_delivery_type_id' => (int) ($settings->trax_delivery_type_id ?? 1),
                 'default_weight_kg' => (float) $settings->default_weight_kg,
                 'default_length_cm' => (float) $settings->default_length_cm,
                 'default_width_cm' => (float) $settings->default_width_cm,
@@ -91,6 +99,11 @@ class ShippingSettingsAdminController extends Controller
             'sender_snapshot' => $data['sender_snapshot'],
             'postex_pickup_address_code' => $data['postex_pickup_address_code'] ?: null,
             'postex_store_address_code' => $data['postex_store_address_code'] ?: null,
+            'trax_pickup_address_id' => $data['trax_pickup_address_id'] ?: null,
+            'trax_shipping_mode_id' => $data['trax_shipping_mode_id'],
+            'trax_charges_mode_id' => $data['trax_charges_mode_id'],
+            'trax_item_product_type_id' => $data['trax_item_product_type_id'],
+            'trax_delivery_type_id' => $data['trax_delivery_type_id'],
             'default_weight_kg' => $data['default_weight_kg'],
             'default_length_cm' => $data['default_length_cm'],
             'default_width_cm' => $data['default_width_cm'],
@@ -139,6 +152,14 @@ class ShippingSettingsAdminController extends Controller
                     } else {
                         unset($creds['api_vendor']);
                     }
+                    $credentialsChanged = true;
+                }
+            }
+
+            if ($account->courier?->adapter === 'trax') {
+                $env = strtolower(trim((string) ($row['api_environment'] ?? '')));
+                if (in_array($env, ['testing', 'live'], true)) {
+                    $creds['api_environment'] = $env;
                     $credentialsChanged = true;
                 }
             }

@@ -8,6 +8,9 @@ use App\Domain\Shipping\PostEx\PostExApiClient;
 use App\Domain\Shipping\PostEx\PostExHttpDiagnostics;
 use App\Domain\Shipping\PostEx\PostExShipmentInspector;
 use App\Domain\Shipping\PostEx\PostExTokenResolver;
+use App\Domain\Shipping\Trax\TraxApiClient;
+use App\Domain\Shipping\Trax\TraxShipmentInspector;
+use App\Domain\Shipping\Trax\TraxTokenResolver;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\ShipmentStatus;
@@ -655,5 +658,147 @@ class OrderAdminController extends Controller
         return redirect()
             ->route('admin.orders.show', $order)
             ->with('status', 'PostEx cancel queued/sent.');
+    }
+
+    public function traxAirWaybill(Order $order, Shipment $shipment): HttpResponse
+    {
+        abort_unless($shipment->order_id === $order->id, 404);
+
+        $shipment->load(['courier', 'courierAccount']);
+        abort_unless($shipment->courier?->adapter === 'trax', 404);
+        abort_unless((string) $shipment->tracking_number !== '', 400);
+
+        if (TraxShipmentInspector::isAppSandboxBooking($shipment)) {
+            abort(422, 'This shipment uses a local sandbox tracking number (no order exists in Sonic). Set SHIPPING_SANDBOX=false, clear config, then book again.');
+        }
+
+        $token = TraxTokenResolver::forCourierAccount($shipment->courierAccount);
+        abort_if($token === '', 422, 'Trax API key is not configured. Add it under Admin → Shipping settings for the Trax courier account.');
+
+        $base = TraxApiClient::resolvedBaseUrl($shipment->courierAccount);
+        $url = $base.'/api/shipment/air_waybill';
+        $tracking = (string) $shipment->tracking_number;
+
+        $res = TraxApiClient::request($token)->get($url, [
+            'tracking_number' => $tracking,
+            'type' => 1, // pdf
+        ]);
+
+        abort_unless($res->successful(), 502, 'Trax air waybill PDF request failed.');
+
+        return response($res->body(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="trax-air-waybill-'.$tracking.'.pdf"',
+        ]);
+    }
+
+    public function traxReceivingSheet(Order $order): HttpResponse
+    {
+        $order->load(['shipments.courier', 'shipments.courierAccount']);
+
+        $shipments = $order->shipments
+            ->filter(fn (Shipment $s) => $s->courier?->adapter === 'trax')
+            ->filter(fn (Shipment $s) => (string) $s->tracking_number !== '')
+            ->values();
+
+        abort_if($shipments->isEmpty(), 422, 'No Trax shipments with tracking numbers found on this order.');
+
+        foreach ($shipments as $s) {
+            if (TraxShipmentInspector::isAppSandboxBooking($s)) {
+                abort(422, 'This order includes a local sandbox Trax shipment (no orders in Sonic). Set SHIPPING_SANDBOX=false, clear config, then book again before using the receiving sheet.');
+            }
+        }
+
+        /** @var Shipment $first */
+        $first = $shipments->first();
+        $token = TraxTokenResolver::forCourierAccount($first->courierAccount);
+        abort_if($token === '', 422, 'Trax API key is not configured. Add it under Admin → Shipping settings for the Trax courier account.');
+
+        $trackingNumbers = $shipments->pluck('tracking_number')->filter()->unique()->values()->take(25)->all();
+
+        $base = TraxApiClient::resolvedBaseUrl($first->courierAccount);
+        $createUrl = $base.'/api/receiving_sheet/create';
+
+        $createRes = TraxApiClient::request($token)->post($createUrl, [
+            'tracking_numbers' => $trackingNumbers,
+        ]);
+        $createBody = $createRes->json() ?: [];
+        abort_unless($createRes->successful(), 502, 'Trax receiving sheet create request failed.');
+
+        if (! is_array($createBody) || (($createBody['status'] ?? null) !== 0 && ($createBody['status'] ?? null) !== '0')) {
+            abort(502, 'Trax receiving sheet create request returned an unexpected response.');
+        }
+
+        $sheetId = $createBody['receiving_sheet_id'] ?? null;
+        abort_if(! is_int($sheetId) && ! (is_string($sheetId) && ctype_digit($sheetId)), 502, 'Trax did not return receiving_sheet_id.');
+        $sheetId = (int) $sheetId;
+
+        $viewUrl = $base.'/api/receiving_sheet/view';
+        $viewRes = TraxApiClient::request($token)->get($viewUrl, [
+            'receiving_sheet_id' => $sheetId,
+            'type' => 1, // pdf
+        ]);
+
+        abort_unless($viewRes->successful(), 502, 'Trax receiving sheet PDF request failed.');
+
+        return response($viewRes->body(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="trax-receiving-sheet-'.$order->order_number.'.pdf"',
+        ]);
+    }
+
+    public function traxCancel(Order $order, Shipment $shipment): RedirectResponse
+    {
+        abort_unless($shipment->order_id === $order->id, 404);
+
+        $shipment->load(['courier', 'courierAccount']);
+        if ($shipment->courier?->adapter !== 'trax') {
+            return redirect()->route('admin.orders.show', $order)->with('error', 'This shipment is not Trax.');
+        }
+        if ((string) $shipment->tracking_number === '') {
+            return redirect()->route('admin.orders.show', $order)->with('error', 'No tracking number found to cancel.');
+        }
+        if ($shipment->status === ShipmentStatus::Canceled) {
+            return redirect()->route('admin.orders.show', $order)->with('status', 'Shipment is already canceled.');
+        }
+
+        if (TraxShipmentInspector::isAppSandboxBooking($shipment)) {
+            return redirect()->route('admin.orders.show', $order)->with('error', 'This shipment uses a local sandbox tracking number (nothing to cancel in Sonic). Set SHIPPING_SANDBOX=false, clear config, then book again.');
+        }
+
+        $token = TraxTokenResolver::forCourierAccount($shipment->courierAccount);
+        if ($token === '') {
+            return redirect()->route('admin.orders.show', $order)->with('error', 'Trax API key is not configured. Add it under Admin → Shipping settings for the Trax courier account.');
+        }
+
+        $base = TraxApiClient::resolvedBaseUrl($shipment->courierAccount);
+        $url = $base.'/api/shipment/cancel';
+        $payload = ['tracking_number' => (string) $shipment->tracking_number];
+
+        $res = TraxApiClient::request($token)->post($url, $payload);
+        $body = $res->json() ?: [];
+        if (! $res->successful()) {
+            return redirect()
+                ->route('admin.orders.show', $order)
+                ->with('error', 'Trax cancel failed.');
+        }
+
+        $shipment->status = ShipmentStatus::Canceled;
+        $shipment->meta = array_merge($shipment->meta ?? [], [
+            'trax_cancel_response' => $body,
+        ]);
+        $shipment->save();
+
+        ShipmentEvent::query()->create([
+            'shipment_id' => $shipment->id,
+            'status' => ShipmentStatus::Canceled->value,
+            'description' => 'Shipment canceled on Trax',
+            'raw_payload' => is_array($body) ? $body : [],
+            'occurred_at' => now(),
+        ]);
+
+        return redirect()
+            ->route('admin.orders.show', $order)
+            ->with('status', 'Trax cancel sent.');
     }
 }

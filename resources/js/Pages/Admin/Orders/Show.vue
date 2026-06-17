@@ -73,6 +73,10 @@ const hasPostExShipment = computed(
     () => (props.order.shipments ?? []).some((s) => s.courier?.adapter === 'postex' && !!s.tracking_number),
 );
 
+const hasTraxShipment = computed(
+    () => (props.order.shipments ?? []).some((s) => s.courier?.adapter === 'trax' && !!s.tracking_number),
+);
+
 function submit() {
     form.patch(route('admin.orders.update', props.order.id), {
         preserveScroll: true,
@@ -146,6 +150,25 @@ async function cancelPostExShipment(shipmentId) {
     if (!ok) return;
     router.post(
         route('admin.orders.shipment.postex.cancel', [props.order.id, shipmentId]),
+        {},
+        {
+            preserveScroll: true,
+            onSuccess: () => toastSuccess('Shipment canceled'),
+            onError: () => toastError('Failed to cancel shipment'),
+        },
+    );
+}
+
+async function cancelTraxShipment(shipmentId) {
+    if (!shipmentId) return;
+    const ok = await confirmDanger({
+        title: 'Cancel this shipment?',
+        text: 'This will cancel the Trax (Sonic) shipment and cannot be undone.',
+        confirmText: 'Yes, cancel',
+    });
+    if (!ok) return;
+    router.post(
+        route('admin.orders.shipment.trax.cancel', [props.order.id, shipmentId]),
         {},
         {
             preserveScroll: true,
@@ -500,6 +523,15 @@ function printPackingSlip() {
                             >
                                 PostEx load sheet
                             </a>
+                            <a
+                                v-if="hasTraxShipment"
+                                class="btn btn-sm btn-outline-secondary"
+                                :href="route('admin.orders.trax.receiving-sheet', props.order.id)"
+                                target="_blank"
+                                rel="noopener"
+                            >
+                                Trax receiving sheet
+                            </a>
                         </div>
 
                         <div class="mt-3">
@@ -535,6 +567,22 @@ function printPackingSlip() {
                                             type="button"
                                             class="btn btn-link btn-sm text-danger p-0"
                                             @click="cancelPostExShipment(s.id)"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                    <div v-if="s.courier?.adapter === 'trax' && s.tracking_number" class="mt-1 d-flex flex-wrap gap-2">
+                                        <a
+                                            :href="route('admin.orders.shipment.trax.air-waybill', [order.id, s.id])"
+                                            target="_blank"
+                                            rel="noopener"
+                                            class="btn btn-link btn-sm p-0"
+                                        >Air waybill PDF</a>
+                                        <button
+                                            v-if="s.status !== 'canceled'"
+                                            type="button"
+                                            class="btn btn-link btn-sm text-danger p-0"
+                                            @click="cancelTraxShipment(s.id)"
                                         >
                                             Cancel
                                         </button>
