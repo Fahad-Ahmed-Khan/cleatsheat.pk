@@ -14,7 +14,6 @@ return [
         'postex' => env('POSTEX_API_BASE', 'https://postex.pk'),
         'trax' => [
             'testing' => env('TRAX_API_BASE_TESTING', 'https://app.sonic.pk'),
-            // API routes live on app.sonic.pk; sonic.pk is the marketing/login host and may timeout from some servers.
             'live' => env('TRAX_API_BASE_LIVE', 'https://sonic.pk'),
         ],
         'runcourier' => env('RUN_COURIER_API_BASE', 'https://portal.runcourier.com'),

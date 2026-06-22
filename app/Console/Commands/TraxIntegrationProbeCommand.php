@@ -9,16 +9,17 @@ use App\Models\Courier;
 use App\Models\CourierAccount;
 use App\Models\ShippingSetting;
 use Illuminate\Console\Command;
+use Illuminate\Http\Client\ConnectionException;
 
 class TraxIntegrationProbeCommand extends Command
 {
     protected $signature = 'trax:probe
-        {step=settings : settings | cities | pickup-addresses | track | rates}
+        {step=settings : settings | connectivity | cities | pickup-addresses | track | rates}
         {tracking? : Tracking number (required for track)}
         {--token= : Override API key (otherwise default Trax courier account)}
         {--env= : Override environment testing|live (otherwise account setting)}';
 
-    protected $description = 'Probe Trax (Sonic) integration: local settings, cities, pickup addresses, tracking, and rate calculation.';
+    protected $description = 'Probe Trax (Sonic) integration: local settings, connectivity, cities, pickup addresses, tracking, and rate calculation.';
 
     public function handle(): int
     {
@@ -26,6 +27,7 @@ class TraxIntegrationProbeCommand extends Command
 
         return match ($step) {
             'settings' => $this->runSettings(),
+            'connectivity' => $this->runConnectivity(),
             'cities' => $this->runCities(),
             'pickup-addresses' => $this->runPickupAddresses(),
             'track' => $this->runTrack(),
@@ -36,7 +38,7 @@ class TraxIntegrationProbeCommand extends Command
 
     private function invalidStep(string $step): int
     {
-        $this->error("Unknown step \"{$step}\". Use: settings, cities, pickup-addresses, track, rates.");
+        $this->error("Unknown step \"{$step}\". Use: settings, connectivity, cities, pickup-addresses, track, rates.");
 
         return self::FAILURE;
     }
@@ -124,9 +126,82 @@ class TraxIntegrationProbeCommand extends Command
         }
 
         $this->newLine();
-        $this->comment('Next: php artisan trax:probe cities');
+        $this->comment('Next: php artisan trax:probe connectivity');
 
         return self::SUCCESS;
+    }
+
+    private function runConnectivity(): int
+    {
+        $account = $this->applyEnvOverride($this->resolveAccount());
+        if ($account === null) {
+            $this->error('No Trax courier account found.');
+
+            return self::FAILURE;
+        }
+
+        $base = TraxApiClient::resolvedBaseUrl($account);
+        $host = (string) parse_url($base, PHP_URL_HOST);
+        if ($host === '') {
+            $this->error('Could not parse host from base URL: '.$base);
+
+            return self::FAILURE;
+        }
+
+        $this->info('Trax (Sonic) — connectivity (no API key required for DNS/TCP)');
+        $this->line('  resolved base URL: '.$base);
+        $this->line('  host: '.$host);
+
+        $dnsStart = microtime(true);
+        $ip = gethostbyname($host);
+        $dnsMs = (int) round((microtime(true) - $dnsStart) * 1000);
+        if ($ip === $host) {
+            $this->error("  DNS: FAILED — could not resolve {$host}");
+        } else {
+            $this->line("  DNS: {$host} → {$ip} ({$dnsMs} ms)");
+        }
+
+        $tcpStart = microtime(true);
+        $errno = 0;
+        $errstr = '';
+        $socket = @fsockopen('ssl://'.$host, 443, $errno, $errstr, 8);
+        $tcpMs = (int) round((microtime(true) - $tcpStart) * 1000);
+        if ($socket === false) {
+            $this->error("  TCP 443: FAILED after {$tcpMs} ms — [{$errno}] {$errstr}");
+            $this->newLine();
+            $this->warn('Outbound HTTPS to Trax appears blocked or unreachable from this server.');
+            $this->comment('Contact Hostinger support or Trax — booking will fail until 443 to '.$host.' works.');
+
+            return self::FAILURE;
+        }
+
+        fclose($socket);
+        $this->line("  TCP 443: OK ({$tcpMs} ms)");
+
+        $token = $this->resolveToken($account);
+        if ($token === '') {
+            $this->warn('  HTTP: skipped (no API key)');
+
+            return self::SUCCESS;
+        }
+
+        $url = $base.'/api/cities';
+        $this->line('  HTTP GET: '.$url.' (8s connect / 15s total)');
+        $httpStart = microtime(true);
+
+        try {
+            $res = TraxApiClient::probeRequest($token)->get($url);
+        } catch (ConnectionException $e) {
+            $httpMs = (int) round((microtime(true) - $httpStart) * 1000);
+            $this->error('  HTTP: connection failed after '.$httpMs.' ms — '.$e->getMessage());
+
+            return self::FAILURE;
+        }
+
+        $httpMs = (int) round((microtime(true) - $httpStart) * 1000);
+        $this->line('  HTTP: '.$res->status().' ('.$httpMs.' ms)');
+
+        return $res->successful() ? self::SUCCESS : self::FAILURE;
     }
 
     private function runCities(): int
@@ -148,16 +223,34 @@ class TraxIntegrationProbeCommand extends Command
         $this->info('Trax (Sonic) — cities');
         $base = TraxApiClient::resolvedBaseUrl($account);
         $url = $base.'/api/cities';
-        $res = TraxApiClient::request($token)->get($url);
-        $this->line('  HTTP '.$res->status().' '.$url);
+        $this->line('  GET '.$url);
+        $this->line('  (8s connect / 15s timeout — use trax:probe connectivity if this hangs)');
+
+        $start = microtime(true);
+
+        try {
+            $res = TraxApiClient::probeRequest($token)->get($url);
+        } catch (ConnectionException $e) {
+            $elapsed = round(microtime(true) - $start, 1);
+            $this->error("  Connection failed after {$elapsed}s: ".$e->getMessage());
+            $this->newLine();
+            $this->warn('Shipment booking will also fail until this server can reach '.$base);
+            $this->comment('Diagnostics: php artisan trax:probe connectivity --env='.($account->credentials['api_environment'] ?? 'testing'));
+            $this->comment('Workaround (cities only): fetch cities locally, upload JSON, run php artisan trax:import-cities /path/to/cities.json');
+
+            return self::FAILURE;
+        }
+
+        $elapsed = round(microtime(true) - $start, 1);
+        $this->line('  HTTP '.$res->status().' ('.$elapsed.'s) '.$url);
         if (! $res->successful()) {
             $this->line((string) $res->body());
 
             return self::FAILURE;
         }
 
-        // Reuse resolver parsing (also caches on success).
-        $rows = TraxCityResolver::cities($account, $token);
+        $rows = TraxCityResolver::parseCitiesResponse($res->json());
+        TraxCityResolver::seedCache($account, $rows);
         $this->line('  parsed count: '.count($rows));
         foreach (array_slice($rows, 0, 25) as $r) {
             $this->line('  - '.$r['id'].' '.$r['name']);
@@ -189,8 +282,20 @@ class TraxIntegrationProbeCommand extends Command
         $url = $base.'/api/pickup_addresses';
 
         $this->info('Trax (Sonic) — pickup addresses');
-        $res = TraxApiClient::request($token)->get($url);
-        $this->line('  HTTP '.$res->status().' '.$url);
+        $this->line('  GET '.$url);
+        $start = microtime(true);
+
+        try {
+            $res = TraxApiClient::probeRequest($token)->get($url);
+        } catch (ConnectionException $e) {
+            $elapsed = round(microtime(true) - $start, 1);
+            $this->error("  Connection failed after {$elapsed}s: ".$e->getMessage());
+
+            return self::FAILURE;
+        }
+
+        $elapsed = round(microtime(true) - $start, 1);
+        $this->line('  HTTP '.$res->status().' ('.$elapsed.'s) '.$url);
         if (! $res->successful()) {
             $this->error('HTTP '.$res->status().' from '.$url);
             $this->line((string) $res->body());

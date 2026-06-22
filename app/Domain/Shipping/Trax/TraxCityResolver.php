@@ -62,6 +62,25 @@ final class TraxCityResolver
         return $out;
     }
 
+    /**
+     * @param  array<int, array{id:int,name:string}>  $rows
+     */
+    public static function seedCache(CourierAccount $account, array $rows): int
+    {
+        if ($rows === []) {
+            return 0;
+        }
+
+        $base = TraxApiClient::resolvedBaseUrl($account);
+        $cacheKey = self::cacheKey($account, $base);
+        $staleKey = self::staleCacheKey($account, $base);
+
+        Cache::put($cacheKey, $rows, now()->addHours(self::CACHE_TTL_HOURS));
+        Cache::put($staleKey, $rows, now()->addDays(self::STALE_CACHE_DAYS));
+
+        return count($rows);
+    }
+
     public static function resolveCityId(CourierAccount $account, string $token, string $cityName): ?int
     {
         $needle = self::normalize($cityName);

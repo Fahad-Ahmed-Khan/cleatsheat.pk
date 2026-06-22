@@ -67,7 +67,7 @@ class TraxCourierAdapter extends AbstractCourierAdapter
                 false,
                 raw: ['receiver_city' => $cityName, 'api_base' => TraxApiClient::resolvedBaseUrl($account)],
                 errorMessage: 'Trax booking failed: could not load Sonic city list (network timeout or API unreachable). '
-                    .'On the server run: php artisan trax:probe cities — and set TRAX_API_BASE_LIVE=https://app.sonic.pk if sonic.pk times out.',
+                    .'On the server run: php artisan trax:probe connectivity --env=live',
             );
         }
         $cityId = TraxCityResolver::resolveCityId($account, $token, $cityName);
