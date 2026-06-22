@@ -11,9 +11,10 @@ return [
         'leopards' => env('LEOPARDS_API_BASE', 'https://api.leopardscourier.com.pk/api/v1'),
         'mp' => env('MP_API_BASE', 'https://api.mulphilogistics.com'),
         // Host only (e.g. https://api.postex.pk). If you paste .../services/integration/api from docs, it is normalized automatically.
-        'postex' => env('POSTEX_API_BASE', 'https://api.postex.pk'),
+        'postex' => env('POSTEX_API_BASE', 'https://postex.pk'),
         'trax' => [
             'testing' => env('TRAX_API_BASE_TESTING', 'https://app.sonic.pk'),
+            // API routes live on app.sonic.pk; sonic.pk is the marketing/login host and may timeout from some servers.
             'live' => env('TRAX_API_BASE_LIVE', 'https://sonic.pk'),
         ],
         'runcourier' => env('RUN_COURIER_API_BASE', 'https://portal.runcourier.com'),

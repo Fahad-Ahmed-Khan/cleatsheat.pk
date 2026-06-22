@@ -28,8 +28,9 @@ final class TraxApiClient
         // allow storing "Bearer ..." directly in the DB; we won't override it.
         $headerValue = str_contains($trimmed, ' ') ? $trimmed : $trimmed;
 
-        return Http::retry(3, 250, null, false)
-            ->timeout(45)
+        return Http::retry(3, 500, null, false)
+            ->connectTimeout(25)
+            ->timeout(60)
             ->acceptJson()
             ->asJson()
             ->withHeaders([
@@ -37,4 +38,3 @@ final class TraxApiClient
             ]);
     }
 }
-

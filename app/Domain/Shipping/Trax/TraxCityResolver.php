@@ -3,17 +3,24 @@
 namespace App\Domain\Shipping\Trax;
 
 use App\Models\CourierAccount;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 final class TraxCityResolver
 {
+    private const CACHE_TTL_HOURS = 24;
+
+    private const STALE_CACHE_DAYS = 7;
+
     /**
      * @return array<int, array{id:int,name:string}>
      */
     public static function cities(CourierAccount $account, string $token): array
     {
         $base = TraxApiClient::resolvedBaseUrl($account);
-        $cacheKey = 'trax:cities:'.$account->id.':'.md5($base);
+        $cacheKey = self::cacheKey($account, $base);
+        $staleKey = self::staleCacheKey($account, $base);
 
         $cached = Cache::get($cacheKey);
         if (is_array($cached)) {
@@ -22,42 +29,35 @@ final class TraxCityResolver
         }
 
         $url = $base.'/api/cities';
-        $res = TraxApiClient::request($token)->get($url);
+
+        try {
+            $res = TraxApiClient::request($token)->get($url);
+        } catch (ConnectionException $e) {
+            Log::warning('trax.cities_connection_failed', [
+                'url' => $url,
+                'account_id' => $account->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            $stale = Cache::get($staleKey);
+            if (is_array($stale) && $stale !== []) {
+                return $stale;
+            }
+
+            return [];
+        }
+
         if (! $res->successful()) {
-            // Do not cache failures (bad token / blocked / downtime) — that would break
-            // bookings for up to 24 hours even after credentials are fixed.
             return [];
         }
 
-        $body = $res->json();
-        if (! is_array($body)) {
+        $out = self::parseCitiesResponse($res->json());
+        if ($out === []) {
             return [];
         }
 
-        $rows = $body['cities'] ?? [];
-        if (! is_array($rows)) {
-            return [];
-        }
-
-        $out = [];
-        foreach ($rows as $r) {
-            if (! is_array($r)) {
-                continue;
-            }
-            $id = $r['id'] ?? null;
-            $name = $r['name'] ?? null;
-            if (! is_int($id) && ! (is_string($id) && ctype_digit($id))) {
-                continue;
-            }
-            $id = (int) $id;
-            $name = trim((string) $name);
-            if ($id <= 0 || $name === '') {
-                continue;
-            }
-            $out[] = ['id' => $id, 'name' => $name];
-        }
-
-        Cache::put($cacheKey, $out, now()->addHours(24));
+        Cache::put($cacheKey, $out, now()->addHours(self::CACHE_TTL_HOURS));
+        Cache::put($staleKey, $out, now()->addDays(self::STALE_CACHE_DAYS));
 
         return $out;
     }
@@ -97,6 +97,51 @@ final class TraxCityResolver
         return null;
     }
 
+    /**
+     * @return array<int, array{id:int,name:string}>
+     */
+    public static function parseCitiesResponse(mixed $body): array
+    {
+        if (! is_array($body)) {
+            return [];
+        }
+
+        $rows = $body['cities'] ?? [];
+        if (! is_array($rows)) {
+            return [];
+        }
+
+        $out = [];
+        foreach ($rows as $r) {
+            if (! is_array($r)) {
+                continue;
+            }
+            $id = $r['id'] ?? null;
+            $name = $r['name'] ?? null;
+            if (! is_int($id) && ! (is_string($id) && ctype_digit($id))) {
+                continue;
+            }
+            $id = (int) $id;
+            $name = trim((string) $name);
+            if ($id <= 0 || $name === '') {
+                continue;
+            }
+            $out[] = ['id' => $id, 'name' => $name];
+        }
+
+        return $out;
+    }
+
+    private static function cacheKey(CourierAccount $account, string $base): string
+    {
+        return 'trax:cities:'.$account->id.':'.md5($base);
+    }
+
+    private static function staleCacheKey(CourierAccount $account, string $base): string
+    {
+        return 'trax:cities:stale:'.$account->id.':'.md5($base);
+    }
+
     private static function normalize(string $s): string
     {
         $s = strtolower(trim($s));
@@ -106,4 +151,3 @@ final class TraxCityResolver
         return trim($s);
     }
 }
-
