@@ -52,7 +52,11 @@ return [
     'send_default_pii' => env('SENTRY_SEND_DEFAULT_PII', false),
 
     // @see: https://docs.sentry.io/platforms/php/guides/laravel/configuration/options/#ignore_exceptions
-    // 'ignore_exceptions' => [],
+    // Queue listener timeouts and OOM while building Sentry frames can recurse into huge logs.
+    'ignore_exceptions' => [
+        Symfony\Component\Process\Exception\ProcessTimedOutException::class,
+        Symfony\Component\ErrorHandler\Error\FatalError::class,
+    ],
 
     // @see: https://docs.sentry.io/platforms/php/guides/laravel/configuration/options/#ignore_transactions
     'ignore_transactions' => [
