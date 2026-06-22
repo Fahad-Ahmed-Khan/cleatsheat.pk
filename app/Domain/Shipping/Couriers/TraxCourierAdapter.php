@@ -165,7 +165,7 @@ class TraxCourierAdapter extends AbstractCourierAdapter
         }
 
         try {
-            $response = TraxApiClient::request($token)->post($url, $payload);
+            ['response' => $response, 'url' => $url] = TraxApiClient::post($account, $token, '/api/shipment/book', $payload);
             $body = $response->json() ?: [];
 
             $this->logger->log($courier, $account, $shipment, 'request', $url, $response->status(), $payload, is_array($body) ? $body : [], null);
@@ -214,14 +214,13 @@ class TraxCourierAdapter extends AbstractCourierAdapter
         }
 
         $base = TraxApiClient::resolvedBaseUrl($account);
-        $url = $base.'/api/shipment/track';
         $payload = [
             'tracking_number' => (string) ($shipment->tracking_number ?? ''),
             'type' => 0,
         ];
 
         try {
-            $response = TraxApiClient::request($token)->get($url, $payload);
+            ['response' => $response, 'url' => $url] = TraxApiClient::get($account, $token, '/api/shipment/track', $payload);
             $body = $response->json() ?: [];
 
             $this->logger->log($courier, $account, $shipment, 'poll', $url, $response->status(), $payload, is_array($body) ? $body : [], null);

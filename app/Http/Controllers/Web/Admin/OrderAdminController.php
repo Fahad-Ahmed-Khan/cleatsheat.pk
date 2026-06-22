@@ -675,11 +675,9 @@ class OrderAdminController extends Controller
         $token = TraxTokenResolver::forCourierAccount($shipment->courierAccount);
         abort_if($token === '', 422, 'Trax API key is not configured. Add it under Admin → Shipping settings for the Trax courier account.');
 
-        $base = TraxApiClient::resolvedBaseUrl($shipment->courierAccount);
-        $url = $base.'/api/shipment/air_waybill';
         $tracking = (string) $shipment->tracking_number;
 
-        $res = TraxApiClient::request($token)->get($url, [
+        ['response' => $res] = TraxApiClient::get($shipment->courierAccount, $token, '/api/shipment/air_waybill', [
             'tracking_number' => $tracking,
             'type' => 1, // pdf
         ]);
@@ -716,10 +714,7 @@ class OrderAdminController extends Controller
 
         $trackingNumbers = $shipments->pluck('tracking_number')->filter()->unique()->values()->take(25)->all();
 
-        $base = TraxApiClient::resolvedBaseUrl($first->courierAccount);
-        $createUrl = $base.'/api/receiving_sheet/create';
-
-        $createRes = TraxApiClient::request($token)->post($createUrl, [
+        ['response' => $createRes] = TraxApiClient::post($first->courierAccount, $token, '/api/receiving_sheet/create', [
             'tracking_numbers' => $trackingNumbers,
         ]);
         $createBody = $createRes->json() ?: [];
@@ -733,8 +728,7 @@ class OrderAdminController extends Controller
         abort_if(! is_int($sheetId) && ! (is_string($sheetId) && ctype_digit($sheetId)), 502, 'Trax did not return receiving_sheet_id.');
         $sheetId = (int) $sheetId;
 
-        $viewUrl = $base.'/api/receiving_sheet/view';
-        $viewRes = TraxApiClient::request($token)->get($viewUrl, [
+        ['response' => $viewRes] = TraxApiClient::get($first->courierAccount, $token, '/api/receiving_sheet/view', [
             'receiving_sheet_id' => $sheetId,
             'type' => 1, // pdf
         ]);
@@ -771,11 +765,9 @@ class OrderAdminController extends Controller
             return redirect()->route('admin.orders.show', $order)->with('error', 'Trax API key is not configured. Add it under Admin → Shipping settings for the Trax courier account.');
         }
 
-        $base = TraxApiClient::resolvedBaseUrl($shipment->courierAccount);
-        $url = $base.'/api/shipment/cancel';
         $payload = ['tracking_number' => (string) $shipment->tracking_number];
 
-        $res = TraxApiClient::request($token)->post($url, $payload);
+        ['response' => $res] = TraxApiClient::post($shipment->courierAccount, $token, '/api/shipment/cancel', $payload);
         $body = $res->json() ?: [];
         if (! $res->successful()) {
             return redirect()

@@ -18,30 +18,27 @@ final class TraxCityResolver
      */
     public static function cities(CourierAccount $account, string $token): array
     {
-        $base = TraxApiClient::resolvedBaseUrl($account);
-        $cacheKey = self::cacheKey($account, $base);
-        $staleKey = self::staleCacheKey($account, $base);
-
-        $cached = Cache::get($cacheKey);
-        if (is_array($cached)) {
-            /** @var array<int, array{id:int,name:string}> $cached */
-            return $cached;
+        foreach (TraxApiClient::baseUrlCandidates($account) as $base) {
+            $cached = Cache::get(self::cacheKey($account, $base));
+            if (is_array($cached)) {
+                /** @var array<int, array{id:int,name:string}> $cached */
+                return $cached;
+            }
         }
 
-        $url = $base.'/api/cities';
-
         try {
-            $res = TraxApiClient::request($token)->get($url);
+            ['response' => $res, 'base' => $base] = TraxApiClient::get($account, $token, '/api/cities');
         } catch (ConnectionException $e) {
             Log::warning('trax.cities_connection_failed', [
-                'url' => $url,
                 'account_id' => $account->id,
                 'error' => $e->getMessage(),
             ]);
 
-            $stale = Cache::get($staleKey);
-            if (is_array($stale) && $stale !== []) {
-                return $stale;
+            foreach (TraxApiClient::baseUrlCandidates($account) as $candidate) {
+                $stale = Cache::get(self::staleCacheKey($account, $candidate));
+                if (is_array($stale) && $stale !== []) {
+                    return $stale;
+                }
             }
 
             return [];
@@ -56,6 +53,8 @@ final class TraxCityResolver
             return [];
         }
 
+        $cacheKey = self::cacheKey($account, $base);
+        $staleKey = self::staleCacheKey($account, $base);
         Cache::put($cacheKey, $out, now()->addHours(self::CACHE_TTL_HOURS));
         Cache::put($staleKey, $out, now()->addDays(self::STALE_CACHE_DAYS));
 
@@ -71,12 +70,12 @@ final class TraxCityResolver
             return 0;
         }
 
-        $base = TraxApiClient::resolvedBaseUrl($account);
-        $cacheKey = self::cacheKey($account, $base);
-        $staleKey = self::staleCacheKey($account, $base);
-
-        Cache::put($cacheKey, $rows, now()->addHours(self::CACHE_TTL_HOURS));
-        Cache::put($staleKey, $rows, now()->addDays(self::STALE_CACHE_DAYS));
+        foreach (TraxApiClient::baseUrlCandidates($account) as $candidate) {
+            $cacheKey = self::cacheKey($account, $candidate);
+            $staleKey = self::staleCacheKey($account, $candidate);
+            Cache::put($cacheKey, $rows, now()->addHours(self::CACHE_TTL_HOURS));
+            Cache::put($staleKey, $rows, now()->addDays(self::STALE_CACHE_DAYS));
+        }
 
         return count($rows);
     }
