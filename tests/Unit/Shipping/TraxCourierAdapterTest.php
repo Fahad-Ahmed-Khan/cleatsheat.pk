@@ -99,8 +99,160 @@ class TraxCourierAdapterTest extends TestCase
                 && ($req['pickup_address_id'] ?? null) === 3015
                 && ($req['consignee_city_id'] ?? null) === 202
                 && ($req['shipping_mode_id'] ?? null) === 1
-                && ($req['charges_mode_id'] ?? null) === 4;
+                && ($req['charges_mode_id'] ?? null) === 4
+                && array_key_exists('consignee_email_address', $req->data())
+                && ! array_key_exists('consignee_phone_number_2', $req->data());
         });
+    }
+
+    public function test_trax_booking_omits_optional_fields_when_empty(): void
+    {
+        config(['shipping.sandbox' => false]);
+        config(['shipping.endpoints.trax.testing' => 'https://app.sonic.pk']);
+
+        $settings = ShippingSetting::current();
+        $settings->trax_pickup_address_id = 3015;
+        $settings->save();
+
+        $courier = Courier::query()->where('code', 'trax')->firstOrFail();
+        $account = CourierAccount::query()->where('courier_id', $courier->id)->firstOrFail();
+        $account->credentials = ['api_token' => 'tok-123', 'api_environment' => 'testing'];
+        $account->save();
+
+        $order = Order::query()->create([
+            'order_number' => 'TR-TRX-03',
+            'guest_email' => null,
+            'status' => OrderStatus::Processing,
+            'payment_status' => PaymentStatus::Pending,
+            'payment_gateway' => 'cod',
+            'subtotal' => '1000',
+            'discount_total' => '0',
+            'shipping_total' => '200',
+            'cod_fee' => '0',
+            'grand_total' => '1200',
+            'shipping_address_snapshot' => [
+                'full_name' => 'Buyer',
+                'phone' => '03001234567',
+                'line1' => 'Street 1',
+                'city' => 'Karachi',
+            ],
+            'preferred_courier_id' => $courier->id,
+            'courier_assignment' => 'auto',
+        ]);
+
+        $shipment = Shipment::query()->create([
+            'order_id' => $order->id,
+            'courier_id' => $courier->id,
+            'courier_account_id' => $account->id,
+            'status' => ShipmentStatus::Pending,
+            'cod_amount' => '1200',
+            'weight_kg' => '1.000',
+            'receiver_snapshot' => $order->shipping_address_snapshot,
+        ]);
+        $shipment->load(['order', 'order.items']);
+
+        Http::fake([
+            'https://app.sonic.pk/api/cities' => Http::response([
+                'status' => 0,
+                'cities' => [
+                    ['id' => 202, 'name' => 'Karachi', 'pickup' => true],
+                ],
+            ], 200),
+            'https://app.sonic.pk/api/shipment/book' => Http::response([
+                'status' => 0,
+                'message' => 'Shipment has been Booked!',
+                'tracking number' => '101101000406',
+            ], 200),
+        ]);
+
+        $logger = $this->createMock(CourierApiLogger::class);
+        $adapter = new TraxCourierAdapter($logger);
+
+        $result = $adapter->book($shipment, $courier, $account);
+
+        $this->assertTrue($result->success);
+
+        Http::assertSent(function ($req) {
+            $data = $req->data();
+
+            return $req->url() === 'https://app.sonic.pk/api/shipment/book'
+                && ! array_key_exists('consignee_email_address', $data)
+                && ! array_key_exists('consignee_phone_number_2', $data)
+                && ! array_key_exists('special_instructions', $data);
+        });
+    }
+
+    public function test_trax_booking_surfaces_field_validation_errors(): void
+    {
+        config(['shipping.sandbox' => false]);
+        config(['shipping.endpoints.trax.testing' => 'https://app.sonic.pk']);
+
+        $settings = ShippingSetting::current();
+        $settings->trax_pickup_address_id = 3015;
+        $settings->save();
+
+        $courier = Courier::query()->where('code', 'trax')->firstOrFail();
+        $account = CourierAccount::query()->where('courier_id', $courier->id)->firstOrFail();
+        $account->credentials = ['api_token' => 'tok-123', 'api_environment' => 'testing'];
+        $account->save();
+
+        $order = Order::query()->create([
+            'order_number' => 'TR-TRX-04',
+            'guest_email' => 'buyer@example.com',
+            'status' => OrderStatus::Processing,
+            'payment_status' => PaymentStatus::Pending,
+            'payment_gateway' => 'cod',
+            'subtotal' => '1000',
+            'discount_total' => '0',
+            'shipping_total' => '200',
+            'cod_fee' => '0',
+            'grand_total' => '1200',
+            'shipping_address_snapshot' => [
+                'full_name' => 'Buyer',
+                'phone' => '03001234567',
+                'line1' => 'Street 1',
+                'city' => 'Karachi',
+            ],
+            'preferred_courier_id' => $courier->id,
+            'courier_assignment' => 'auto',
+        ]);
+
+        $shipment = Shipment::query()->create([
+            'order_id' => $order->id,
+            'courier_id' => $courier->id,
+            'courier_account_id' => $account->id,
+            'status' => ShipmentStatus::Pending,
+            'cod_amount' => '1200',
+            'weight_kg' => '1.000',
+            'receiver_snapshot' => $order->shipping_address_snapshot,
+        ]);
+        $shipment->load(['order', 'order.items']);
+
+        Http::fake([
+            'https://app.sonic.pk/api/cities' => Http::response([
+                'status' => 0,
+                'cities' => [
+                    ['id' => 202, 'name' => 'Karachi', 'pickup' => true],
+                ],
+            ], 200),
+            'https://app.sonic.pk/api/shipment/book' => Http::response([
+                'status' => 1,
+                'message' => 'Error(s) in Input',
+                'errors' => [
+                    'consignee_email_address' => [
+                        'Consignee Email Address is Optional but cannot be Empty if Present.',
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $logger = $this->createMock(CourierApiLogger::class);
+        $adapter = new TraxCourierAdapter($logger);
+
+        $result = $adapter->book($shipment, $courier, $account);
+
+        $this->assertFalse($result->success);
+        $this->assertStringContainsString('consignee email address', strtolower($result->errorMessage ?? ''));
     }
 
     public function test_trax_tracking_maps_delivered_status_text(): void

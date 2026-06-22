@@ -132,18 +132,14 @@ class TraxCourierAdapter extends AbstractCourierAdapter
             'consignee_name' => (string) ($recv['full_name'] ?? 'Customer'),
             'consignee_address' => (string) ($recv['line1'] ?? ''),
             'consignee_phone_number_1' => (string) ($recv['phone'] ?? ''),
-            'consignee_phone_number_2' => (string) ($recv['phone2'] ?? ''),
-            'consignee_email_address' => (string) ($recv['email'] ?? $order->guest_email ?? ''),
             'order_id' => (string) $order->order_number,
             'item_product_type_id' => $itemTypeId,
             'item_description' => $detail !== '' ? $detail : 'Order '.$order->order_number,
             'item_quantity' => $totalQty,
             'item_insurance' => 0,
             'pickup_date' => now()->format('Y-m-d'),
-            'special_instructions' => (string) ($order->customer_notes ?? ''),
             'estimated_weight' => $weight,
             'shipping_mode_id' => $shippingModeId,
-            'same_day_timing_id' => null,
             'amount' => $codAmount,
             'payment_mode_id' => $isCod ? 1 : 4,
             'charges_mode_id' => $chargesModeId,
@@ -151,7 +147,21 @@ class TraxCourierAdapter extends AbstractCourierAdapter
             'open_shipment' => 0,
             'pieces_quantity' => 1,
         ];
-        $payload = array_filter($payload, fn ($v) => $v !== null);
+
+        $phone2 = trim((string) ($recv['phone2'] ?? ''));
+        if ($phone2 !== '') {
+            $payload['consignee_phone_number_2'] = $phone2;
+        }
+
+        $email = trim((string) ($recv['email'] ?? $order->guest_email ?? ''));
+        if ($email !== '') {
+            $payload['consignee_email_address'] = $email;
+        }
+
+        $notes = trim((string) ($order->customer_notes ?? ''));
+        if ($notes !== '') {
+            $payload['special_instructions'] = $notes;
+        }
 
         try {
             $response = TraxApiClient::request($token)->post($url, $payload);
@@ -170,7 +180,7 @@ class TraxCourierAdapter extends AbstractCourierAdapter
             }
 
             if (($body['status'] ?? null) !== 0 && ($body['status'] ?? null) !== '0') {
-                return new BookingResult(false, raw: $body, errorMessage: (string) ($body['message'] ?? 'Trax booking failed'));
+                return new BookingResult(false, raw: $body, errorMessage: self::formatBookingErrorMessage($body));
             }
 
             $tracking = (string) ($body['tracking number'] ?? $body['tracking_number'] ?? '');
@@ -233,5 +243,42 @@ class TraxCourierAdapter extends AbstractCourierAdapter
             return new TrackingResult(status: $shipment->status, raw: [], publicMessage: $e->getMessage());
         }
     }
-}
 
+    /**
+     * @param  array<string, mixed>  $body
+     */
+    private static function formatBookingErrorMessage(array $body): string
+    {
+        $message = trim((string) ($body['message'] ?? 'Trax booking failed'));
+        $errors = $body['errors'] ?? null;
+        if (! is_array($errors) || $errors === []) {
+            return $message !== '' ? $message : 'Trax booking failed';
+        }
+
+        $parts = [];
+        foreach ($errors as $field => $messages) {
+            $label = str_replace('_', ' ', (string) $field);
+            if (is_array($messages)) {
+                foreach ($messages as $msg) {
+                    $text = trim((string) $msg);
+                    if ($text !== '') {
+                        $parts[] = $label.': '.$text;
+                    }
+                }
+
+                continue;
+            }
+
+            $text = trim((string) $messages);
+            if ($text !== '') {
+                $parts[] = $label.': '.$text;
+            }
+        }
+
+        if ($parts === []) {
+            return $message !== '' ? $message : 'Trax booking failed';
+        }
+
+        return $message.': '.implode('; ', $parts);
+    }
+}
