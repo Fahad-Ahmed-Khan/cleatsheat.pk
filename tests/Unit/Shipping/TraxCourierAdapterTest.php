@@ -33,24 +33,10 @@ class TraxCourierAdapterTest extends TestCase
         $settings->trax_delivery_type_id = 1;
         $settings->save();
 
-        $courier = Courier::query()->create([
-            'code' => 'trax',
-            'name' => 'Trax',
-            'adapter' => 'trax',
-            'is_active' => true,
-            'sort_order' => 0,
-        ]);
-
-        $account = CourierAccount::query()->create([
-            'courier_id' => $courier->id,
-            'name' => 'Main',
-            'credentials' => ['api_token' => 'tok-123', 'api_environment' => 'testing'],
-            'service_code' => null,
-            'cod_allowed' => true,
-            'city_restrictions' => null,
-            'is_active' => true,
-            'is_default' => true,
-        ]);
+        $courier = Courier::query()->where('code', 'trax')->firstOrFail();
+        $account = CourierAccount::query()->where('courier_id', $courier->id)->firstOrFail();
+        $account->credentials = ['api_token' => 'tok-123', 'api_environment' => 'testing'];
+        $account->save();
 
         $order = Order::query()->create([
             'order_number' => 'TR-TRX-01',
@@ -122,24 +108,10 @@ class TraxCourierAdapterTest extends TestCase
         config(['shipping.sandbox' => false]);
         config(['shipping.endpoints.trax.testing' => 'https://app.sonic.pk']);
 
-        $courier = Courier::query()->create([
-            'code' => 'trax',
-            'name' => 'Trax',
-            'adapter' => 'trax',
-            'is_active' => true,
-            'sort_order' => 0,
-        ]);
-
-        $account = CourierAccount::query()->create([
-            'courier_id' => $courier->id,
-            'name' => 'Main',
-            'credentials' => ['api_token' => 'tok-123', 'api_environment' => 'testing'],
-            'service_code' => null,
-            'cod_allowed' => true,
-            'city_restrictions' => null,
-            'is_active' => true,
-            'is_default' => true,
-        ]);
+        $courier = Courier::query()->where('code', 'trax')->firstOrFail();
+        $account = CourierAccount::query()->where('courier_id', $courier->id)->firstOrFail();
+        $account->credentials = ['api_token' => 'tok-123', 'api_environment' => 'testing'];
+        $account->save();
 
         $order = Order::query()->create([
             'order_number' => 'TR-TRX-02',
