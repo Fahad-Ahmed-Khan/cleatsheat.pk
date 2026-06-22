@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ContentPost;
 use App\Models\MarketingSetting;
 use App\Support\Seo\SeoPresenter;
+use App\Support\Storage\PublicAssetUrl;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -54,9 +55,10 @@ class JournalController extends Controller
         $canonical = $seo->canonicalJournalPost($post);
         $title = ($post->meta_title ?: $post->title).' — '.config('app.name');
         $description = $post->meta_description ?? (string) ($post->excerpt ?? '');
+        $featuredImage = PublicAssetUrl::resolve($post->featured_image_url);
 
         $schemas = [
-            $seo->articleJsonLd($post, $canonical, $m?->default_og_image_url),
+            $seo->articleJsonLd($post, $canonical, $featuredImage ?: $m?->default_og_image_url),
             $seo->breadcrumbJsonLd([
                 ['name' => 'Home', 'url' => $seo->canonicalHome()],
                 ['name' => 'Journal', 'url' => $seo->canonicalJournalIndex()],
@@ -70,6 +72,7 @@ class JournalController extends Controller
             'canonical' => $canonical,
             'og_title' => $post->meta_title ?: $post->title,
             'og_description' => $description,
+            'og_image' => $featuredImage,
             'og_type' => 'article',
             'schema_json' => $seo->encodeSchemas($schemas),
         ], $m?->default_og_image_url, $m?->twitter_site);

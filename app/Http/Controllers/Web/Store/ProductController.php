@@ -24,9 +24,13 @@ class ProductController extends Controller
         $chart = $sizeCharts->resolveForProduct($product);
 
         $canonical = $seo->canonicalProduct($product);
-        $primaryImage = $product->images->first()?->path;
+        $primaryImageModel = $product->images->first();
+        $primaryImage = $primaryImageModel?->path;
         $description = $seo->productDescriptionForSeo($product);
         $m = MarketingSetting::query()->first();
+        $lowestPrice = $product->variants
+            ->where('is_active', true)
+            ->min(fn ($v) => (float) $v->price);
 
         $crumbs = [
             ['name' => 'Home', 'url' => $seo->canonicalHome()],
@@ -52,6 +56,10 @@ class ProductController extends Controller
             'og_description' => $description,
             'canonical' => $canonical,
             'og_image' => $primaryImage,
+            'og_image_width' => $primaryImageModel?->width,
+            'og_image_height' => $primaryImageModel?->height,
+            'product_price' => $lowestPrice !== null ? (string) $lowestPrice : null,
+            'product_price_currency' => 'PKR',
             'og_type' => 'product',
             'twitter_card' => 'summary_large_image',
             'schema_json' => $seo->encodeSchemas($schemas),
@@ -92,6 +100,7 @@ class ProductController extends Controller
 
         return Inertia::render('Store/Product', [
             'product' => (new ProductResource($product))->resolve(),
+            'breadcrumbs' => $crumbs,
             'reviews' => $product->reviews->map(fn ($r) => [
                 'id' => $r->id,
                 'author_display' => $r->author_display,

@@ -43,6 +43,9 @@ class CategoryController extends Controller
             'title' => $title,
             'description' => $description,
             'canonical' => $canonical,
+            'robots' => $seo->listingShouldNoindex($filters, $products->currentPage())
+                ? 'noindex, follow'
+                : null,
             'og_title' => $category->meta_title ?: $category->name,
             'og_description' => $description,
             'og_image' => $ogImage,

@@ -1,14 +1,28 @@
 <!DOCTYPE html>
 @php
+    use App\Models\StorefrontSetting;
     use App\Support\Seo\LcpPreloadUrl;
+    use App\Support\Storage\PublicAssetUrl;
+    use Illuminate\Support\Facades\Schema;
+
     $lcpImage = isset($page) && is_array($page) ? LcpPreloadUrl::fromInertiaPage($page) : null;
     $appOrigin = rtrim((string) config('app.url'), '/');
+    $faviconHref = asset('favicon.ico');
+    if (Schema::hasTable('storefront_settings')) {
+        $storedFavicon = StorefrontSetting::query()->value('favicon_url');
+        $resolvedFavicon = PublicAssetUrl::resolve($storedFavicon);
+        if ($resolvedFavicon) {
+            $faviconHref = $resolvedFavicon;
+        }
+    }
 @endphp
 <html lang="{{ config('app.html_lang', 'en-PK') }}">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
+
+        <link rel="icon" href="{{ $faviconHref }}">
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
 

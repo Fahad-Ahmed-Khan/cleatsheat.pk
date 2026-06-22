@@ -22,6 +22,7 @@ class StoreContentPostRequest extends FormRequest
             'meta_title' => ['nullable', 'string', 'max:255'],
             'meta_description' => ['nullable', 'string', 'max:512'],
             'excerpt' => ['nullable', 'string', 'max:2000'],
+            'featured_image_url' => ['nullable', 'string', 'max:1024'],
             'body' => ['nullable', 'string'],
             'pillar_keyword' => ['nullable', 'string', 'max:128'],
             'is_published' => ['boolean'],

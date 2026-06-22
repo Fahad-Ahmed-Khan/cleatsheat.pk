@@ -13,6 +13,7 @@ class ContentPost extends Model
         'meta_title',
         'meta_description',
         'excerpt',
+        'featured_image_url',
         'body',
         'pillar_keyword',
         'is_published',

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Seo;
 
+use Database\Seeders\DemoCatalogSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -16,7 +17,11 @@ class RobotsAndSitemapTest extends TestCase
         $this->get('/robots.txt')
             ->assertOk()
             ->assertHeader('Content-Type', 'text/plain; charset=UTF-8')
-            ->assertSee('Sitemap: '.$base.'/sitemap.xml', false);
+            ->assertSee('Sitemap: '.$base.'/sitemap.xml', false)
+            ->assertSee('Disallow: /admin', false)
+            ->assertSee('Disallow: /account', false)
+            ->assertSee('Disallow: /cart', false)
+            ->assertSee('Disallow: /checkout', false);
     }
 
     public function test_sitemap_xml_lists_home_shop_journal_and_static_pages(): void
@@ -59,5 +64,26 @@ class RobotsAndSitemapTest extends TestCase
                 ->component('Store/StaticPage')
                 ->where('slug', 'contact')
                 ->has('seo.schema_json'));
+    }
+
+    public function test_sitemap_uses_index_when_url_count_exceeds_threshold(): void
+    {
+        config([
+            'seo.sitemap_index_threshold' => 5,
+            'seo.sitemap_chunk_size' => 2,
+        ]);
+
+        $this->seed(DemoCatalogSeeder::class);
+
+        $base = rtrim((string) config('app.url'), '/');
+
+        $this->get('/sitemap.xml')
+            ->assertOk()
+            ->assertSee('<sitemapindex', false)
+            ->assertSee($base.'/sitemap/products-1.xml', false);
+
+        $this->get('/sitemap/products-1.xml')
+            ->assertOk()
+            ->assertSee($base.'/p/', false);
     }
 }

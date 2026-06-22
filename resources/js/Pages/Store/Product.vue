@@ -9,11 +9,12 @@ import StoreTrustStrip from '@/Components/Store/StoreTrustStrip.vue';
 import StoreLayout from '@/Layouts/StoreLayout.vue';
 import { useStoreAnalytics } from '@/composables/useStoreAnalytics';
 import { useStoreFormat } from '@/composables/useStoreFormat';
-import { router, usePage } from '@inertiajs/vue3';
+import { Link, router, usePage } from '@inertiajs/vue3';
 import { computed, onMounted, ref, watch } from 'vue';
 
 const props = defineProps({
     product: { type: Object, required: true },
+    breadcrumbs: { type: Array, default: () => [] },
     sizeChart: { type: Object, default: null },
     reviews: { type: Array, default: () => [] },
     relatedProducts: { type: Array, default: () => [] },
@@ -265,6 +266,25 @@ function stars(n) {
     <StoreSeoHead :seo="seo" />
     <StoreLayout>
         <div class="store-container pb-44 sm:pb-14 lg:pb-12">
+            <nav
+                v-if="breadcrumbs.length"
+                class="flex flex-wrap items-center gap-1.5 pt-4 text-[11px] font-medium text-stadium-secondary sm:pt-10"
+                aria-label="Breadcrumb"
+            >
+                <template v-for="(crumb, index) in breadcrumbs" :key="crumb.url">
+                    <Link
+                        v-if="index < breadcrumbs.length - 1"
+                        :href="crumb.url"
+                        class="hover:text-store-secondary dark:hover:text-stadium-lime"
+                    >
+                        {{ crumb.name }}
+                    </Link>
+                    <span v-else class="font-semibold text-stadium-ink dark:text-stadium-inverse-text">
+                        {{ crumb.name }}
+                    </span>
+                    <span v-if="index < breadcrumbs.length - 1" aria-hidden="true">/</span>
+                </template>
+            </nav>
             <div class="sm:grid sm:grid-cols-[1.1fr_1fr] sm:gap-10 sm:pt-10 lg:gap-14">
                 <div class="pt-4 sm:pt-0">
                     <StoreProductGallery

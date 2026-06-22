@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Web\Store\Account\Concerns;
 
+use App\Support\Seo\SeoPresenter;
+
 trait BuildsAccountSeo
 {
     /**
@@ -9,13 +11,10 @@ trait BuildsAccountSeo
      */
     protected function accountSeo(string $title, string $path): array
     {
-        $canonical = rtrim(config('app.url'), '/').$path;
-
-        return [
-            'title' => $title.' — '.config('app.name'),
-            'description' => $title.' for your '.config('app.name').' account.',
-            'canonical' => $canonical,
-            'robots' => 'noindex, nofollow',
-        ];
+        return app(SeoPresenter::class)->privatePageSeo(
+            $title,
+            $path,
+            $title.' for your '.config('app.name').' account.',
+        );
     }
 }

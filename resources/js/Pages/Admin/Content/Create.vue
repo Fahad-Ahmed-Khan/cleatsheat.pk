@@ -11,6 +11,7 @@ const form = useForm({
     meta_title: '',
     meta_description: '',
     excerpt: '',
+    featured_image_url: '',
     body: '',
     pillar_keyword: '',
     is_published: false,
@@ -108,6 +109,22 @@ function submit() {
                         />
                     </template>
                 </FormField>
+
+                <FormField id="post_featured_image" label="Featured image URL" :error="form.errors.featured_image_url" hint="Used for social sharing and article schema (1200×630 recommended).">
+                    <template #default="{ invalid, describedBy }">
+                        <input
+                            id="post_featured_image"
+                            v-model="form.featured_image_url"
+                            type="url"
+                            class="form-control"
+                            :class="{ 'is-invalid': invalid }"
+                            :aria-describedby="describedBy"
+                        />
+                    </template>
+                </FormField>
+                <div v-if="form.featured_image_url" class="mb-3">
+                    <img :src="form.featured_image_url" alt="Featured image preview" class="img-fluid rounded border" style="max-height: 12rem;">
+                </div>
 
                 <FormField id="post_body" label="Body (HTML)" :error="form.errors.body">
                     <template #default="{ invalid, describedBy }">

@@ -15,21 +15,22 @@ class ReviewController extends Controller
 {
     public function create(SeoPresenter $seo): Response
     {
-        $canonical = route('store.review');
-        $title = 'Share your experience — '.$seo->storeName();
-        $description = 'Tell us about your CleatSheat order. Your feedback helps other players across Pakistan find the right boots.';
-
         $marketing = MarketingSetting::query()->first();
+        $description = 'Tell us about your '.$seo->storeName().' order. Your feedback helps other players across Pakistan find the right boots.';
 
         return Inertia::render('Store/Review', [
-            'seo' => $seo->mergeSocialTags([
-                'title' => $title,
-                'description' => $description,
-                'canonical' => $canonical,
-                'og_title' => $title,
-                'og_description' => $description,
-                'og_type' => 'website',
-            ], $marketing?->default_og_image_url, $marketing?->twitter_site),
+            'seo' => $seo->mergeSocialTags(
+                array_merge(
+                    $seo->privatePageSeo('Share your experience', '/review', $description),
+                    [
+                        'og_title' => 'Share your experience — '.$seo->storeName(),
+                        'og_description' => $description,
+                        'og_type' => 'website',
+                    ],
+                ),
+                $marketing?->default_og_image_url,
+                $marketing?->twitter_site,
+            ),
         ]);
     }
 

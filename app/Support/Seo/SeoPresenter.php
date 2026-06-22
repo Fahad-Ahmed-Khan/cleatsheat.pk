@@ -5,7 +5,9 @@ namespace App\Support\Seo;
 use App\Models\Category;
 use App\Models\ContentPost;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Support\Storage\PublicAssetUrl;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 final class SeoPresenter
@@ -188,30 +190,10 @@ final class SeoPresenter
             ->values()
             ->all();
 
-        $offers = [];
-        foreach ($product->variants as $v) {
-            if (! $v->is_active) {
-                continue;
-            }
-            $offers[] = [
-                '@type' => 'Offer',
-                'sku' => $v->sku,
-                'priceCurrency' => 'PKR',
-                'price' => (string) $v->price,
-                'availability' => 'https://schema.org/InStock',
-                'url' => $canonicalUrl,
-            ];
-        }
+        $activeVariants = $product->variants->filter(fn ($v) => $v->is_active)->values();
+        $inStockVariants = $activeVariants->filter(fn ($v) => $this->variantHasStock($v))->values();
 
-        if ($offers === []) {
-            $offers[] = [
-                '@type' => 'Offer',
-                'priceCurrency' => 'PKR',
-                'price' => null,
-                'availability' => 'https://schema.org/InStock',
-                'url' => $canonicalUrl,
-            ];
-        }
+        $offers = $this->productOffersSchema($inStockVariants, $activeVariants, $canonicalUrl);
 
         $additional = [];
         if ($product->gender) {
@@ -250,20 +232,87 @@ final class SeoPresenter
             '@type' => 'Product',
             'name' => $product->name,
             'description' => $desc,
-            'sku' => $product->variants->first()?->sku,
-            'brand' => [
-                '@type' => 'Brand',
-                'name' => $product->brand->name,
-            ],
+            'sku' => $activeVariants->first()?->sku,
             'image' => $images,
             'offers' => $offers,
         ];
+
+        if ($product->brand) {
+            $schema['brand'] = [
+                '@type' => 'Brand',
+                'name' => $product->brand->name,
+            ];
+        }
+
+        if ($product->relationLoaded('reviews') && $product->reviews->isNotEmpty()) {
+            $schema['aggregateRating'] = [
+                '@type' => 'AggregateRating',
+                'ratingValue' => (string) round((float) $product->reviews->avg('rating'), 1),
+                'reviewCount' => $product->reviews->count(),
+                'bestRating' => '5',
+            ];
+        }
 
         if ($additional !== []) {
             $schema['additionalProperty'] = $additional;
         }
 
         return $schema;
+    }
+
+    /**
+     * @param  Collection<int, ProductVariant>  $inStockVariants
+     * @param  Collection<int, ProductVariant>  $activeVariants
+     * @return array<string, mixed>
+     */
+    private function productOffersSchema($inStockVariants, $activeVariants, string $canonicalUrl): array
+    {
+        if ($inStockVariants->count() >= 2) {
+            $prices = $inStockVariants->map(fn ($v) => (float) $v->price)->all();
+
+            return [
+                '@type' => 'AggregateOffer',
+                'priceCurrency' => 'PKR',
+                'lowPrice' => (string) min($prices),
+                'highPrice' => (string) max($prices),
+                'offerCount' => $inStockVariants->count(),
+                'availability' => 'https://schema.org/InStock',
+                'url' => $canonicalUrl,
+            ];
+        }
+
+        if ($inStockVariants->count() === 1) {
+            $v = $inStockVariants->first();
+
+            return [
+                '@type' => 'Offer',
+                'sku' => $v->sku,
+                'priceCurrency' => 'PKR',
+                'price' => (string) $v->price,
+                'availability' => 'https://schema.org/InStock',
+                'url' => $canonicalUrl,
+            ];
+        }
+
+        $fallback = $activeVariants->first();
+
+        return [
+            '@type' => 'Offer',
+            'sku' => $fallback?->sku,
+            'priceCurrency' => 'PKR',
+            'price' => $fallback !== null ? (string) $fallback->price : null,
+            'availability' => 'https://schema.org/OutOfStock',
+            'url' => $canonicalUrl,
+        ];
+    }
+
+    private function variantHasStock(ProductVariant $variant): bool
+    {
+        if (! $variant->relationLoaded('sizes')) {
+            return false;
+        }
+
+        return $variant->sizes->contains(fn ($s) => (int) $s->stock_qty > 0);
     }
 
     /**
@@ -527,6 +576,60 @@ final class SeoPresenter
         $payload = count($schemas) === 1 ? $schemas[0] : $schemas;
 
         return json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+
+    /**
+     * Whether a shop/category listing URL with query params should be noindexed.
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    public function listingShouldNoindex(array $filters, int $currentPage): bool
+    {
+        if ($currentPage > 1) {
+            return true;
+        }
+
+        foreach (['brand_ids', 'color_ids', 'category_ids'] as $listKey) {
+            if (! empty($filters[$listKey])) {
+                return true;
+            }
+        }
+
+        foreach (['gender', 'type', 'size', 'availability'] as $scalarKey) {
+            if (filled($filters[$scalarKey] ?? null)) {
+                return true;
+            }
+        }
+
+        if (filled($filters['price_min'] ?? null) || filled($filters['price_max'] ?? null)) {
+            return true;
+        }
+
+        $sizeUk = $filters['size_uk'] ?? null;
+        if (is_array($sizeUk) ? $sizeUk !== [] : filled($sizeUk)) {
+            return true;
+        }
+
+        if (filled($filters['sort'] ?? null)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * @return array{title: string, description: string, canonical: string, robots: string}
+     */
+    public function privatePageSeo(string $title, string $path, ?string $description = null): array
+    {
+        $canonical = rtrim(config('app.url'), '/').$path;
+
+        return [
+            'title' => $title.' — '.$this->storeName(),
+            'description' => $description ?? $title.' — '.$this->storeName().'.',
+            'canonical' => $canonical,
+            'robots' => 'noindex, nofollow',
+        ];
     }
 
     public function mergeSocialTags(array $base, ?string $defaultOgImage, ?string $twitterSite): array

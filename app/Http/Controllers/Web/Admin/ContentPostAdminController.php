@@ -43,6 +43,7 @@ class ContentPostAdminController extends Controller
                 'meta_title' => $content_post->meta_title,
                 'meta_description' => $content_post->meta_description,
                 'excerpt' => $content_post->excerpt,
+                'featured_image_url' => $content_post->featured_image_url,
                 'body' => $content_post->body,
                 'pillar_keyword' => $content_post->pillar_keyword,
                 'is_published' => (bool) $content_post->is_published,

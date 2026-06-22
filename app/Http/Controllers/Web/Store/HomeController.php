@@ -34,8 +34,8 @@ class HomeController extends Controller
         $m = MarketingSetting::query()->first();
 
         $siteName = $storefront?->site_name ?: config('app.name');
-        $defaultTitle = 'CleatSheat.pk — Used Football Boots & Cleats in Pakistan | FG, SG, AG';
-        $defaultDescription = 'Shop original used football boots in Pakistan — FG, SG, AG & Turf cleats with UK/EU sizing, inspected condition, WhatsApp fit help, COD & fast nationwide delivery from Lahore to Karachi.';
+        $defaultTitle = $siteName.' — Football Boots & Cleats in Pakistan | FG, SG, AG';
+        $defaultDescription = 'Shop football shoes and cleats in Pakistan — FG, SG, AG & Turf boots with UK/EU sizing, inspected condition, WhatsApp fit help, COD & fast nationwide delivery.';
         $title = $storefront?->default_meta_title
             ?: $m?->home_meta_title
             ?: $defaultTitle;

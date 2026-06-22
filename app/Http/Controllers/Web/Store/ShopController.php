@@ -38,6 +38,9 @@ class ShopController extends Controller
             'title' => $title,
             'description' => $description,
             'canonical' => $canonical,
+            'robots' => $seo->listingShouldNoindex($filters, $products->currentPage())
+                ? 'noindex, follow'
+                : null,
             'og_title' => 'Shop all football gear',
             'og_description' => $description,
             'og_type' => 'website',

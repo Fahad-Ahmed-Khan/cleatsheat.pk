@@ -15,7 +15,10 @@ class RobotsController extends Controller
 
         $lines = [
             'User-agent: *',
-            'Disallow:',
+            'Disallow: /admin',
+            'Disallow: /account',
+            'Disallow: /cart',
+            'Disallow: /checkout',
             '',
             'Sitemap: '.$sitemap,
         ];

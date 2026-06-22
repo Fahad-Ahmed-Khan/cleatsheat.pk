@@ -1,12 +1,15 @@
 <script setup>
 import { SURFACE_TILES, useStoreCategoryHref } from '@/composables/useStoreCategoryHref';
-import { Link } from '@inertiajs/vue3';
-import { toRef } from 'vue';
+import { Link, usePage } from '@inertiajs/vue3';
+import { computed, toRef } from 'vue';
 
 const props = defineProps({
     categories: { type: Array, default: () => [] },
     seoHtml: { type: String, default: null },
 });
+
+const page = usePage();
+const appName = computed(() => page.props.appName || 'Store');
 
 const { categoryHref } = useStoreCategoryHref(toRef(props, 'categories'));
 </script>
@@ -29,8 +32,8 @@ const { categoryHref } = useStoreCategoryHref(toRef(props, 'categories'));
 
             <div v-else class="mt-6 space-y-6 text-sm leading-relaxed text-stadium-inverse-text/85">
                 <p>
-                    <strong class="text-white">CleatSheat.pk</strong> specialises in
-                    <strong class="text-stadium-lime">original used football boots</strong> for players in
+                    <strong class="text-white">{{ appName }}</strong> specialises in
+                    <strong class="text-stadium-lime">football boots and cleats</strong> for players in
                     Lahore, Karachi, Islamabad, and nationwide. Every listing includes UK/EU size clarity,
                     surface-matched plates, and honest condition grading before dispatch.
                 </p>

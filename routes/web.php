@@ -12,7 +12,10 @@ require __DIR__.'/whatsapp.php';
 require __DIR__.'/deploy.php';
 
 Route::get('/robots.txt', RobotsController::class)->name('robots');
-Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
+Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
+Route::get('/sitemap/{segment}.xml', [SitemapController::class, 'segment'])
+    ->where('segment', '[a-z0-9\-]+')
+    ->name('sitemap.segment');
 
 Route::get('/welcome-skeleton', function () {
     return Inertia::render('Welcome');
